@@ -7,7 +7,7 @@ Copyright:          (c) Rohan Drape, 2019-2022
 Author:             Rohan Drape
 Maintainer:         rd@rohandrape.net
 Stability:          Experimental
-Homepage:           http://rohandrape.net/t/stsc3
+Homepage:           http://rohandrape.net/t/stsc3-som
 Tested-With:        GHC == 8.8.4
 Build-Type:         Simple
 

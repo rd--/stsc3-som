@@ -2,8 +2,8 @@
 
 [Haskell](http://haskell.org/)
 implementation of the
-[http://som-st.github.io/](Simple Object Model)
-[Smalltalk](http://archive.org/details/byte-magazine-1981-08/)
+[Simple Object Model](http://som-st.github.io/)
+([Smalltalk](http://archive.org/details/byte-magazine-1981-08/))
 system using the parser and abstract syntax tree of
 [sts3c](http://rohandrape.net/?t=stsc3).
 
