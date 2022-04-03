@@ -26,7 +26,7 @@ import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str
+import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Vec
@@ -69,7 +69,7 @@ data ContextNode =
 data Context = Context ContextNode (Maybe Context) deriving (Eq)
 
 -- | Smalltalk expression
-type StExpr = Expr.Expr ()
+type StExpr = Expr.Expr
 
 -- * Object
 
@@ -86,7 +86,7 @@ data ObjectData
   | DataInteger LargeInteger
   | DataDouble Double
   | DataCharacter Char -- ^ Not in SOM
-  | DataString UnicodeString
+  | DataString Bool UnicodeString -- ^ IsSymbol
   | DataArray (IORef (Vec Object)) -- ^ Arrays are mutable
   | DataClass (St.ClassDefinition, Bool) Tbl (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
@@ -265,8 +265,8 @@ objectToString (Object nm obj) =
     DataInteger x -> show x
     DataDouble x -> show x
     DataCharacter x -> ['$',x]
-    DataString x ->
-      if nm == toSymbol "Symbol"
+    DataString isSymbol x ->
+      if isSymbol -- nm == toSymbol "Symbol"
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
     DataArray _ -> "instance of Array"
@@ -406,13 +406,13 @@ characterObject :: Char -> Object
 characterObject x = Object (toSymbol "Character") (DataCharacter x)
 
 unicodeStringObject :: UnicodeString -> Object
-unicodeStringObject x = Object (toSymbol "String") (DataString x)
+unicodeStringObject x = Object (toSymbol "String") (DataString False x)
 
 stringObject :: String -> Object
 stringObject = unicodeStringObject . toUnicodeString . Som.somEscapedString
 
 unicodeSymbolObject :: UnicodeString -> Object
-unicodeSymbolObject x = Object (toSymbol "Symbol") (DataString x)
+unicodeSymbolObject x = Object (toSymbol "Symbol") (DataString True x)
 
 symbolObject :: String -> Object
 symbolObject = unicodeSymbolObject . toUnicodeString . Som.somEscapedString
@@ -550,7 +550,7 @@ objectIntHash (Object nm obj) =
     DataInteger x -> return x -- c.f. Integer>>hashcode
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
-    DataString x -> mHash x -- c.f. 'x' hashcode = #'x' hashcode
+    DataString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode
     DataArray x -> deRef x >>= \vec -> mapM objectIntHash (Vector.toList vec) >>= mHash
     DataClass (x,_) _ _ -> mHash (nm,St.className x)
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)

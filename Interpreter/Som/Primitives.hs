@@ -17,7 +17,7 @@ import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str
+import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
@@ -105,8 +105,21 @@ doublePositiveInfinity o arg = case (o,arg) of
 -- | Double class>>fromString: (String|Symbol -> Double)
 doubleFromString :: Primitive
 doubleFromString = binaryPrimitive "Double class>>fromString:" (\arg1 arg2 -> case (arg1,arg2) of
-  (DataClass _ _ _,DataString x) -> fmap doubleObject (unicodeStringReadDouble x)
+  (DataClass _ _ _,DataString _ x) -> fmap doubleObject (unicodeStringReadDouble x)
   _ -> Nothing)
+
+{- | C.f. DoubleTest, c.f. Js
+
+(doubleMod (-3) 2, mod' (-3) 2) == (-1, 1)
+(doubleMod 3 (-2), mod' 3 (-2)) == (1, -1)
+-}
+doubleMod :: Real t => t -> t -> t
+doubleMod p q =
+  let r = mod' p q
+  in case (p < 0, q < 0) of
+       (True, False) -> -r
+       (False, True) -> -r
+       _ -> r
 
 -- * Primitives for Integer
 
@@ -119,7 +132,7 @@ integerAsString = unaryPrimitive "Integer>>asString" (\arg -> case arg of
 -- | Integer class>>fromString: (String|Symbol -> Integer)
 integerFromString :: Primitive
 integerFromString = binaryPrimitive "Integer class>>fromString:" (\arg1 arg2 -> case (arg1,arg2) of
-  (DataClass _ _ _,DataString x) -> fmap integerObject (unicodeStringReadInteger x)
+  (DataClass _ _ _,DataString _ x) -> fmap integerObject (unicodeStringReadInteger x)
   _ -> Nothing)
 
 objectAsDouble :: Object -> VM Double
@@ -192,7 +205,7 @@ objectInstVarAtPut rcv arg = case (rcv,arg) of
 -- | Object>>instVarNamed:
 objectInstVarNamed :: Primitive
 objectInstVarNamed rcv arg = case (rcv,arg) of
-  (Object _ (DataUser _ tbl),[Object "Symbol" (DataString key)]) ->
+  (Object _ (DataUser _ tbl),[Object "Symbol" (DataString True key)]) ->
     tblAtKeyDefault tbl (fromUnicodeString key) (objectError rcv "Object>>instVarNamed: no such key")
   _ -> objectError rcv "Object>>instVarNamed:"
 
@@ -215,20 +228,22 @@ primitiveSignature (Object nm obj) arg = case (obj,arg) of
 -- | String>>asSymbol (String|Symbol -> Symbol)
 stringAsSymbol :: Primitive
 stringAsSymbol = unaryPrimitive "String>>asSymbol" (\arg1 -> case arg1 of
-  DataString str1 -> Just (unicodeSymbolObject str1)
+  DataString _ str1 -> Just (unicodeSymbolObject str1)
   _ -> Nothing)
 
 -- | String>>concatenate:  (String|Symbol -> String|Symbol -> String)
 stringConcatenate :: Primitive
 stringConcatenate = binaryPrimitive "String>>concatenate:" (\arg1 arg2 -> case (arg1,arg2) of
-  (DataString str1,DataString str2) -> Just (unicodeStringObject (Text.append str1 str2))
+  (DataString _ str1,DataString _ str2) -> Just (unicodeStringObject (Text.append str1 str2))
   _ -> Nothing)
 
 -- | String>>= (String|Symbol -> String|Symbol -> Bool)
+--
+-- The SOM rule (in the tests) is 'x' = #x but #x ~= 'x'
 stringEqual :: Primitive
 stringEqual = binaryPrimitive "String>>=" (\arg1 arg2 -> case (arg1,arg2) of
-  (DataString str1, DataString str2) -> Just (booleanObject (str1 == str2))
-  (DataString _,_) -> Just falseObject
+  (DataString typ1 str1, DataString typ2 str2) -> Just (booleanObject ((not typ1 || typ1 == typ2) && str1 == str2))
+  (DataString _ _,_) -> Just falseObject
   _ -> Nothing)
 
 -- | String>>hashcode
@@ -238,19 +253,19 @@ stringHashcode = objectHashcode
 -- | String>>length (String|Symbol -> Int)
 stringLength :: Primitive
 stringLength = unaryPrimitive "String>>length" (\arg1 -> case arg1 of
-  DataString str1 -> Just (integerObject (toLargeInteger (Text.length str1)))
+  DataString _ str1 -> Just (integerObject (toLargeInteger (Text.length str1)))
   _ -> Nothing)
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 stringAll :: (Char -> Bool) -> Primitive
 stringAll f = unaryPrimitive "stringAll" (\arg1 -> case arg1 of
-  DataString str1 -> Just (booleanObject (not (Text.null str1) && Text.all f str1))
+  DataString False str1 -> Just (booleanObject (not (Text.null str1) && Text.all f str1))
   _ -> Nothing)
 
 -- | String>>primSubstringFrom:to: (String|Symbol -> Int -> Int -> String)
 stringPrimSubstringFromTo :: Primitive
 stringPrimSubstringFromTo = ternaryPrimitive "String>>primSubstringFrom:to:" (\arg1 arg2 arg3 -> case (arg1,arg2,arg3) of
-  (DataString str1,DataInteger int1,DataInteger int2) ->
+  (DataString _ str1,DataInteger int1,DataInteger int2) ->
     Just (unicodeStringObject (unicodeStringSubstringFromTo str1 int1 int2))
   _ -> Nothing)
 
@@ -259,7 +274,7 @@ stringPrimSubstringFromTo = ternaryPrimitive "String>>primSubstringFrom:to:" (\a
 -- | Symbol>>asString
 symbolAsString :: Primitive
 symbolAsString = unaryPrimitive "Symbol>>asString" (\arg1 -> case arg1 of
-  DataString str1 -> Just (unicodeStringObject str1)
+  DataString True str1 -> Just (unicodeStringObject str1)
   _ -> Nothing)
 
 -- * Primitives for System
@@ -299,13 +314,13 @@ readFileMaybe fn = do
 -}
 systemGlobal :: Primitive
 systemGlobal (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object "Symbol" (DataString x)]) -> vmGlobalLookupOrNil (Text.unpack x)
+  (DataSystem,[Object "Symbol" (DataString True x)]) -> vmGlobalLookupOrNil (Text.unpack x)
   _ -> prError ("System>>global: " ++ fromSymbol nm)
 
 -- | System>>global:put:
 systemGlobalPut :: Primitive
 systemGlobalPut (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object "Symbol" (DataString x),e]) -> vmGlobalAssign (Text.unpack x) e
+  (DataSystem,[Object "Symbol" (DataString True x),e]) -> vmGlobalAssign (Text.unpack x) e
   _ -> prError ("System>>global:put: " ++ fromSymbol nm)
 
 {- | System>>hasGlobal:
@@ -314,16 +329,16 @@ systemGlobalPut (Object nm obj) arg = case (obj,arg) of
 -}
 systemHasGlobal :: Primitive
 systemHasGlobal (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object "Symbol" (DataString x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
+  (DataSystem,[Object "Symbol" (DataString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
   _ -> prError ("System>>hasGlobal: " ++ fromSymbol nm)
 
-{- | System>>loadFile: (String|Symbol -> String|Error)
+{- | System>>loadFile: (String -> String|Error) ?Symbol
 
 > system loadFile: '/etc/passwd'
 -}
 systemLoadFile :: Primitive
 systemLoadFile (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object _ (DataString x)]) -> do
+  (DataSystem,[Object "String" (DataString False x)]) -> do
     maybeText <- liftIO (readFileMaybe (Text.unpack x))
     maybe (prError "System>>loadFile: file does not exist") (return . stringObject) maybeText
   _ -> prError ("System>>loadFile: " ++ fromSymbol nm)
@@ -331,7 +346,7 @@ systemLoadFile (Object nm obj) arg = case (obj,arg) of
 -- | System>>printString: (String|Symbol -> ())
 systemPrintString :: Primitive
 systemPrintString (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object _ (DataString x)]) -> liftIO (Text.IO.putStr x) >> return nilObject
+  (DataSystem,[Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x) >> return nilObject
   _ -> prError ("System>>printString: " ++ fromSymbol nm)
 
 -- | System>>printNewline
@@ -380,7 +395,7 @@ primitiveTable =
   ,(("Double","*"),doubleNumDoublePrimitive "*" (*))
   --,(("Double","/"),doubleNumDoublePrimitive (/)) -- ? Som
   ,(("Double","//"),doubleNumDoublePrimitive "//" (/)) -- Som
-  ,(("Double","%"),doubleNumDoublePrimitive "%" mod')
+  ,(("Double","%"),doubleNumDoublePrimitive "%" doubleMod)
   ,(("Double","sqrt"),doubleDoublePrimitive "sqrt" sqrt)
   ,(("Double","round"),doubleIntPrimitive "round" round) -- Som (roundTowardPositive in IEEE 754-2008)
   ,(("Double","asInteger"),doubleIntPrimitive "asInteger" truncate) -- Som

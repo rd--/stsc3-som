@@ -23,7 +23,7 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Primitives
-import Interpreter.Som.Str
+import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
@@ -501,7 +501,7 @@ objectInspect rcv arg = case arg of
 -}
 objectPerformInSuperclass :: Primitive
 objectPerformInSuperclass rcv arg = case arg of
-  [Object "Symbol" (DataString sel),cl] -> do
+  [Object "Symbol" (DataString True sel),cl] -> do
     findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
   _ -> objectError rcv "Object>>perform:"
 
@@ -520,7 +520,7 @@ objectPerform rcv arg = case arg of
 -}
 objectPerformWithArgumentsInSuperclass :: Primitive
 objectPerformWithArgumentsInSuperclass rcv arg = case arg of
-  [Object "Symbol" (DataString sel),argumentsArray,cl] -> do
+  [Object "Symbol" (DataString True sel),argumentsArray,cl] -> do
     arguments <- arrayElements argumentsArray
     findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
   _ -> objectError rcv "Object>>perform:withArguments:inSuperclass:"
@@ -553,7 +553,7 @@ primitiveInvokeOnWith (Object nm obj) arg = case (obj,arg) of
 -}
 systemLoad :: Primitive
 systemLoad (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object "Symbol" (DataString x)]) -> systemLoadClassOrNil (Text.unpack x)
+  (DataSystem,[Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
   _ -> prError ("System>>load: " ++ nm)
 
 -- | Load class or return nil.

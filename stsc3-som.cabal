@@ -32,6 +32,7 @@ library
                     Interpreter.Som.Ref
                     Interpreter.Som.Repl
                     Interpreter.Som.Str
+                    Interpreter.Som.Str.Text
                     Interpreter.Som.Sym
                     Interpreter.Som.Tbl
                     Interpreter.Som.Types

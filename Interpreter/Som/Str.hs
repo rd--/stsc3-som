@@ -4,24 +4,21 @@
 -}
 module Interpreter.Som.Str where
 
-import qualified Data.Text as Text {- text -}
-import qualified Data.Text.Read as Text.Read {- text -}
-
 import Interpreter.Som.Int {- stsc3 -}
 
-type UnicodeString = Text.Text
+type UnicodeString = String
 
 toUnicodeString :: String -> UnicodeString
-toUnicodeString = Text.pack
+toUnicodeString = id
 
 fromUnicodeString :: UnicodeString -> String
-fromUnicodeString = Text.unpack
+fromUnicodeString = id
 
 unicodeStringReadInteger :: UnicodeString -> Maybe LargeInteger
-unicodeStringReadInteger = either (const Nothing) (Just . fst) . Text.Read.signed Text.Read.decimal
+unicodeStringReadInteger = read
 
 unicodeStringReadDouble :: UnicodeString -> Maybe Double
-unicodeStringReadDouble = either (const Nothing) (Just . fst) . Text.Read.double
+unicodeStringReadDouble = read
 
 unicodeStringSubstringFromTo :: UnicodeString -> LargeInteger -> LargeInteger -> UnicodeString
-unicodeStringSubstringFromTo x i j = Text.drop (fromLargeInteger i - 1) (Text.take (fromLargeInteger j) x)
+unicodeStringSubstringFromTo x i j = drop (fromLargeInteger i - 1) (take (fromLargeInteger j) x)
