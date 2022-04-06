@@ -28,10 +28,14 @@ $
 
 There is a Som interpreter written in Som.
 
-To load the class path should be set to:
+To load, the class path should be set to:
 
 > Smalltalk:TestSuite:SomSom/src/compiler:SomSom/src/vm:SomSom/src/vmobjects:SomSom/src/interpreter:SomSom/src/primitives
 
 To run type:
+
+> stsc3-som run Main -cp Smalltalk ./Examples/Hello.som
+
+It currently fails for the test suite, the error after _Double class>>fromString:_ fails (indicated by returning _NaN_).
 
 > stsc3-som run Main -cp Smalltalk ./TestSuite/TestHarness.som
