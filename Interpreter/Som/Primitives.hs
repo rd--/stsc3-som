@@ -59,7 +59,10 @@ arrayNew (Object nm obj) arg = case (obj,arg) of
 
 -- * Primitives for Block
 
--- | Block>>restart
+{- | Block>>restart
+
+This is not implemented, for now the single use in the class library (Block>>whileTrue:) should be modified to call itself.
+-}
 blockRestart :: Primitive
 blockRestart (Object nm obj) arg = case (obj,arg) of
   (DataBlock _ _ _,[]) -> prError "Block>>restart not implemented"
@@ -102,9 +105,12 @@ doublePositiveInfinity o arg = case (o,arg) of
   (Object "Double class" (DataClass _ _ _),[]) -> return (doubleObject (read "Infinity"))
   _ -> prError "Double>>PositiveInfinity"
 
+nanObject :: Object
+nanObject = doubleObject (0/0)
+
 -- | Double class>>fromString: (String|Symbol -> Double)
 doubleFromString :: Primitive
-doubleFromString = binaryPrimitive "Double class>>fromString:" (\arg1 arg2 -> case (arg1,arg2) of
+doubleFromString = binaryPrimitiveOr (return nanObject) "Double class>>fromString:" (\arg1 arg2 -> case (arg1,arg2) of
   (DataClass _ _ _,DataString _ x) -> fmap doubleObject (unicodeStringReadDouble x)
   _ -> Nothing)
 
@@ -332,15 +338,19 @@ systemHasGlobal (Object nm obj) arg = case (obj,arg) of
   (DataSystem,[Object "Symbol" (DataString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
   _ -> prError ("System>>hasGlobal: " ++ fromSymbol nm)
 
-{- | System>>loadFile: (String -> String|Error) ?Symbol
+{- | System>>loadFile: (String -> String|Nil) ?Symbol
+
+If the file does not exist return nil, do not error.
 
 > system loadFile: '/etc/passwd'
 -}
 systemLoadFile :: Primitive
 systemLoadFile (Object nm obj) arg = case (obj,arg) of
   (DataSystem,[Object "String" (DataString False x)]) -> do
-    maybeText <- liftIO (readFileMaybe (Text.unpack x))
-    maybe (prError "System>>loadFile: file does not exist") (return . stringObject) maybeText
+    let fn = Text.unpack x
+        onFailure = return nilObject -- prError ("System>>loadFile: file does not exist: " ++ fn)
+    maybeText <- liftIO (readFileMaybe fn)
+    maybe onFailure (return . stringObject) maybeText
   _ -> prError ("System>>loadFile: " ++ fromSymbol nm)
 
 -- | System>>printString: (String|Symbol -> ())
@@ -354,6 +364,19 @@ systemPrintNewline :: Primitive
 systemPrintNewline (Object nm obj) arg = case (obj,arg) of
   (DataSystem,[]) -> liftIO (putChar '\n') >> return nilObject
   _ -> prError ("System>>printNewline " ++ fromSymbol nm)
+
+-- | System>>errorPrintln: (String|Symbol -> ())
+systemErrorPrintln :: Primitive
+systemErrorPrintln (Object nm obj) arg = case (obj,arg) of
+  (DataSystem,[Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x >> putChar '\n') >> error ("Error: " ++ Text.unpack x)
+  _ -> prError ("System>>errorPrintln: " ++ fromSymbol nm)
+
+-- | System>>errorPrint: (String|Symbol -> ())
+systemErrorPrint :: Primitive
+systemErrorPrint (Object nm obj) arg = case (obj,arg) of
+  (DataSystem,[Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x) >> error ("Error: " ++ Text.unpack x)
+  _ -> prError ("System>>errorPrint: " ++ fromSymbol nm)
+
 
 {- | System>>ticks (elapsed time in microseconds)
 
@@ -459,6 +482,8 @@ primitiveTable =
   ,(("System","loadFile:"),systemLoadFile)
   ,(("System","printString:"),systemPrintString)
   ,(("System","printNewline"),systemPrintNewline)
+  ,(("System","errorPrintln:"),systemErrorPrintln)
+  ,(("System","errorPrint:"),systemErrorPrint)
   ,(("System","ticks"),systemTicks)
   ,(("System","time"),systemTime)
   ]
@@ -480,7 +505,7 @@ binaryPrimitiveOr def nm fun o@(Object _ obj) arg = case arg of
   _ -> objectListError (o : arg) ("binaryPrimitive: arity: " ++ nm)
 
 binaryPrimitive :: String -> (ObjectData -> ObjectData -> Maybe Object) -> Primitive
-binaryPrimitive nm fun o arg = binaryPrimitiveOr (objectListError (o : arg) ("binaryPrimitive" ++ nm)) nm fun o arg
+binaryPrimitive nm fun o arg = binaryPrimitiveOr (objectListError (o : arg) ("binaryPrimitive: " ++ nm)) nm fun o arg
 
 ternaryPrimitive :: String -> (ObjectData -> ObjectData -> ObjectData -> Maybe Object) -> Primitive
 ternaryPrimitive nm fun o@(Object _ obj) arg = case arg of

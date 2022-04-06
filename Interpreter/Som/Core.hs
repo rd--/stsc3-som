@@ -286,6 +286,7 @@ evalMethodOrPrimitive dat =
 findAndEvalMethodOrPrimitive :: Object -> Object -> St.Selector -> [Object] -> VM Object
 findAndEvalMethodOrPrimitive receiver methodReceiver selector arguments = do
   maybeMethod <- findMethodMaybe methodReceiver selector
+  -- printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) arguments
   case maybeMethod of
     Nothing -> do
       argumentsArray <- arrayFromList arguments
@@ -579,6 +580,7 @@ systemLoadAndAssignClassesAbove x = do
   case existing of
       Just _ -> return existing
       Nothing -> do
+        -- liftIO (putStrLn (show ("systemLoadAndAssignClassesAbove", x)))
         maybeCd <- liftIO (Som.somLoadClassFile x)
         case maybeCd of
           Just cd -> do
