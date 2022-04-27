@@ -29,6 +29,7 @@ library
   exposed-modules:  Interpreter.Som.Core
                     Interpreter.Som.Int
                     Interpreter.Som.Primitives
+                    Interpreter.Som.Primitives.Util
                     Interpreter.Som.Ref
                     Interpreter.Som.Repl
                     Interpreter.Som.Str

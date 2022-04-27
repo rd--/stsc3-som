@@ -16,16 +16,13 @@ import qualified Data.Text.IO as Text.IO {- text -}
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 
 import Interpreter.Som.Int
+import Interpreter.Som.Primitives.Util
 import Interpreter.Som.Ref
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
 import Interpreter.Som.Vec
-
--- | Alias for Except.throwError
-prError :: String -> VM t
-prError = vmError
 
 -- * Primitives for Array
 
@@ -55,7 +52,7 @@ arrayLength (Object nm obj) arg = case (obj,arg) of
 arrayNew :: Primitive
 arrayNew (Object nm obj) arg = case (obj,arg) of
   (DataClass _ _ _,[Object _ (DataInteger size)]) -> arrayFromList (genericReplicate size nilObject)
-  _ -> prError ("Array>>new: " ++ fromSymbol nm)
+  _ -> prError ("Array class>>new: " ++ fromSymbol nm)
 
 -- * Primitives for Block
 
@@ -99,7 +96,7 @@ doubleAsString = unaryPrimitive "Double>>asString" (\arg -> case arg of
   DataDouble x -> Just (stringObject (show x))
   _ -> Nothing)
 
--- | Double>>PositiveInfinity
+-- | Double class>>PositiveInfinity
 doublePositiveInfinity :: Primitive
 doublePositiveInfinity o arg = case (o,arg) of
   (Object "Double class" (DataClass _ _ _),[]) -> return (doubleObject (read "Infinity"))
@@ -140,12 +137,6 @@ integerFromString :: Primitive
 integerFromString = binaryPrimitive "Integer class>>fromString:" (\arg1 arg2 -> case (arg1,arg2) of
   (DataClass _ _ _,DataString _ x) -> fmap integerObject (unicodeStringReadInteger x)
   _ -> Nothing)
-
-objectAsDouble :: Object -> VM Double
-objectAsDouble o = case o of
-  Object _ (DataInteger x) -> return (fromIntegral x)
-  Object _ (DataDouble x) -> return x
-  _ -> prError "objectAsDouble"
 
 {-
 numberReduce :: Object -> VM Object
@@ -487,105 +478,3 @@ primitiveTable =
   ,(("System","ticks"),systemTicks)
   ,(("System","time"),systemTime)
   ]
-
--- * Primitive Constructors
-
-unaryPrimitive :: String -> (ObjectData -> Maybe Object) -> Primitive
-unaryPrimitive nm fun o@(Object _ obj) arg = case arg of
-  [] -> case fun obj of
-          Just r -> return r
-          Nothing -> objectError o ("unaryPrimitive: " ++ nm)
-  _ -> prError ("unaryPrimitive: arity: " ++ nm)
-
-binaryPrimitiveOr :: VM Object -> String -> (ObjectData -> ObjectData -> Maybe Object) -> Primitive
-binaryPrimitiveOr def nm fun o@(Object _ obj) arg = case arg of
-  [Object _ p1] -> case fun obj p1 of
-            Just r -> return r
-            Nothing -> def
-  _ -> objectListError (o : arg) ("binaryPrimitive: arity: " ++ nm)
-
-binaryPrimitive :: String -> (ObjectData -> ObjectData -> Maybe Object) -> Primitive
-binaryPrimitive nm fun o arg = binaryPrimitiveOr (objectListError (o : arg) ("binaryPrimitive: " ++ nm)) nm fun o arg
-
-ternaryPrimitive :: String -> (ObjectData -> ObjectData -> ObjectData -> Maybe Object) -> Primitive
-ternaryPrimitive nm fun o@(Object _ obj) arg = case arg of
-  [Object _ p1,Object _ p2] -> case fun obj p1 p2 of
-               Just r -> return r
-               Nothing -> objectError o ("ternaryPrimitive: " ++ nm)
-  _ -> objectListError arg ("ternaryPrimitive: arity: " ++ nm)
-
-doubleAsFractional :: Double -> Object
-doubleAsFractional x =
-  case properFraction x of
-    (i,0) -> integerObject i
-    _ -> doubleObject x
-
-numNumPrimitive :: String -> (Double -> Double) -> Primitive
-numNumPrimitive msg f rcv arg = case arg of
-  [] -> do
-    lhs <- objectAsDouble rcv
-    return (doubleAsFractional (f lhs))
-  _ -> prError msg
-
-numNumNumPrimitive :: String -> (Double -> Double -> Double) -> Primitive
-numNumNumPrimitive msg f rcv arg = case arg of
-  [arg1] -> do
-    lhs <- objectAsDouble rcv
-    rhs <- objectAsDouble arg1
-    return (doubleAsFractional (f lhs rhs))
-  _ -> prError msg
-
-intIntPrimitive :: String -> (LargeInteger -> LargeInteger) -> Primitive
-intIntPrimitive nm fun = unaryPrimitive nm (\arg1 -> case arg1 of
-  DataInteger p1 -> Just (integerObject (fun p1))
-  _ -> Nothing)
-
-intDoublePrimitive :: String -> (LargeInteger -> Double) -> Primitive
-intDoublePrimitive nm fun = unaryPrimitive nm (\arg1 -> case arg1 of
-  DataInteger p1 -> Just (doubleObject (fun p1))
-  _ -> Nothing)
-
-intIntIntPrimitive :: String -> (LargeInteger -> LargeInteger -> LargeInteger) -> Primitive
-intIntIntPrimitive nm fun = binaryPrimitive nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataInteger p1,DataInteger p2) -> Just (integerObject (fun p1 p2))
-  _ -> Nothing)
-
-intNumNumPrimitive :: String -> (LargeInteger -> LargeInteger -> LargeInteger) -> (Double -> Double -> Double) -> Primitive
-intNumNumPrimitive nm fun1 fun2 = binaryPrimitive nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataInteger p1,DataInteger p2) -> Just (integerObject (fun1 p1 p2))
-  (DataInteger p1,DataDouble p2) -> Just (doubleObject (fun2 (fromIntegral p1) p2))
-  _ -> Nothing)
-
-intNumBoolPrimitiveOr :: VM Object -> String -> (LargeInteger -> LargeInteger -> Bool) -> (Double -> Double -> Bool) -> Primitive
-intNumBoolPrimitiveOr def nm fun1 fun2 = binaryPrimitiveOr def nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataInteger p1,DataInteger p2) -> Just (booleanObject (fun1 p1 p2))
-  (DataInteger p1,DataDouble p2) -> Just (booleanObject (fun2 (fromIntegral p1) p2))
-  _ -> Nothing)
-
-intNumBoolPrimitive :: String -> (LargeInteger -> LargeInteger -> Bool) -> (Double -> Double -> Bool) -> Primitive
-intNumBoolPrimitive nm fun1 fun2 = binaryPrimitive nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataInteger p1,DataInteger p2) -> Just (booleanObject (fun1 p1 p2))
-  (DataInteger p1,DataDouble p2) -> Just (booleanObject (fun2 (fromIntegral p1) p2))
-  _ -> Nothing)
-
-doubleDoublePrimitive :: String -> (Double -> Double) -> Primitive
-doubleDoublePrimitive nm fun = unaryPrimitive nm (\arg1 -> case arg1 of
-  DataDouble p1 -> Just (doubleObject (fun p1))
-  _ -> Nothing)
-
-doubleIntPrimitive :: String -> (Double -> LargeInteger) -> Primitive
-doubleIntPrimitive nm fun = unaryPrimitive nm (\arg1 -> case arg1 of
-  DataDouble p1 -> Just (integerObject (fun p1))
-  _ -> Nothing)
-
-doubleNumDoublePrimitive :: String -> (Double -> Double -> Double) -> Primitive
-doubleNumDoublePrimitive nm fun = binaryPrimitive nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataDouble p1,DataInteger p2) -> Just (doubleObject (fun p1 (fromIntegral p2)))
-  (DataDouble p1,DataDouble p2) -> Just (doubleObject (fun p1 p2))
-  _ -> Nothing)
-
-doubleNumBoolPrimitive :: String -> (Double -> Double -> Bool) -> Primitive
-doubleNumBoolPrimitive nm fun = binaryPrimitive nm (\arg1 arg2 -> case (arg1,arg2) of
-  (DataDouble p1,DataInteger p2) -> Just (booleanObject (fun p1 (fromIntegral p2)))
-  (DataDouble p1,DataDouble p2) -> Just (booleanObject (fun p1 p2))
-  _ -> Nothing)

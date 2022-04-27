@@ -23,6 +23,7 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Primitives
+import Interpreter.Som.Primitives.Util
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl

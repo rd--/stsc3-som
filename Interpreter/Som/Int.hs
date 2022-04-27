@@ -4,8 +4,8 @@
 module Interpreter.Som.Int where
 
 import Data.Bits {- base -}
-
-import qualified Music.Theory.Math.Convert as Math.Convert {- hmt-base -}
+import Data.Int {- base -}
+import Data.Word {- base -}
 
 type SmallInteger = Int
 type LargeInteger = Integer
@@ -23,7 +23,11 @@ shiftRight ::  LargeInteger -> LargeInteger ->  LargeInteger
 shiftRight x by = Data.Bits.shiftR x (fromLargeInteger by)
 
 as32BitUnsignedValue :: LargeInteger -> LargeInteger
-as32BitUnsignedValue = Math.Convert.word32_to_integer . Math.Convert.integer_to_word32
+as32BitUnsignedValue x =
+  let uint32 = (fromIntegral x) :: Word32
+  in fromIntegral uint32
 
 as32BitSignedValue :: LargeInteger -> LargeInteger
-as32BitSignedValue = Math.Convert.int32_to_integer . Math.Convert.integer_to_int32
+as32BitSignedValue x =
+  let int32 = (fromIntegral x) :: Int32
+  in fromIntegral int32
