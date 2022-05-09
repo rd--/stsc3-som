@@ -9,6 +9,7 @@ import Data.List {- base -}
 import System.Directory {- directory -}
 import System.Mem {- base -}
 import System.Random {- random -}
+import Text.Printf {- random -}
 
 import qualified Data.Text as Text {- text -}
 import qualified Data.Text.IO as Text.IO {- text -}
@@ -24,16 +25,36 @@ import Interpreter.Som.Tbl
 import Interpreter.Som.Types
 import Interpreter.Som.Vec
 
+-- | Primitives could more written more concisely...
+primitive :: (String, String, Object, [Object]) -> VM Object
+primitive (prClass, prMethod, receiver@(Object receiverName receiverObj), arguments) =
+  case (prClass, prMethod, receiverObj, arguments) of
+    ("Array", "at:", DataArray ref, [Object _ (DataInteger ix)]) -> prArrayAt ref ix
+    ("Array", "at:put:", DataArray ref, [Object _ (DataInteger ix), value]) -> vecRefWrite ref (ix - 1) value
+    ("Array", "length", DataArray ref, []) -> deRef ref >>= \v -> return (integerObject (vecLength v))
+    ("Array", "new", DataClass {},[Object _ (DataInteger size)]) -> arrayFromList (genericReplicate size nilObject)
+    ("Block", "restart", DataBlock {}, []) -> prError "Block>>restart not implemented"
+    ("Block", "value", DataBlock {}, []) -> prError "Block>>value not implemented"
+    ("Class", "methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
+    ("Class", "name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
+    ("Double", "asString", DataDouble x, []) -> return (stringObject (show x))
+    ("Double class", "PositiveInfinity", DataClass {}, []) -> return (doubleObject (read "Infinity"))
+    ("Double class", "fromString:", DataClass {}, [x]) -> return (prDoubleFromString x)
+    _ -> prError (printf "%s>>%s " prClass prMethod (fromSymbol receiverName))
+
 -- * Primitives for Array
+
+prArrayAt :: Ref (Vec Object) -> LargeInteger -> VM Object
+prArrayAt ref ix = do
+  v <- deRef ref
+  if ix <= vecLength v
+    then return (vecAt v (ix - 1))
+    else prError "Array>>at: index out of range"
 
 -- | Array>>at:
 arrayAt :: Primitive
 arrayAt (Object nm obj) arg = case (obj,arg) of
-  (DataArray ref,[Object _ (DataInteger ix)]) -> do
-    v <- deRef ref
-    if ix <= vecLength v
-      then return (vecAt v (ix - 1))
-      else prError "Array>>at: index out of range"
+  (DataArray ref,[Object _ (DataInteger ix)]) -> prArrayAt ref ix
   _ -> prError ("Array>>at: " ++ fromSymbol nm)
 
 -- | Array>>at:put: (Returns object put)
@@ -104,6 +125,12 @@ doublePositiveInfinity o arg = case (o,arg) of
 
 nanObject :: Object
 nanObject = doubleObject (0/0)
+
+prDoubleFromString :: Object -> Object
+prDoubleFromString arg =
+  case arg of
+    Object _ (DataString _ x) -> maybe nanObject doubleObject (unicodeStringReadDouble x)
+    _ -> nanObject
 
 -- | Double class>>fromString: (String|Symbol -> Double)
 doubleFromString :: Primitive
