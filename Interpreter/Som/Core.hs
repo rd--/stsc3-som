@@ -341,6 +341,7 @@ evalExpr expr =
     Expr.Array exprList -> mapM evalExpr exprList >>= arrayFromList
     Expr.Begin exprList -> evalExprSequence exprList
     Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence exprList
+    Expr.Primitive _ -> error "evalExpr: primitive?"
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
 evalString :: String -> VM Object
