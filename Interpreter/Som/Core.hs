@@ -9,7 +9,6 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
-import qualified Data.Map as Map {- containers -}
 import qualified Data.Text as Text {- text -}
 import qualified Data.Vector as Vector {- vector -}
 
@@ -23,7 +22,6 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Primitives
-import Interpreter.Som.Primitives.Util
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
@@ -64,10 +62,10 @@ objectLookupClassVariable :: Object -> Symbol -> VM (Maybe Object)
 objectLookupClassVariable object key =
   case object of
     Object _ DataNil -> return Nothing
-    Object _ (DataClass _ tbl _) ->
+    Object _ (DataClass (cd,isMeta) tbl _) ->
       mLookupSequence [tblAtKeyMaybe tbl
-                      ,\k -> classSuperclass object [] >>= \sp -> objectLookupClassVariable sp k] key
-    _ -> objectClass object [] >>= \cl -> objectLookupClassVariable cl key
+                      ,\k -> prClassSuperclass cd isMeta >>= \sp -> objectLookupClassVariable sp k] key
+    _ -> prObjectClass object >>= \cl -> objectLookupClassVariable cl key
 
 -- | Lookup a name in a Context.  See Context for description of lookup rules.
 contextLookup :: Context -> Symbol -> VM (Maybe Object)
@@ -94,10 +92,10 @@ objectAssignClassVariable :: Object -> Symbol -> Object -> VM (Maybe Object)
 objectAssignClassVariable object key value =
   case object of
     Object _ DataNil -> return Nothing
-    Object _ (DataClass _ tbl _) ->
+    Object _ (DataClass (cd,isMeta) tbl _) ->
       mAssignSequence [tblAtKeyPutMaybe tbl
-                      ,\k v -> classSuperclass object [] >>= \sp -> objectAssignClassVariable sp k v] key value
-    _ -> objectClass object [] >>= \cl -> objectAssignClassVariable cl key value
+                      ,\k v -> prClassSuperclass cd isMeta >>= \sp -> objectAssignClassVariable sp k v] key value
+    _ -> prObjectClass object >>= \cl -> objectAssignClassVariable cl key value
 
 {- | Set a name in a Context.
      Assignments at NilContext (the empty context) set variables in the Workspace.
@@ -160,7 +158,7 @@ vmUnknownGlobal :: Context -> String -> VM Object
 vmUnknownGlobal ctx k =
   case contextReceiverMaybe ctx of
     Just receiver -> evalMessageSend False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
-    _ -> vmError ("vmUnknownGlobal: " ++ show k)
+    _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a Return escapes we send an escapedBlock: message to the Object that the Block that Returned escaped from.
      For this purpose the Return object stores the Block that sent it.
@@ -199,19 +197,6 @@ vmGlobalResolveOrError :: Symbol -> VM Object
 vmGlobalResolveOrError key = vmGlobalResolveMaybe key >>= maybe (vmError ("vmGlobalResolve: " ++ key)) return
 
 -- * Eval
-
--- | Lookup primitive in global dictionary, or error.
-primitiveLookup :: (Symbol, Symbol) -> VM Primitive
-primitiveLookup k = do
-  case Map.lookup k primitiveDictionary of
-    Just f -> return f
-    Nothing -> vmError (printf "primitiveLookup: %s>>%s" (fst k) (snd k))
-
--- | Primitive>>invokeOnWith
-evalPrimitiveInvokeOnWith :: Symbol -> Symbol -> Object -> [Object] -> VM Object
-evalPrimitiveInvokeOnWith hld sig rcv arg = do
-  f <- primitiveLookup (hld,sig)
-  f rcv arg
 
 -- | Evaluate StExpr in sequence.  If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
 evalExprSequence :: [StExpr] -> VM Object
@@ -304,15 +289,15 @@ findMethodMaybe o sel =
          Just mth ->
           case Vector.find (\(Object _ (DataMethod _ m _)) -> sel == St.methodSelector m) mth of
             Just m -> return (Just m)
-            Nothing -> classSuperclass o [] >>= \sc -> findMethodMaybe sc sel
+            Nothing -> classSuperclassOf o >>= \sc -> findMethodMaybe sc sel
          _ -> vmError "findMethodMaybe"
 
 -- | Evaluate message send.
 evalMessageSend :: Bool -> Object -> St.Selector -> [Object] -> VM Object
 evalMessageSend isSuper receiver selector arguments = do
-  receiverClass <- objectClass receiver []
+  receiverClass <- prObjectClass receiver
   methodClass <- if isSuper
-                 then classSuperclass receiverClass []
+                 then classSuperclassOf receiverClass
                  else return receiverClass
   findAndEvalMethodOrPrimitive receiver methodClass selector arguments
 
@@ -359,26 +344,6 @@ vmEval vmState str =
     [] -> return (Right nilObject, vmState)
     txt -> State.runStateT (Except.runExceptT (evalString txt)) vmState
 
--- * Block Primitives
-
--- | Block1>>value
-block1Value :: Primitive
-block1Value rcv@(Object nm obj) arg = case (obj,arg) of
-  (DataBlock _ _ _,[]) -> evalBlock rcv []
-  _ -> prError ("Block1>>value " ++ nm)
-
--- | Block2>>value:
-block2Value :: Primitive
-block2Value rcv@(Object nm obj) arg = case (obj,arg) of
-  (DataBlock _ _ _,[arg1]) -> evalBlock rcv [arg1]
-  _ -> prError ("Block2>>value: " ++ nm)
-
--- | Block3>>value:with:
-block3ValueWith :: Primitive
-block3ValueWith rcv@(Object nm obj) arg = case (obj,arg) of
-  (DataBlock _ _ _,[arg1,arg2]) -> evalBlock rcv [arg1,arg2]
-  _ -> prError ("Block3>>value:with: " ++ nm)
-
 -- * Class Primitives
 
 {- | Get all variables of the indicated kind for the indicated class.
@@ -399,17 +364,15 @@ classAllVariableNames fn cd = do
     Nothing -> return (fn cd)
 
 -- | Class>>fields => Array[Symbol]
-classFields :: Primitive
-classFields (Object nm obj) arg = case (obj,arg) of
-  (DataClass (cd,isMeta) _ _,[]) ->
-    case isMeta of
-      False -> do
-        fld <- classAllVariableNames St.classInstanceVariableNames cd
-        arrayFromList (map symbolObject fld)
-      True -> do
-        fld <- classAllVariableNames St.classVariableNames cd
-        arrayFromList (map symbolObject fld)
-  _ -> vmError ("Class>>fields " ++ nm)
+prClassFields :: St.ClassDefinition -> Bool -> VM Object
+prClassFields cd isMeta =
+  case isMeta of
+    False -> do
+      fld <- classAllVariableNames St.classInstanceVariableNames cd
+      arrayFromList (map symbolObject fld)
+    True -> do
+      fld <- classAllVariableNames St.classVariableNames cd
+      arrayFromList (map symbolObject fld)
 
 {- | Create instance of class that is not defined primitively.
      Allocate reference for instance variables and initialize to nil.
@@ -417,15 +380,12 @@ classFields (Object nm obj) arg = case (obj,arg) of
          - the instance variables of it's class definition
          - all of the instance variables of all of it's superclasses.
 -}
-classNew :: Primitive
-classNew (Object nm obj) arg =
-  case (obj,arg) of
-    (DataClass (cd,_) _ _,[]) -> do
-      instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
-      tbl <- variablesTbl instVarNames
-      pc <- vmProgramCounterIncrement
-      return (Object (St.className cd) (DataUser pc tbl))
-    _ -> vmError ("Class>>new " ++ nm)
+prClassNew :: St.ClassDefinition -> VM Object
+prClassNew cd = do
+  instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
+  tbl <- variablesTbl instVarNames
+  pc <- vmProgramCounterIncrement
+  return (Object (St.className cd) (DataUser pc tbl))
 
 {- | Class>>superclass => Class|nil
 
@@ -438,31 +398,26 @@ For all other classes "C class superclass = C superclass class".
 > Object class superclass = Class                 "=> true"
 > Nil class superclass = Nil superclass class     "=> true"
 -}
-classSuperclass :: Primitive
-classSuperclass (Object nm obj) arg = case (obj,arg) of
-  (DataClass (cd,isMeta) _ _,[]) ->
-    if St.className cd == "Object"
-    then if isMeta then vmGlobalLookupOrError "Class" else return nilObject
-    else do
-      sp <- maybe (return nilObject) vmGlobalResolveOrNil (St.superclassName cd)
-      if isMeta then classMetaclass sp else return sp
-  _ -> vmError ("Class>>superclass " ++ nm)
+prClassSuperclass :: St.ClassDefinition -> Bool -> VM Object
+prClassSuperclass cd isMeta =
+  if St.className cd == "Object"
+  then if isMeta then vmGlobalLookupOrError "Class" else return nilObject
+  else do
+    sp <- maybe (return nilObject) vmGlobalResolveOrNil (St.superclassName cd)
+    if isMeta then classMetaclass sp else return sp
+
+classSuperclassOf :: Object -> VM Object
+classSuperclassOf (Object _ obj) =
+  case obj of
+    DataClass (cd,isMeta) _ _ -> prClassSuperclass cd isMeta
+    _ -> vmError "classSuperclassOf"
 
 -- * Method Primitives
 
--- | Method>>holder (Method -> Class)
-methodHolder :: Primitive
-methodHolder (Object nm obj) arg = case (obj,arg) of
-  (DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
-  _ -> vmError ("Method>>holder " ++ nm)
-
--- | Method>>invokeOn:with: (Method -> Object -> [Object] -> Object)
-methodInvokeOnWith :: Primitive
-methodInvokeOnWith (Object nm obj) arg = case (nm,arg) of
-  ("Method", [receiver, argumentsArray]) -> do
-    arguments <- arrayElements argumentsArray
-    evalMethodOrPrimitive obj receiver arguments
-  _ -> objectListError (Object nm obj : arg) "Method>>invokeOn:with:" -- vmError ("Method>>invokeOn:with: " ++ nm)
+prMethodInvokeOnWith :: ObjectData -> Object -> Object -> VM Object
+prMethodInvokeOnWith obj receiver argumentsArray = do
+  arguments <- arrayElements argumentsArray
+  evalMethodOrPrimitive obj receiver arguments
 
 -- * Object Primitives
 
@@ -479,85 +434,38 @@ classMetaclass (Object _ obj) =
       else return (Object "Class" (DataClass (cd,True) cVar mCache))
     _ -> Except.throwError "classMetaclass"
 
-{- | Object>>class (Object -> Class)
+prObjectClass :: Object -> VM Object
+prObjectClass rcv@(Object nm obj) =
+  case obj of
+    DataClass {} -> classMetaclass rcv
+    _ -> vmGlobalLookupOrError nm
 
-> 0 class = Integer                               "=> true"
-> 0 class class = Integer class                   "=> true"
-> 0 class class class = Metaclass                 "=> true"
-> Metaclass class class = Metaclass               "=> true"
--}
-objectClass :: Primitive
-objectClass rcv@(Object nm obj) arg = case (obj,arg) of
-  (DataClass _ _ _,[]) -> classMetaclass rcv
-  (_,[]) -> vmGlobalLookupOrError nm
-  _ -> vmError ("Object>>class " ++ nm)
+prObjectInspect :: Object -> VM Object
+prObjectInspect rcv = objectToInspector rcv >>= liftIO . putStrLn >> return rcv
 
--- | Object>>inspect (Object -> ())
-objectInspect :: Primitive
-objectInspect rcv arg = case arg of
-  [] -> objectToInspector rcv >>= liftIO . putStrLn >> return rcv
-  _ -> vmError "Object>>inspect"
+prObjectPerformInSuperclass :: Object -> UnicodeString -> Object -> VM Object
+prObjectPerformInSuperclass rcv sel cl = findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
 
-{- | Object>>perform:inSuperclass: (Object -> Symbol -> Object -> Object)
+prObjectPerform :: Object -> UnicodeString -> VM Object
+prObjectPerform rcv sel = prObjectClass rcv >>= \cl -> prObjectPerformInSuperclass rcv sel cl
 
-> (1 perform: #class inSuperclass: Object) = Integer "=> true"
--}
-objectPerformInSuperclass :: Primitive
-objectPerformInSuperclass rcv arg = case arg of
-  [Object "Symbol" (DataString True sel),cl] -> do
-    findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
-  _ -> objectError rcv "Object>>perform:"
+prObjectPerformWithArgumentsInSuperclass :: Object -> UnicodeString -> Object -> Object -> VM Object
+prObjectPerformWithArgumentsInSuperclass rcv sel argumentsArray cl = do
+  arguments <- arrayElements argumentsArray
+  findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
 
-{- | Object>>perform: (Object -> Symbol -> Object)
-
-> (1 perform: #class) = Integer                   "=> true"
--}
-objectPerform :: Primitive
-objectPerform rcv arg = case arg of
-  [sel] -> objectClass rcv [] >>= \cl -> objectPerformInSuperclass rcv [sel,cl]
-  _ -> objectError rcv "Object>>perform:"
-
-{- |Object>>perform:withArguments:inSuperclass:
-
-> 1 perform: #+ withArguments: #(2) inSuperclass: Object
--}
-objectPerformWithArgumentsInSuperclass :: Primitive
-objectPerformWithArgumentsInSuperclass rcv arg = case arg of
-  [Object "Symbol" (DataString True sel),argumentsArray,cl] -> do
-    arguments <- arrayElements argumentsArray
-    findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
-  _ -> objectError rcv "Object>>perform:withArguments:inSuperclass:"
-
-{- | Object>>perform:withArguments:
-
-> (1 perform: #+ withArguments: #(2)) = 3         "=> true"
--}
-objectPerformWithArguments :: Primitive
-objectPerformWithArguments rcv arg = case arg of
-  [sel,argArray] -> objectClass rcv [] >>= \cl -> objectPerformWithArgumentsInSuperclass rcv [sel,argArray,cl]
-  _ -> objectError rcv "Object>>perform:withArguments:"
+prObjectPerformWithArguments :: Object -> UnicodeString -> Object -> VM Object
+prObjectPerformWithArguments rcv sel argArray = prObjectClass rcv >>= \cl -> prObjectPerformWithArgumentsInSuperclass rcv sel argArray cl
 
 -- * Primitive Primitives
 
 -- | Primitive>>invokeOn:with:.
-primitiveInvokeOnWith :: Primitive
-primitiveInvokeOnWith (Object nm obj) arg = case (obj,arg) of
-  (DataPrimitive hld sig,[rcv,argumentsArray]) -> do
-    arguments <- arrayElements argumentsArray
-    evalPrimitiveInvokeOnWith hld sig rcv arguments
-  _ -> vmError ("Primitive>>invokeOn:with: " ++ nm)
+prPrimitiveInvokeOnWith :: Symbol -> Symbol -> Object -> Object -> VM Object
+prPrimitiveInvokeOnWith hld sig rcv argumentsArray = do
+  arguments <- arrayElements argumentsArray
+  evalPrimitiveInvokeOnWith hld sig rcv arguments
 
 -- * System Primitives
-
-{- | System>>load: (Symbol -> Class|nil)
-
-> (system load: #Array) = Array                   "=> true"
-> (system load: #UnknownClass) = nil              "=> true"
--}
-systemLoad :: Primitive
-systemLoad (Object nm obj) arg = case (obj,arg) of
-  (DataSystem,[Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
-  _ -> prError ("System>>load: " ++ nm)
 
 -- | Load class or return nil.
 systemLoadClassOrNil :: Symbol -> VM Object
@@ -594,33 +502,28 @@ systemLoadAndAssignClassesAbove x = do
             return (Just co)
           _ -> return Nothing
 
--- * Primitive Dictionary
+-- * Evaluate primitive
 
--- | Table of core primitives.
-corePrimitiveTable :: PrimitiveTable
-corePrimitiveTable =
-  [
-   (("Block1","value"),block1Value)
-  ,(("Block2","value:"),block2Value)
-  ,(("Block3","value:with:"),block3ValueWith)
-  ,(("Class","fields"),classFields)
-  ,(("Class","new"),classNew)
-  ,(("Class","superclass"),classSuperclass)
-  ,(("Method","holder"),methodHolder)
-  ,(("Method","invokeOn:with:"),methodInvokeOnWith)
-  ,(("Object","class"),objectClass)
-  ,(("Object","inspect"),objectInspect)
-  ,(("Object","perform:"),objectPerform)
-  ,(("Object","perform:inSuperclass:"),objectPerformInSuperclass)
-  ,(("Object","perform:withArguments:"),objectPerformWithArguments)
-  ,(("Object","perform:withArguments:inSuperclass:"),objectPerformWithArgumentsInSuperclass)
-  ,(("Primitive","invokeOn:with:"),primitiveInvokeOnWith)
-  ,(("System","load:"),systemLoad)
-  ]
-
--- | Dictionary of all Som primitives.
-primitiveDictionary :: PrimitiveDictionary
-primitiveDictionary = Map.fromList (corePrimitiveTable ++ primitiveTable)
+evalPrimitiveInvokeOnWith :: Symbol -> Symbol -> Object -> [Object] -> VM Object
+evalPrimitiveInvokeOnWith prClass prMethod receiver@(Object _ receiverObj) arguments =
+  case (prClass, prMethod, receiverObj, arguments) of
+    ("Block1", "value", DataBlock {}, []) -> evalBlock receiver []
+    ("Block2", "value:", DataBlock {}, [arg]) -> evalBlock receiver [arg]
+    ("Block3", "value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock receiver [arg1, arg2]
+    ("Class", "fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
+    ("Class", "new", DataClass (cd,_) _ _,[]) -> prClassNew cd
+    ("Class", "superclass", DataClass (cd,isMeta) _ _,[]) -> prClassSuperclass cd isMeta
+    ("Method", "holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
+    ("Method", "invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith rcv arg1 arg2
+    ("Object","class", _, []) -> prObjectClass receiver
+    ("Object", "inspect", _, []) -> prObjectInspect receiver
+    ("Object", "perform:", _, [Object "Symbol" (DataString True sel)]) -> prObjectPerform receiver sel
+    ("Object", "perform:inSuperclass:", _, [Object "Symbol" (DataString True sel), cl]) -> prObjectPerformInSuperclass receiver sel cl
+    ("Object", "perform:withArguments:", _, [Object "Symbol" (DataString True sel), arg]) -> prObjectPerformWithArguments receiver sel arg
+    ("Object", "perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataString True sel), arg, cl]) -> prObjectPerformWithArgumentsInSuperclass receiver sel arg cl
+    ("Primitive", "invokeOn:with:", DataPrimitive hld sig, [rcv,argumentsArray]) -> prPrimitiveInvokeOnWith hld sig rcv argumentsArray
+    ("System", "load:", DataSystem, [Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
+    _ -> nonCorePrimitive prClass prMethod receiver arguments
 
 -- * Tables
 

@@ -11,7 +11,6 @@ import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
-import qualified Data.Map as Map {- containers -}
 import qualified Data.Time.Clock.System as Time {- time -}
 import qualified Data.Vector as Vector {- vector -}
 
@@ -102,15 +101,6 @@ data Object = Object Symbol ObjectData deriving (Eq)
 
 -- | Table of named objects.
 type ObjectTable = [(Symbol,Object)]
-
--- | Primitive (receiver -> arguments -> result)
-type Primitive = Object -> [Object] -> VM Object
-
--- | (Class,MethodSignature) -> Primitive table
-type PrimitiveTable = [((Symbol,Symbol),Primitive)]
-
--- | Dictionary form of a PrimitiveTable
-type PrimitiveDictionary = Map.Map (Symbol,Symbol) Primitive
 
 {- | The VM state holds:
      - startTime, required for System>>ticks and System>>time
@@ -207,6 +197,10 @@ vmGlobalLookupMaybe key = vmGlobalDict >>= \dict -> Env.dictRefLookup dict key
 -- | Lookup global, don't attempt to resolve if not found, return nil if not found.
 vmGlobalLookupOrNil :: Symbol -> VM Object
 vmGlobalLookupOrNil key = vmGlobalLookupMaybe key >>= return . fromMaybe nilObject
+
+-- | Lookup global, don't attempt to resolve if not found, return symbol looked for if not found.
+vmGlobalLookupOrSymbol :: Symbol -> VM Object
+vmGlobalLookupOrSymbol key = vmGlobalLookupMaybe key >>= return . fromMaybe (symbolObject key)
 
 -- | Lookup global, don't attempt to resolve if not found, error if not found.
 vmGlobalLookupOrError :: Symbol -> VM Object
@@ -401,6 +395,9 @@ integerObject x = Object (toSymbol "Integer") (DataInteger x)
 
 doubleObject :: Double -> Object
 doubleObject x = Object (toSymbol "Double") (DataDouble x)
+
+nanObject :: Object
+nanObject = doubleObject (0/0)
 
 characterObject :: Char -> Object
 characterObject x = Object (toSymbol "Character") (DataCharacter x)
