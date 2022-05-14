@@ -21,7 +21,7 @@ replReadInput s h = do
 {- | The read-eval-print loop continue function.
      Read program text, evaluate it, report errors or result, continue with the modified state.
 -}
-replContinue :: VMState -> IO ()
+replContinue :: VmState -> IO ()
 replContinue vmState = do
   str <- replReadInput "" stdin
   (result,vmState') <- vmEval vmState str

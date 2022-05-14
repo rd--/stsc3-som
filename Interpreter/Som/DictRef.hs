@@ -2,7 +2,6 @@
 module Interpreter.Som.DictRef where
 
 import Control.Monad.IO.Class {- base -}
-import Data.IORef {- base -}
 
 import qualified Data.Map as Map {- containers -}
 
@@ -10,7 +9,7 @@ import Interpreter.Som.Dict
 import Interpreter.Som.Ref
 
 -- | Dictionary in reference.
-type DictRef k v = IORef (Dict k v)
+type DictRef k v = Ref (Dict k v)
 
 dictRefEmpty :: MonadIO m => m (DictRef k v)
 dictRefEmpty = toRef Map.empty

@@ -101,20 +101,20 @@ data Object = Object Symbol ObjectData deriving (Eq)
 -- | Association list of named objects.
 type ObjectAssociationList = [(Symbol,Object)]
 
-{- | The VM state holds:
+{- | The Vm state holds:
      - startTime, required for System>>ticks and System>>time
      - programCounter, used to identify method contexts and non-immediate objects
      - context, holds the currently executing context
      - globalDictionary, holds global variables
      - workspaceDictionary, holds workspace variables
 -}
-type VMState = (Double, Int, Context, ObjectDictionary, ObjectDictionary)
+type VmState = (Double, Int, Context, ObjectDictionary, ObjectDictionary)
 
--- | VM is an Exception/State monad over VMState
-type VM r = Except.ExceptT String (State.StateT VMState IO) r
+-- | Vm is an Exception/State monad over VmState
+type Vm r = Except.ExceptT String (State.StateT VmState IO) r
 
--- | Generate VM state from initial global dictionary.
-vmStateInit :: ObjectDictionary -> IO VMState
+-- | Generate Vm state from initial global dictionary.
+vmStateInit :: ObjectDictionary -> IO VmState
 vmStateInit globalDictionary = do
   startTime <- getSystemTimeAsDouble
   let programCounter = 0
@@ -122,11 +122,11 @@ vmStateInit globalDictionary = do
   return (startTime,programCounter,nilContext,globalDictionary,workspace)
 
 -- | Alias for Except.throwError
-vmError :: String -> VM t
+vmError :: String -> Vm t
 vmError = Except.throwError
 
 -- | Fetch start time.
-vmStartTime :: VM Double
+vmStartTime :: Vm Double
 vmStartTime = State.get >>= \(startTime,_,_,_,_) -> return startTime
 
 -- | Get current system time as a floating point value (in seconds).
@@ -136,34 +136,34 @@ getSystemTimeAsDouble = do
   return (fromIntegral (Time.systemSeconds tm) + (fromIntegral (Time.systemNanoseconds tm) * 1.0e-9))
 
 -- | Get elapsed system time in microseconds (us).
-vmSystemTicksInt :: VM Int
+vmSystemTicksInt :: Vm Int
 vmSystemTicksInt = do
   startTime <- vmStartTime
   currentTime <- getSystemTimeAsDouble
   return (round ((currentTime - startTime) * 1.0e6))
 
 -- | Fetch program counter.
-vmProgramCounter :: VM Int
+vmProgramCounter :: Vm Int
 vmProgramCounter = State.get >>= \(_,programCounter,_,_,_) -> return programCounter
 
 -- | Increment program counter and return previous (pre-increment) value.
-vmProgramCounterIncrement :: VM Int
+vmProgramCounterIncrement :: Vm Int
 vmProgramCounterIncrement = State.get >>= \(tm,pc,ctx,glb,usr) -> State.put (tm,pc + 1,ctx,glb,usr) >> return pc
 
 -- | Fetch current context
-vmContext :: VM Context
+vmContext :: Vm Context
 vmContext = State.get >>= \(_,_,ctx,_,_) -> return ctx
 
 -- | Fetch Id of Method context, else error.
-vmContextId :: VM Id
+vmContextId :: Vm Id
 vmContextId = vmContext >>= \ctx -> maybe (vmError "vmContextId: lookup failed") return (contextIdMaybe ctx)
 
 -- | Fetch current block, else Nothing
-vmContextCurrentBlock :: VM (Maybe Object)
+vmContextCurrentBlock :: Vm (Maybe Object)
 vmContextCurrentBlock = fmap contextCurrentBlock vmContext
 
 -- | Apply /f/ at the context and store the result.
-vmContextModify :: (Context -> VM Context) -> VM Object
+vmContextModify :: (Context -> Vm Context) -> Vm Object
 vmContextModify f = do
   (tm,pc,ctx,glb,usr) <- State.get
   modifiedCtx <- f ctx
@@ -171,76 +171,76 @@ vmContextModify f = do
   return nilObject
 
 -- | Add a frame to the context.
-vmContextAdd :: ContextNode -> VM ()
+vmContextAdd :: ContextNode -> Vm ()
 vmContextAdd x = vmContextModify (\ctx -> return (contextAdd ctx x)) >> return ()
 
 -- | Delete a frame from the context
-vmContextDelete :: VM ()
+vmContextDelete :: Vm ()
 vmContextDelete = vmContextModify contextDelete >> return ()
 
 -- | Replace the context, return the previous context.
-vmContextReplace :: Context -> VM Context
+vmContextReplace :: Context -> Vm Context
 vmContextReplace ctx = do
   (tm,pc,previousCtx,glb,usr) <- State.get
   State.put (tm,pc,ctx,glb,usr)
   return previousCtx
 
 -- | Fetch global dictionary
-vmGlobalDict :: VM ObjectDictionary
+vmGlobalDict :: Vm ObjectDictionary
 vmGlobalDict = State.get >>= \(_,_,_,dict,_) -> return dict
 
 -- | Lookup global, don't attempt to resolve if not found.
-vmGlobalLookupMaybe :: Symbol -> VM (Maybe Object)
+vmGlobalLookupMaybe :: Symbol -> Vm (Maybe Object)
 vmGlobalLookupMaybe key = vmGlobalDict >>= \dict -> dictRefLookup dict key
 
 -- | Lookup global, don't attempt to resolve if not found, return nil if not found.
-vmGlobalLookupOrNil :: Symbol -> VM Object
+vmGlobalLookupOrNil :: Symbol -> Vm Object
 vmGlobalLookupOrNil key = vmGlobalLookupMaybe key >>= return . fromMaybe nilObject
 
 -- | Lookup global, don't attempt to resolve if not found, return symbol looked for if not found.
-vmGlobalLookupOrSymbol :: Symbol -> VM Object
+vmGlobalLookupOrSymbol :: Symbol -> Vm Object
 vmGlobalLookupOrSymbol key = vmGlobalLookupMaybe key >>= return . fromMaybe (symbolObject key)
 
 -- | Lookup global, don't attempt to resolve if not found, error if not found.
-vmGlobalLookupOrError :: Symbol -> VM Object
+vmGlobalLookupOrError :: Symbol -> Vm Object
 vmGlobalLookupOrError key = vmGlobalLookupMaybe key >>= maybe (vmError ("vmGlobalLookup: " ++ fromSymbol key)) return
 
 -- | Is global assigned, don't attempt to resolve if not.
-vmHasGlobal :: Symbol -> VM Bool
+vmHasGlobal :: Symbol -> Vm Bool
 vmHasGlobal = fmap (maybe False (const True)) . vmGlobalLookupMaybe
 
 -- | Assign to existing global variable.
-vmGlobalAssignMaybe :: Symbol -> Object -> VM (Maybe Object)
+vmGlobalAssignMaybe :: Symbol -> Object -> Vm (Maybe Object)
 vmGlobalAssignMaybe key value = do
   d <- vmGlobalDict
   dictRefAssignMaybe d key value
 
 -- | Assign to or create new global variable.
-vmGlobalAssign :: Symbol -> Object -> VM Object
+vmGlobalAssign :: Symbol -> Object -> Vm Object
 vmGlobalAssign key value = vmGlobalDict >>= \d -> dictRefInsert d key value >> return value
 
 -- | Fetch workspace dictionary
-vmWorkspaceDict :: VM ObjectDictionary
+vmWorkspaceDict :: Vm ObjectDictionary
 vmWorkspaceDict = State.get >>= \(_,_,_,_,d) -> return d
 
-vmWorkspaceLookupMaybe :: Symbol -> VM (Maybe Object)
+vmWorkspaceLookupMaybe :: Symbol -> Vm (Maybe Object)
 vmWorkspaceLookupMaybe key = vmWorkspaceDict >>= \dict -> dictRefLookup dict key
 
 -- | Assign to existing workspace variable.
-vmWorkspaceAssignMaybe :: Symbol -> Object -> VM (Maybe Object)
+vmWorkspaceAssignMaybe :: Symbol -> Object -> Vm (Maybe Object)
 vmWorkspaceAssignMaybe key value = do
   d <- vmWorkspaceDict
   dictRefAssignMaybe d key value
 
 -- | Assign to existing workspace variable or allocate new variable.
-vmWorkspaceInsert :: Symbol -> Object -> VM Object
+vmWorkspaceInsert :: Symbol -> Object -> Vm Object
 vmWorkspaceInsert key value = do
   d <- vmWorkspaceDict
   dictRefInsert d key value
   return value
 
 -- | System>>inspect
-vmShowDetailed :: VM String
+vmShowDetailed :: Vm String
 vmShowDetailed = do
   (_tm,pc,_ctx,glb,wrk) <- State.get
   globalKeys <- dictRefKeys glb
@@ -282,14 +282,14 @@ objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToString o))) 
 -- * Inspect
 
 -- | Inspect instance variables.
-tblToInspector :: ObjectTable -> VM String
+tblToInspector :: ObjectTable -> Vm String
 tblToInspector tbl = do
   (keys,values) <- fmap unzip (tblToList tbl)
   valuesInspected <- mapM objectToInspector values
   return (show (zip keys valuesInspected))
 
 -- | Object>>inspect
-objectToInspector :: Object -> VM String
+objectToInspector :: Object -> Vm String
 objectToInspector (Object nm obj) =
   case obj of
     DataArray ref -> do
@@ -310,10 +310,10 @@ objectToInspector (Object nm obj) =
 
 -- * Error
 
-objectError :: Object -> String -> VM t
+objectError :: Object -> String -> Vm t
 objectError o msg = objectPrint o >> vmError msg
 
-objectListError :: [Object] -> String -> VM Object
+objectListError :: [Object] -> String -> Vm Object
 objectListError o msg = objectListPrint o >> vmError (printf "%s: arity=%d" msg (length o))
 
 -- * Accessors
@@ -325,20 +325,20 @@ classMethodsVec (Object _ obj) =
     DataClass (_,True) _ (_,classMethodsCache) -> Just classMethodsCache
     _ -> Nothing
 
-arrayElements :: Object -> VM [Object]
+arrayElements :: Object -> Vm [Object]
 arrayElements o = case o of
   Object _ (DataArray vectorRef) -> fmap Vector.toList (deRef vectorRef)
   _ -> vmError ("arrayElements: not array")
 
 -- | Lookup instance variable of Object.
-objectLookupInstanceVariable :: Object -> Symbol -> VM (Maybe Object)
+objectLookupInstanceVariable :: Object -> Symbol -> Vm (Maybe Object)
 objectLookupInstanceVariable o key =
   case o of
     Object _ (DataUser _ tbl) -> tblAtKeyMaybe tbl key
     _ -> return Nothing
 
 -- | Assign to instance variable of Object.
-objectAssignInstanceVariable :: Object -> Symbol -> Object -> VM (Maybe Object)
+objectAssignInstanceVariable :: Object -> Symbol -> Object -> Vm (Maybe Object)
 objectAssignInstanceVariable object key value =
   case object of
     Object _ (DataUser _ tbl) -> tblAtKeyPutMaybe tbl key value

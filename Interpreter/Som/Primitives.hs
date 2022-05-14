@@ -25,30 +25,30 @@ import Interpreter.Som.Tbl
 import Interpreter.Som.Types
 import Interpreter.Som.Vec
 
-prArrayAt :: Ref (Vec Object) -> LargeInteger -> VM Object
+prArrayAt :: Ref (Vec Object) -> LargeInteger -> Vm Object
 prArrayAt ref ix = do
   v <- deRef ref
   if ix <= vecLength v
     then return (vecAt v (ix - 1))
     else prError "Array>>at: index out of range"
 
-prIntegerFromString :: UnicodeString -> VM Object
+prIntegerFromString :: UnicodeString -> Vm Object
 prIntegerFromString x = maybe (prError "Integer class>>fromString:") (return . integerObject) (unicodeStringReadInteger x)
 
-prObjectEqual :: Object -> Object -> VM Object
+prObjectEqual :: Object -> Object -> Vm Object
 prObjectEqual rcv arg = do
   hash1 <- objectIntHash rcv
   hash2 <- objectIntHash arg
   return (booleanObject (hash1 == hash2))
 
-prStringEqual :: (Bool, UnicodeString) -> ObjectData -> VM Object
+prStringEqual :: (Bool, UnicodeString) -> ObjectData -> Vm Object
 prStringEqual (typ1, str1) rhs =
   case rhs of
     DataString typ2 str2 -> return (booleanObject ((not typ1 || typ1 == typ2) && str1 == str2))
     _ -> return falseObject
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
-prStringAll :: (Char -> Bool) -> UnicodeString -> VM Object
+prStringAll :: (Char -> Bool) -> UnicodeString -> Vm Object
 prStringAll f str = return (booleanObject (not (Text.null str) && Text.all f str))
 
 {- | C.f. DoubleTest, c.f. Js
@@ -69,7 +69,7 @@ readFileMaybe fn = do
   exists <- doesFileExist fn
   if exists then fmap Just (readFile fn) else return Nothing
 
-prSystemLoadFile :: UnicodeString -> VM Object
+prSystemLoadFile :: UnicodeString -> Vm Object
 prSystemLoadFile aString = do
     let fn = Text.unpack aString
         onFailure = return nilObject
@@ -85,7 +85,7 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 System>>ticks is elapsed time in microseconds.
 System>>time is elapsed time in milliseconds.
 -}
-nonCorePrimitive :: Symbol -> Symbol -> Object  -> [Object] -> VM Object
+nonCorePrimitive :: Symbol -> Symbol -> Object  -> [Object] -> Vm Object
 nonCorePrimitive prClass prMethod receiver@(Object receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Array class", "new:", DataClass {},[Object _ (DataInteger size)]) -> arrayFromList (genericReplicate size nilObject)

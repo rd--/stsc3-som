@@ -4,7 +4,6 @@
 module Interpreter.Som.Dict where
 
 import Control.Monad.IO.Class {- base -}
-import Data.IORef {- base -}
 import Data.Maybe {- base -}
 
 import qualified Control.Monad.Except as Except {- mtl -}
@@ -13,7 +12,7 @@ import qualified Data.Map as Map {- containers -}
 import Interpreter.Som.Ref
 
 -- | Map with reference values.
-type Dict k v = Map.Map k (IORef v)
+type Dict k v = Map.Map k (Ref v)
 
 dictMerge :: Ord k => Dict k v -> Dict k v -> Dict k v
 dictMerge = Map.union
