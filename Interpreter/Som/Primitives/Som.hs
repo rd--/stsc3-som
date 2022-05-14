@@ -1,5 +1,5 @@
--- | Primitives that do not require access to interpreter state.
-module Interpreter.Som.Primitives where
+-- | Som primitives
+module Interpreter.Som.Primitives.Som where
 
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
@@ -16,6 +16,7 @@ import qualified Data.Text.IO as Text.IO {- text -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 
+import Interpreter.Som.Core
 import Interpreter.Som.Int
 import Interpreter.Som.Primitives.Util
 import Interpreter.Som.Ref
@@ -72,7 +73,7 @@ prSystemLoadFile aString = do
     maybeText <- liftIO (readFileMaybe fn)
     maybe onFailure (return . somStringObject) maybeText
 
-{- | Primitive
+{- | Primitives that do not require access to interpreter state.
 
 Notes:
 Block>>restart is not implemented, for now the single use in the class library (Block>>whileTrue:) should be modified to call itself.
@@ -81,8 +82,8 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 System>>ticks is elapsed time in microseconds.
 System>>time is elapsed time in milliseconds.
 -}
-nonCorePrimitive :: Symbol -> Symbol -> Object  -> [Object] -> Vm Object
-nonCorePrimitive prClass prMethod receiver@(Object receiverName receiverObj) arguments =
+somNonCorePrimitives :: PrimitiveDispatcher
+somNonCorePrimitives prClass prMethod _prCode receiver@(Object receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("Array", "at:", DataArray ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
@@ -157,6 +158,29 @@ nonCorePrimitive prClass prMethod receiver@(Object receiverName receiverObj) arg
     ("System", "ticks", DataSystem, []) -> fmap (somIntegerObject . toLargeInteger) vmSystemTicksInt
     ("System", "time", DataSystem, []) -> fmap (somIntegerObject . toLargeInteger . (`div` 1000)) vmSystemTicksInt
     _ -> prError (printf "%s>>%s (%s)" prClass prMethod (fromSymbol receiverName))
+
+somPrimitives :: PrimitiveDispatcher
+somPrimitives prClass prMethod prCode receiver@(Object _ receiverObj) arguments =
+  case (prClass, prMethod, receiverObj, arguments) of
+    ("Block1", "value", DataBlock {}, []) -> evalBlock somPrimitives receiver []
+    ("Block2", "value:", DataBlock {}, [arg]) -> evalBlock somPrimitives receiver [arg]
+    ("Block3", "value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock somPrimitives receiver [arg1, arg2]
+    ("Class", "fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
+    ("Class", "new", DataClass (cd,_) _ _,[]) -> prClassNew cd
+    ("Class", "superclass", DataClass (cd,isMeta) _ _,[]) -> prClassSuperclass cd isMeta
+    ("Method", "holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
+    ("Method", "invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somPrimitives rcv arg1 arg2
+    ("Object","class", _, []) -> prObjectClass receiver
+    ("Object", "inspect", _, []) -> prObjectInspect receiver
+    ("Object", "perform:", _, [Object "Symbol" (DataString True sel)]) -> prObjectPerform somPrimitives receiver sel
+    ("Object", "perform:inSuperclass:", _, [Object "Symbol" (DataString True sel), cl]) -> prObjectPerformInSuperclass somPrimitives receiver sel cl
+    ("Object", "perform:withArguments:", _, [Object "Symbol" (DataString True sel), arg]) -> prObjectPerformWithArguments somPrimitives receiver sel arg
+    ("Object", "perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataString True sel), arg, cl]) -> prObjectPerformWithArgumentsInSuperclass somPrimitives receiver sel arg cl
+    ("Primitive", "invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
+    ("System", "load:", DataSystem, [Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
+    _ -> somNonCorePrimitives prClass prMethod prCode receiver arguments
+
+
 
 {-
 import System.Exit {- base -}

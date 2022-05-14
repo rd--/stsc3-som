@@ -8,6 +8,7 @@ import Text.Printf {- base -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Core {- stsc3 -}
+import Interpreter.Som.Primitives.Som {- stsc3 -}
 import Interpreter.Som.Types {- stsc3 -}
 
 -- | Read lines from Handle while there is input waiting.
@@ -24,7 +25,7 @@ replReadInput s h = do
 replContinue :: VmState -> IO ()
 replContinue vmState = do
   str <- replReadInput "" stdin
-  (result,vmState') <- vmEval vmState str
+  (result,vmState') <- vmEval somPrimitives vmState str
   case result of
     Left msg -> putStrLn ("error: " ++ msg) >> replContinue vmState
     Right res -> putStr "result: " >> objectPrint res >> replContinue vmState'
@@ -54,7 +55,7 @@ runSomClassSmalltalk cl arg =
 loadAndRunClass :: FilePath -> String -> [String] -> IO ()
 loadAndRunClass dir cl arg = do
   st <- initialGlobalDictionary dir >>= vmStateInit
-  (result,_) <- vmEval st (runSomClassSmalltalk cl arg)
+  (result,_) <- vmEval somPrimitives st (runSomClassSmalltalk cl arg)
   case result of
     Left msg -> putStrLn ("error: " ++ msg)
     Right res -> putStr "result: " >> objectPrint res >> return ()

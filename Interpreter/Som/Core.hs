@@ -9,7 +9,7 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
-import qualified Data.Text as Text {- text -}
+--import qualified Data.Text as Text {- text -}
 import qualified Data.Vector as Vector {- vector -}
 
 import qualified Control.Monad.State as State {- mtl -}
@@ -20,7 +20,7 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
-import Interpreter.Som.Primitives
+--import Interpreter.Som.Primitives
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
@@ -127,11 +127,11 @@ contextAddBlockContext blockObject arguments = do
   return (contextAdd blockContext (BlockContext blockObject localVariables))
 
 -- | Lookup value in current context.
-vmContextLookup :: Symbol -> Vm Object
-vmContextLookup k = do
+vmContextLookup :: PrimitiveDispatcher -> Symbol -> Vm Object
+vmContextLookup pd k = do
   ctx <- vmContext
   res <- contextLookup ctx k
-  maybe (vmUnknownGlobal ctx k) return res
+  maybe (vmUnknownGlobal pd ctx k) return res
 
 -- | Assign value in current context
 vmContextAssign :: Symbol -> Object -> Vm Object
@@ -147,16 +147,16 @@ vmContextAssignAllToNil = mapM_ (\name -> vmContextAssign name nilObject)
 -- * Vm
 
 -- | When a method lookup fails, the doesNotUnderstand:arguments: message is sent to the receiver.
-vmDoesNotUnderstand :: Object -> String -> Object -> Vm Object
-vmDoesNotUnderstand receiver k argsArray = do
+vmDoesNotUnderstand :: PrimitiveDispatcher -> Object -> String -> Object -> Vm Object
+vmDoesNotUnderstand pd receiver k argsArray = do
   let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
-  evalMessageSend False receiver sel [symbolObject k, argsArray]
+  evalMessageSend pd False receiver sel [symbolObject k, argsArray]
 
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
-vmUnknownGlobal :: Context -> String -> Vm Object
-vmUnknownGlobal ctx k =
+vmUnknownGlobal :: PrimitiveDispatcher -> Context -> String -> Vm Object
+vmUnknownGlobal pd ctx k =
   case contextReceiverMaybe ctx of
-    Just receiver -> evalMessageSend False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
+    Just receiver -> evalMessageSend pd False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a Return escapes we send an escapedBlock: message to the Object that the Block that Returned escaped from.
@@ -165,14 +165,14 @@ vmUnknownGlobal ctx k =
      The Block that sent Return will be the current BlockContext.
      The Object that received the message that created a block will be the current MethodContext.
 -}
-vmEscapedBlock :: Maybe Object -> Vm Object
-vmEscapedBlock maybeBlock =
+vmEscapedBlock :: PrimitiveDispatcher -> Maybe Object -> Vm Object
+vmEscapedBlock pd maybeBlock =
   case maybeBlock of
     Just block ->
       case block of
         Object _ (DataBlock _ context _) ->
           case contextReceiverMaybe context of
-            Just receiver -> evalMessageSend False receiver (St.KeywordSelector "escapedBlock:") [block]
+            Just receiver -> evalMessageSend pd False receiver (St.KeywordSelector "escapedBlock:") [block]
             Nothing -> vmError "escaped context: no receiver"
         _ -> vmError "escaped context: bad block"
     Nothing -> vmError "escaped context?"
@@ -198,18 +198,18 @@ vmGlobalResolveOrError key = vmGlobalResolveMaybe key >>= maybe (vmError ("vmGlo
 -- * Eval
 
 -- | Evaluate StExpr in sequence.  If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
-evalExprSequence :: [StExpr] -> Vm Object
-evalExprSequence st =
+evalExprSequence :: PrimitiveDispatcher -> [StExpr] -> Vm Object
+evalExprSequence pd st =
   case st of
     [] -> error "evalExprSequence: empty sequence"
-    [e] -> evalExpr e
+    [e] -> evalExpr pd e
     e0:eN -> do
-      r <- evalExpr e0
-      if isReturnObject r then return r else evalExprSequence eN
+      r <- evalExpr pd e0
+      if isReturnObject r then return r else evalExprSequence pd eN
 
 -- | An empty sequence returns nil, otherwise either a Return value or the value of the last StExpr is returned.
-evalStatements :: [StExpr] -> Vm Object
-evalStatements st = if null st then return nilObject else evalExprSequence st
+evalStatements :: PrimitiveDispatcher -> [StExpr] -> Vm Object
+evalStatements pd st = if null st then return nilObject else evalExprSequence pd st
 
 {- | evalBlock works by:
    1. extending the stored (block) context with a context frame
@@ -218,18 +218,18 @@ evalStatements st = if null st then return nilObject else evalExprSequence st
    4. restoring the saved context
    5. returning the saved result
 -}
-evalBlock :: Object -> [Object] -> Vm Object
-evalBlock blockObject arguments = do
+evalBlock :: PrimitiveDispatcher -> Object -> [Object] -> Vm Object
+evalBlock pd blockObject arguments = do
   let Object _ (DataBlock _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
   extendedBlockContext <- contextAddBlockContext blockObject arguments
   currentContext <- vmContextReplace extendedBlockContext
-  result <- evalStatements blockStatements
+  result <- evalStatements pd blockStatements
   _ <- vmContextReplace currentContext
   case result of
     Object _ (DataReturn pc maybeBlock _) ->
       if contextHasId pc currentContext
       then return result
-      else vmEscapedBlock maybeBlock
+      else vmEscapedBlock pd maybeBlock
     _ -> return result
 
 {- | evalMethod is similar to evalBlock, except that methods:
@@ -243,8 +243,8 @@ Returns in Blocks are non-local, they return to the blocks home context.
 The home context is the method the block was defined in.
 
 -}
-evalMethod :: St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
-evalMethod methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
+evalMethod :: PrimitiveDispatcher -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
+evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
   -- printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
   let requiredArguments = length methodArguments
       providedArguments = length arguments
@@ -252,31 +252,33 @@ evalMethod methodDefinition methodArguments methodTemporaries methodStatements r
   when (requiredArguments /= providedArguments) (vmError arityError)
   pc <- vmProgramCounterIncrement
   vmContextAdd =<< methodContextNode pc receiver (zip methodArguments arguments) methodTemporaries
-  result <- evalStatements methodStatements
+  result <- evalStatements pd methodStatements
   _ <- vmContextDelete
   case result of
     (Object "Return" (DataReturn ctxId _ x)) -> if ctxId == pc then return x else return result
     _ -> return receiver
 
+type PrimitiveDispatcher = Symbol -> Symbol -> St.Literal -> Object -> [Object] -> Vm Object
+
 -- | Evaluate method, deferring to Primitive if required.
-evalMethodOrPrimitive :: ObjectData -> Object -> [Object] -> Vm Object
-evalMethodOrPrimitive dat =
+evalMethodOrPrimitive :: PrimitiveDispatcher -> ObjectData -> Object -> [Object] -> Vm Object
+evalMethodOrPrimitive pd dat =
   let (DataMethod holder methodDefinition expr) = dat
       (Expr.Lambda _ methodArguments methodTemporaries methodStatements) = expr
-  in if Som.somMethodIsPrimitive methodDefinition
-     then evalPrimitiveInvokeOnWith holder (St.methodSignature methodDefinition)
-     else evalMethod methodDefinition methodArguments methodTemporaries methodStatements
+  in case St.methodDefinitionPrimitiveLabel methodDefinition of
+       Just k -> pd holder (St.methodSignature methodDefinition) k
+       Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
-findAndEvalMethodOrPrimitive :: Object -> Object -> St.Selector -> [Object] -> Vm Object
-findAndEvalMethodOrPrimitive receiver methodReceiver selector arguments = do
+findAndEvalMethodOrPrimitive :: PrimitiveDispatcher -> Object -> Object -> St.Selector -> [Object] -> Vm Object
+findAndEvalMethodOrPrimitive pd receiver methodReceiver selector arguments = do
   maybeMethod <- findMethodMaybe methodReceiver selector
   -- printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) arguments
   case maybeMethod of
     Nothing -> do
       argumentsArray <- arrayFromList arguments
-      vmDoesNotUnderstand receiver (St.selectorIdentifier selector) argumentsArray
-    Just (Object "Method" dat) -> evalMethodOrPrimitive dat receiver arguments
+      vmDoesNotUnderstand pd receiver (St.selectorIdentifier selector) argumentsArray
+    Just (Object "Method" dat) -> evalMethodOrPrimitive pd dat receiver arguments
     _ -> vmError "findAndEvalMethodOrPrimitive"
 
 -- | Look in the methods of the class, then in the superclass.
@@ -292,44 +294,44 @@ findMethodMaybe o sel =
          _ -> vmError "findMethodMaybe"
 
 -- | Evaluate message send.
-evalMessageSend :: Bool -> Object -> St.Selector -> [Object] -> Vm Object
-evalMessageSend isSuper receiver selector arguments = do
+evalMessageSend :: PrimitiveDispatcher -> Bool -> Object -> St.Selector -> [Object] -> Vm Object
+evalMessageSend pd isSuper receiver selector arguments = do
   receiverClass <- prObjectClass receiver
   methodClass <- if isSuper
                  then classSuperclassOf receiverClass
                  else return receiverClass
-  findAndEvalMethodOrPrimitive receiver methodClass selector arguments
+  findAndEvalMethodOrPrimitive pd receiver methodClass selector arguments
 
 -- | Evaluate expression
-evalExpr :: StExpr -> Vm Object
-evalExpr expr =
+evalExpr :: PrimitiveDispatcher -> StExpr -> Vm Object
+evalExpr pd expr =
   case expr of
-    Expr.Identifier x -> vmContextLookup (if x == "super" then "self" else x)
+    Expr.Identifier x -> vmContextLookup pd (if x == "super" then "self" else x)
     Expr.Literal x -> literalObject (somIntegerObject, somStringObject) x
-    Expr.Assignment lhs rhs -> evalExpr rhs >>= vmContextAssign lhs
+    Expr.Assignment lhs rhs -> evalExpr pd rhs >>= vmContextAssign lhs
     Expr.Return x -> do
-      result <- evalExpr x
+      result <- evalExpr pd x
       if isReturnObject result
       then return result
       else do pc <- vmContextId
               blk <- vmContextCurrentBlock
               returnObject pc blk result
     Expr.Send e (Expr.Message selector exprList) ->
-      do receiver <- evalExpr e
-         arguments <- mapM evalExpr exprList
-         evalMessageSend (Expr.exprIsSuper e) receiver selector arguments
+      do receiver <- evalExpr pd e
+         arguments <- mapM (evalExpr pd) exprList
+         evalMessageSend pd (Expr.exprIsSuper e) receiver selector arguments
     Expr.Lambda _ld arg _tmp _stm -> do
       ctx <- vmContext
       pc <- vmProgramCounterIncrement
       return (Object ("Block" ++ show (length arg + 1)) (DataBlock pc ctx expr))
-    Expr.Array exprList -> mapM evalExpr exprList >>= arrayFromList
-    Expr.Begin exprList -> evalExprSequence exprList
-    Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence exprList
+    Expr.Array exprList -> mapM (evalExpr pd) exprList >>= arrayFromList
+    Expr.Begin exprList -> evalExprSequence pd exprList
+    Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence pd exprList
     Expr.Primitive _ -> error "evalExpr: primitive?"
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
-evalString :: String -> Vm Object
-evalString txt = evalExpr (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
+evalString :: PrimitiveDispatcher -> String -> Vm Object
+evalString pd txt = evalExpr pd (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
 
 deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
@@ -337,11 +339,11 @@ deleteLeadingSpaces = dropWhile Data.Char.isSpace
 {- | Run evalString given initial state and input text.
      If the text is empty (or whitespace only) return nil.
 -}
-vmEval :: VmState -> String -> IO (Either String Object, VmState)
-vmEval vmState str =
+vmEval :: PrimitiveDispatcher -> VmState -> String -> IO (Either String Object, VmState)
+vmEval pd vmState str =
   case deleteLeadingSpaces str of
     [] -> return (Right nilObject, vmState)
-    txt -> State.runStateT (Except.runExceptT (evalString txt)) vmState
+    txt -> State.runStateT (Except.runExceptT (evalString pd txt)) vmState
 
 -- * Class Primitives
 
@@ -413,10 +415,10 @@ classSuperclassOf (Object _ obj) =
 
 -- * Method Primitives
 
-prMethodInvokeOnWith :: ObjectData -> Object -> Object -> Vm Object
-prMethodInvokeOnWith obj receiver argumentsArray = do
+prMethodInvokeOnWith :: PrimitiveDispatcher -> ObjectData -> Object -> Object -> Vm Object
+prMethodInvokeOnWith pd obj receiver argumentsArray = do
   arguments <- arrayElements argumentsArray
-  evalMethodOrPrimitive obj receiver arguments
+  evalMethodOrPrimitive pd obj receiver arguments
 
 -- * Object Primitives
 
@@ -442,27 +444,19 @@ prObjectClass rcv@(Object nm obj) =
 prObjectInspect :: Object -> Vm Object
 prObjectInspect rcv = objectToInspector rcv >>= liftIO . putStrLn >> return rcv
 
-prObjectPerformInSuperclass :: Object -> UnicodeString -> Object -> Vm Object
-prObjectPerformInSuperclass rcv sel cl = findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
+prObjectPerformInSuperclass :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Vm Object
+prObjectPerformInSuperclass pd rcv sel cl = findAndEvalMethodOrPrimitive pd rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
 
-prObjectPerform :: Object -> UnicodeString -> Vm Object
-prObjectPerform rcv sel = prObjectClass rcv >>= \cl -> prObjectPerformInSuperclass rcv sel cl
+prObjectPerform :: PrimitiveDispatcher -> Object -> UnicodeString -> Vm Object
+prObjectPerform pd rcv sel = prObjectClass rcv >>= \cl -> prObjectPerformInSuperclass pd rcv sel cl
 
-prObjectPerformWithArgumentsInSuperclass :: Object -> UnicodeString -> Object -> Object -> Vm Object
-prObjectPerformWithArgumentsInSuperclass rcv sel argumentsArray cl = do
+prObjectPerformWithArgumentsInSuperclass :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Object -> Vm Object
+prObjectPerformWithArgumentsInSuperclass pd rcv sel argumentsArray cl = do
   arguments <- arrayElements argumentsArray
-  findAndEvalMethodOrPrimitive rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
+  findAndEvalMethodOrPrimitive pd rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
 
-prObjectPerformWithArguments :: Object -> UnicodeString -> Object -> Vm Object
-prObjectPerformWithArguments rcv sel argArray = prObjectClass rcv >>= \cl -> prObjectPerformWithArgumentsInSuperclass rcv sel argArray cl
-
--- * Primitive Primitives
-
--- | Primitive>>invokeOn:with:.
-prPrimitiveInvokeOnWith :: Symbol -> Symbol -> Object -> Object -> Vm Object
-prPrimitiveInvokeOnWith hld sig rcv argumentsArray = do
-  arguments <- arrayElements argumentsArray
-  evalPrimitiveInvokeOnWith hld sig rcv arguments
+prObjectPerformWithArguments :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Vm Object
+prObjectPerformWithArguments pd rcv sel argArray = prObjectClass rcv >>= \cl -> prObjectPerformWithArgumentsInSuperclass pd rcv sel argArray cl
 
 -- * System Primitives
 
@@ -500,29 +494,6 @@ systemLoadAndAssignClassesAbove x = do
             _ <- vmGlobalAssign (St.className cd) co
             return (Just co)
           _ -> return Nothing
-
--- * Evaluate primitive
-
-evalPrimitiveInvokeOnWith :: Symbol -> Symbol -> Object -> [Object] -> Vm Object
-evalPrimitiveInvokeOnWith prClass prMethod receiver@(Object _ receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Block1", "value", DataBlock {}, []) -> evalBlock receiver []
-    ("Block2", "value:", DataBlock {}, [arg]) -> evalBlock receiver [arg]
-    ("Block3", "value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock receiver [arg1, arg2]
-    ("Class", "fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
-    ("Class", "new", DataClass (cd,_) _ _,[]) -> prClassNew cd
-    ("Class", "superclass", DataClass (cd,isMeta) _ _,[]) -> prClassSuperclass cd isMeta
-    ("Method", "holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
-    ("Method", "invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith rcv arg1 arg2
-    ("Object","class", _, []) -> prObjectClass receiver
-    ("Object", "inspect", _, []) -> prObjectInspect receiver
-    ("Object", "perform:", _, [Object "Symbol" (DataString True sel)]) -> prObjectPerform receiver sel
-    ("Object", "perform:inSuperclass:", _, [Object "Symbol" (DataString True sel), cl]) -> prObjectPerformInSuperclass receiver sel cl
-    ("Object", "perform:withArguments:", _, [Object "Symbol" (DataString True sel), arg]) -> prObjectPerformWithArguments receiver sel arg
-    ("Object", "perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataString True sel), arg, cl]) -> prObjectPerformWithArgumentsInSuperclass receiver sel arg cl
-    ("Primitive", "invokeOn:with:", DataPrimitive hld sig, [rcv,argumentsArray]) -> prPrimitiveInvokeOnWith hld sig rcv argumentsArray
-    ("System", "load:", DataSystem, [Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
-    _ -> nonCorePrimitive prClass prMethod receiver arguments
 
 -- * Tables
 

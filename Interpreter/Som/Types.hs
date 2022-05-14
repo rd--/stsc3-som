@@ -132,7 +132,7 @@ vmStateInit globalDictionary = do
   startTime <- getSystemTimeAsDouble
   let programCounter = 0
   workspace <- dictRefEmpty
-  return (startTime,programCounter,nilContext,globalDictionary,workspace)
+  return (startTime, programCounter, nilContext, globalDictionary, workspace)
 
 -- | Alias for Except.throwError
 vmError :: String -> Vm t

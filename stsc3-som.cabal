@@ -29,7 +29,7 @@ library
                     Interpreter.Som.Dict
                     Interpreter.Som.DictRef
                     Interpreter.Som.Int
-                    Interpreter.Som.Primitives
+                    Interpreter.Som.Primitives.Som
                     Interpreter.Som.Primitives.Util
                     Interpreter.Som.Ref
                     Interpreter.Som.Repl
