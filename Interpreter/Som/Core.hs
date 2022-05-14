@@ -490,8 +490,8 @@ systemLoadAndAssignClassesAbove x = do
   case existing of
       Just _ -> return existing
       Nothing -> do
-        -- liftIO (putStrLn (show ("systemLoadAndAssignClassesAbove", x)))
-        maybeCd <- liftIO (Som.somLoadClassFile x)
+        -- printTrace ("systemLoadAndAssignClassesAbove: " ++ x) []
+        maybeCd <- liftIO (Som.somLoadClassFile x) -- todo: this should also read .st and .stc files
         case maybeCd of
           Just cd -> do
             co <- classObject cd
@@ -507,7 +507,7 @@ systemLoadAndAssignClassesAbove x = do
 -- | Load the core Som classes and generate an object Table.
 loadClassTable :: MonadIO m => FilePath -> m ObjectAssociationList
 loadClassTable somDirectory = do
-  classLibrary <- liftIO (Som.somLoadClassList somDirectory Som.somStandardClassList)
+  classLibrary <- liftIO (Som.somLoadClassList somDirectory Som.somStandardClassList) -- todo: un-som
   let classNames = map fst classLibrary
   classObjects <- mapM (classObject . snd) classLibrary
   return (zip classNames classObjects)
@@ -518,12 +518,12 @@ loadClassTable somDirectory = do
 reservedIdentifiersTable :: ObjectAssociationList
 reservedIdentifiersTable =
   let f x = (x, reservedObject x)
-  in map f (words "nil true false system")
+  in map f (words "nil true false system") -- todo: un-som
 
 -- | The initial global dictionary holds the class table and the reserved identifiers table.
 initialGlobalDictionary :: MonadIO m => FilePath -> m ObjectDictionary
 initialGlobalDictionary somDirectory = do
-  classTable <- loadClassTable somDirectory
+  classTable <- loadClassTable somDirectory -- todo: un-som
   let compositeTable = concat [classTable, reservedIdentifiersTable]
   dictRefFromList compositeTable
 
