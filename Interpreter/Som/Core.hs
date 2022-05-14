@@ -305,7 +305,7 @@ evalExpr :: StExpr -> Vm Object
 evalExpr expr =
   case expr of
     Expr.Identifier x -> vmContextLookup (if x == "super" then "self" else x)
-    Expr.Literal x -> literalObject x
+    Expr.Literal x -> literalObject (somIntegerObject, somStringObject) x
     Expr.Assignment lhs rhs -> evalExpr rhs >>= vmContextAssign lhs
     Expr.Return x -> do
       result <- evalExpr x

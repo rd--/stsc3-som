@@ -1,6 +1,10 @@
 {-# Language FlexibleContexts #-}
 
--- | Type definitions and functions over these.
+{- | Type definitions and functions over these.
+
+Some constructors are parameterized so that the types can be used both for a correct Som interpreter,
+and for a more traditional Smalltalk interpreter.
+-}
 module Interpreter.Som.Types where
 
 import Control.Monad.IO.Class {- base -}
@@ -75,15 +79,16 @@ type StExpr = Expr.Expr
 
      Som:
        Som has no Character class
-       Som strings are immutable
+       Som strings are primitive and immutable
        Symbol is a subclass of String
 -}
 data ObjectData
   = DataNil
   | DataBoolean Bool
-  | DataInteger LargeInteger
+  | DataSmallInteger SmallInteger -- ^ Not in Som
+  | DataLargeInteger LargeInteger -- ^ Som Integer
   | DataDouble Double
-  | DataCharacter Char -- ^ Not in SOM
+  | DataCharacter Char -- ^ Not in Som
   | DataString Bool UnicodeString -- ^ IsSymbol
   | DataArray (IORef (Vec Object)) -- ^ Arrays are mutable
   | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
@@ -94,6 +99,14 @@ data ObjectData
   | DataSystem -- ^ Token for System instance.
   | DataUser Id ObjectTable
   deriving (Eq)
+
+objectDataAsDouble :: ObjectData -> Maybe Double
+objectDataAsDouble o =
+  case o of
+    DataSmallInteger x -> Just (fromIntegral x)
+    DataLargeInteger x -> Just (fromIntegral x)
+    DataDouble x -> Just x
+    _ -> Nothing
 
 -- | Object represented as class name and object data.
 data Object = Object Symbol ObjectData deriving (Eq)
@@ -255,7 +268,8 @@ objectToString (Object nm obj) =
   case obj of
     DataNil -> "nil"
     DataBoolean x -> map Data.Char.toLower (show x)
-    DataInteger x -> show x
+    DataSmallInteger x -> show x
+    DataLargeInteger x -> show x
     DataDouble x -> show x
     DataCharacter x -> ['$',x]
     DataString isSymbol x ->
@@ -389,11 +403,25 @@ methodObject :: Symbol -> St.MethodDefinition -> Object
 methodObject holder method =
   Object (toSymbol "Method") (DataMethod holder method (Expr.methodDefinitionExpr method))
 
-integerObject :: LargeInteger -> Object
-integerObject x = Object (toSymbol "Integer") (DataInteger x)
+smallIntegerObject :: SmallInteger -> Object
+smallIntegerObject x = Object (toSymbol "SmallInteger") (DataSmallInteger x)
+
+largeIntegerObject :: LargeInteger -> Object
+largeIntegerObject x = Object (toSymbol "LargeInteger") (DataLargeInteger x)
+
+-- move
+somIntegerObject :: LargeInteger -> Object
+somIntegerObject x = Object (toSymbol "Integer") (DataLargeInteger x)
 
 doubleObject :: Double -> Object
 doubleObject x = Object (toSymbol "Double") (DataDouble x)
+
+-- | Integer given by consrtructor if fractional part is zero, else Double.
+doubleAsFractional :: Integral t => (t -> Object) -> Double -> Object
+doubleAsFractional cons x =
+  case properFraction x of
+    (i,0) -> cons i
+    _ -> doubleObject x
 
 nanObject :: Object
 nanObject = doubleObject (0/0)
@@ -404,8 +432,9 @@ characterObject x = Object (toSymbol "Character") (DataCharacter x)
 unicodeStringObject :: UnicodeString -> Object
 unicodeStringObject x = Object (toSymbol "String") (DataString False x)
 
-stringObject :: String -> Object
-stringObject = unicodeStringObject . toUnicodeString . Som.somEscapedString
+-- move...
+somStringObject :: String -> Object
+somStringObject = unicodeStringObject . toUnicodeString . Som.somEscapedString
 
 unicodeSymbolObject :: UnicodeString -> Object
 unicodeSymbolObject x = Object (toSymbol "Symbol") (DataString True x)
@@ -430,21 +459,21 @@ arrayFromVec e = do
 arrayFromList :: MonadIO m => [Object] -> m Object
 arrayFromList e = arrayFromVec (Vector.fromList e)
 
-literalObject :: MonadIO m => St.Literal -> m Object
-literalObject l =
+literalObject :: MonadIO m => (Integer -> Object, String -> Object) -> St.Literal -> m Object
+literalObject (integerObject, stringObject) l =
   case l of
     St.NumberLiteral (St.Int x) -> return (integerObject x)
     St.NumberLiteral (St.Float x) -> return (doubleObject x)
     St.StringLiteral x -> return (stringObject x)
-    St.CharacterLiteral x -> return (characterObject x) -- ? Som has no Character object
+    St.CharacterLiteral x -> return (characterObject x) -- Note: Som has no Character object
     St.SymbolLiteral x -> return (symbolObject x)
     St.SelectorLiteral x -> return (symbolObject (St.selectorIdentifier x))
-    St.ArrayLiteral x -> arrayFromList =<< mapM arrayLiteralElemObject x
+    St.ArrayLiteral x -> arrayFromList =<< mapM (arrayLiteralElemObject (integerObject, stringObject)) x
 
-arrayLiteralElemObject :: MonadIO m => Either St.Literal String -> m Object
-arrayLiteralElemObject e =
+arrayLiteralElemObject :: MonadIO m => (Integer -> Object, String -> Object) -> Either St.Literal String -> m Object
+arrayLiteralElemObject opt e =
   case e of
-    Left x -> literalObject x
+    Left x -> literalObject opt x
     Right x -> return (reservedObject x)
 
 {- | Mark an Object as being a Return Object (from a Block or Method).
@@ -543,7 +572,8 @@ objectIntHash (Object nm obj) =
   case obj of
     DataNil -> mHash (nm,"nil")
     DataBoolean x -> mHash x
-    DataInteger x -> return x -- c.f. Integer>>hashcode
+    DataSmallInteger x -> return (fromIntegral x) -- c.f. Integer>>hashcode
+    DataLargeInteger x -> return x -- c.f. Integer>>hashcode
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
     DataString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode

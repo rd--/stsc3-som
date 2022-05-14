@@ -36,6 +36,7 @@ library
                     Interpreter.Som.Str
                     Interpreter.Som.Str.Text
                     Interpreter.Som.Sym
+                    Interpreter.Som.Sys
                     Interpreter.Som.Tbl
                     Interpreter.Som.Types
                     Interpreter.Som.Vec
