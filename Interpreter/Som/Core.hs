@@ -15,12 +15,11 @@ import qualified Data.Vector as Vector {- vector -}
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
 
-import qualified Sound.SC3.Lisp.Env as Env {- hsc3-lisp -}
-
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
+import Interpreter.Som.DictRef
 import Interpreter.Som.Primitives
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
@@ -74,12 +73,12 @@ contextLookup (Context c p) k =
     MethodContext _ rcv localVariables ->
       if k == "self" || k == "super"
       then return (Just rcv)
-      else mLookupSequence [Env.dictRefLookup localVariables
+      else mLookupSequence [dictRefLookup localVariables
                            ,objectLookupInstanceVariable rcv
                            ,objectLookupClassVariable rcv
                            ,vmGlobalResolveMaybe] k
     BlockContext _ localVariables ->
-      mLookupSequence [Env.dictRefLookup localVariables
+      mLookupSequence [dictRefLookup localVariables
                       ,maybe (\_ -> return Nothing) (\c' -> contextLookup c') p
                       ,vmGlobalResolveMaybe
                       ,vmWorkspaceLookupMaybe] k
@@ -104,12 +103,12 @@ contextAssign :: Context -> Symbol -> Object -> VM (Maybe Object)
 contextAssign (Context c p) k v =
   case c of
     MethodContext _ rcv localVariables ->
-      mAssignSequence [Env.dictRefAssignMaybe localVariables
+      mAssignSequence [dictRefAssignMaybe localVariables
                       ,objectAssignInstanceVariable rcv
                       ,objectAssignClassVariable rcv
                       ,vmGlobalAssignMaybe] k v
     BlockContext _ localVariables ->
-      mAssignSequence [Env.dictRefAssignMaybe localVariables
+      mAssignSequence [dictRefAssignMaybe localVariables
                       ,maybe (\_ _ -> return Nothing) (\c' -> contextAssign c') p
                       ,vmGlobalAssignMaybe
                       ,vmWorkspaceAssignMaybe] k v
@@ -528,7 +527,7 @@ evalPrimitiveInvokeOnWith prClass prMethod receiver@(Object _ receiverObj) argum
 -- * Tables
 
 -- | Load the core Som classes and generate an object Table.
-loadClassTable :: MonadIO m => FilePath -> m ObjectTable
+loadClassTable :: MonadIO m => FilePath -> m ObjectAssociationList
 loadClassTable somDirectory = do
   classLibrary <- liftIO (Som.somLoadClassList somDirectory Som.somStandardClassList)
   let classNames = map fst classLibrary
@@ -538,17 +537,17 @@ loadClassTable somDirectory = do
 {- | Table of reserved identifiers: nil, true, false and system.
      These words are defined in System>>global.
 -}
-reservedIdentifiersTable :: ObjectTable
+reservedIdentifiersTable :: ObjectAssociationList
 reservedIdentifiersTable =
-  let f x = (x,reservedObject x)
+  let f x = (x, reservedObject x)
   in map f (words "nil true false system")
 
 -- | The initial global dictionary holds the class table and the reserved identifiers table.
-initialGlobalDictionary :: MonadIO m => FilePath -> m Dict
+initialGlobalDictionary :: MonadIO m => FilePath -> m ObjectDictionary
 initialGlobalDictionary somDirectory = do
   classTable <- loadClassTable somDirectory
   let compositeTable = concat [classTable, reservedIdentifiersTable]
-  Env.dictRefFromList compositeTable
+  dictRefFromList compositeTable
 
 -- * Trace
 

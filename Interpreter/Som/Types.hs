@@ -17,12 +17,11 @@ import qualified Data.Vector as Vector {- vector -}
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
 
-import qualified Sound.SC3.Lisp.Env as Env {- hsc3-lisp -}
-
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
+import Interpreter.Som.DictRef
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
 import Interpreter.Som.Str.Text
@@ -31,10 +30,10 @@ import Interpreter.Som.Tbl
 import Interpreter.Som.Vec
 
 -- | Extensible mutable dictionary of named objects.
-type Dict = Env.DictRef Symbol Object
+type ObjectDictionary = DictRef Symbol Object
 
 -- | Indexable mutable association list (zero-indexed) of named objects.
-type Tbl = Vec (Symbol,IORef Object)
+type ObjectTable = Vec (Symbol, IORef Object)
 
 -- | Identifier.
 type Id = Int
@@ -47,8 +46,8 @@ type Id = Int
      In addition both store local variables (arguments and temporaries) as a Dict.
 -}
 data ContextNode =
-    MethodContext Id Object Dict
-  | BlockContext Object Dict
+    MethodContext Id Object ObjectDictionary
+  | BlockContext Object ObjectDictionary
   | NilContext
   deriving (Eq)
 
@@ -87,20 +86,20 @@ data ObjectData
   | DataCharacter Char -- ^ Not in SOM
   | DataString Bool UnicodeString -- ^ IsSymbol
   | DataArray (IORef (Vec Object)) -- ^ Arrays are mutable
-  | DataClass (St.ClassDefinition, Bool) Tbl (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
+  | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
   | DataBlock Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
   | DataSystem -- ^ Token for System instance.
-  | DataUser Id Tbl
+  | DataUser Id ObjectTable
   deriving (Eq)
 
 -- | Object represented as class name and object data.
 data Object = Object Symbol ObjectData deriving (Eq)
 
--- | Table of named objects.
-type ObjectTable = [(Symbol,Object)]
+-- | Association list of named objects.
+type ObjectAssociationList = [(Symbol,Object)]
 
 {- | The VM state holds:
      - startTime, required for System>>ticks and System>>time
@@ -109,17 +108,17 @@ type ObjectTable = [(Symbol,Object)]
      - globalDictionary, holds global variables
      - workspaceDictionary, holds workspace variables
 -}
-type VMState = (Double,Int,Context,Dict,Dict)
+type VMState = (Double, Int, Context, ObjectDictionary, ObjectDictionary)
 
 -- | VM is an Exception/State monad over VMState
 type VM r = Except.ExceptT String (State.StateT VMState IO) r
 
 -- | Generate VM state from initial global dictionary.
-vmStateInit :: Dict -> IO VMState
+vmStateInit :: ObjectDictionary -> IO VMState
 vmStateInit globalDictionary = do
   startTime <- getSystemTimeAsDouble
   let programCounter = 0
-  workspace <- Env.dictRefEmpty
+  workspace <- dictRefEmpty
   return (startTime,programCounter,nilContext,globalDictionary,workspace)
 
 -- | Alias for Except.throwError
@@ -187,12 +186,12 @@ vmContextReplace ctx = do
   return previousCtx
 
 -- | Fetch global dictionary
-vmGlobalDict :: VM Dict
+vmGlobalDict :: VM ObjectDictionary
 vmGlobalDict = State.get >>= \(_,_,_,dict,_) -> return dict
 
 -- | Lookup global, don't attempt to resolve if not found.
 vmGlobalLookupMaybe :: Symbol -> VM (Maybe Object)
-vmGlobalLookupMaybe key = vmGlobalDict >>= \dict -> Env.dictRefLookup dict key
+vmGlobalLookupMaybe key = vmGlobalDict >>= \dict -> dictRefLookup dict key
 
 -- | Lookup global, don't attempt to resolve if not found, return nil if not found.
 vmGlobalLookupOrNil :: Symbol -> VM Object
@@ -214,38 +213,38 @@ vmHasGlobal = fmap (maybe False (const True)) . vmGlobalLookupMaybe
 vmGlobalAssignMaybe :: Symbol -> Object -> VM (Maybe Object)
 vmGlobalAssignMaybe key value = do
   d <- vmGlobalDict
-  Env.dictRefAssignMaybe d key value
+  dictRefAssignMaybe d key value
 
 -- | Assign to or create new global variable.
 vmGlobalAssign :: Symbol -> Object -> VM Object
-vmGlobalAssign key value = vmGlobalDict >>= \d -> Env.dictRefInsert d key value >> return value
+vmGlobalAssign key value = vmGlobalDict >>= \d -> dictRefInsert d key value >> return value
 
 -- | Fetch workspace dictionary
-vmWorkspaceDict :: VM Dict
+vmWorkspaceDict :: VM ObjectDictionary
 vmWorkspaceDict = State.get >>= \(_,_,_,_,d) -> return d
 
 vmWorkspaceLookupMaybe :: Symbol -> VM (Maybe Object)
-vmWorkspaceLookupMaybe key = vmWorkspaceDict >>= \dict -> Env.dictRefLookup dict key
+vmWorkspaceLookupMaybe key = vmWorkspaceDict >>= \dict -> dictRefLookup dict key
 
 -- | Assign to existing workspace variable.
 vmWorkspaceAssignMaybe :: Symbol -> Object -> VM (Maybe Object)
 vmWorkspaceAssignMaybe key value = do
   d <- vmWorkspaceDict
-  Env.dictRefAssignMaybe d key value
+  dictRefAssignMaybe d key value
 
 -- | Assign to existing workspace variable or allocate new variable.
 vmWorkspaceInsert :: Symbol -> Object -> VM Object
 vmWorkspaceInsert key value = do
   d <- vmWorkspaceDict
-  Env.dictRefInsert d key value
+  dictRefInsert d key value
   return value
 
 -- | System>>inspect
 vmShowDetailed :: VM String
 vmShowDetailed = do
   (_tm,pc,_ctx,glb,wrk) <- State.get
-  globalKeys <- Env.dictRefKeys glb
-  workspaceKeys <- Env.dictRefKeys wrk
+  globalKeys <- dictRefKeys glb
+  workspaceKeys <- dictRefKeys wrk
   return (show ("programCounter",pc,"global",globalKeys,"workspace",workspaceKeys))
 
 -- * Printing
@@ -283,7 +282,7 @@ objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToString o))) 
 -- * Inspect
 
 -- | Inspect instance variables.
-tblToInspector :: Tbl -> VM String
+tblToInspector :: ObjectTable -> VM String
 tblToInspector tbl = do
   (keys,values) <- fmap unzip (tblToList tbl)
   valuesInspected <- mapM objectToInspector values
@@ -368,8 +367,8 @@ classMethodCache cd =
       cm = map (methodObject (toSymbol (St.classMetaclassName cd))) (St.classMethods cd)
   in (Vector.fromList im,Vector.fromList cm)
 
--- | A Tbl with all variables set to nil.
-variablesTbl :: MonadIO m => [Symbol] -> m Tbl
+-- | An ObjectTable with all variables set to nil.
+variablesTbl :: MonadIO m => [Symbol] -> m ObjectTable
 variablesTbl variableNames = tblFromList (zip variableNames (repeat nilObject))
 
 {- | Create Class object from ClassDefinition
@@ -477,10 +476,10 @@ isNil = (==) nilObject
      Dict will discard multiple keys, keeping the last assigned.
      Therefore arguments are set first.
 -}
-localVariablesDict :: MonadIO m => ObjectTable -> [Symbol] -> m Dict
-localVariablesDict args tmp = Env.dictRefFromList (args ++ zip tmp (repeat nilObject))
+localVariablesDict :: MonadIO m => ObjectAssociationList -> [Symbol] -> m ObjectDictionary
+localVariablesDict args tmp = dictRefFromList (args ++ zip tmp (repeat nilObject))
 
-methodContextNode :: MonadIO m => Id -> Object -> ObjectTable -> St.Temporaries -> m ContextNode
+methodContextNode :: MonadIO m => Id -> Object -> ObjectAssociationList -> St.Temporaries -> m ContextNode
 methodContextNode pc rcv arg (St.Temporaries tmp) =
   fmap (MethodContext pc rcv) (localVariablesDict arg (map toSymbol tmp))
 

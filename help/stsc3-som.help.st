@@ -1,5 +1,5 @@
 "Som"
-TestHarness new run: #('TestHarness.som').
+TestHarness new run: #('TestHarness.som'). "=> 201, 1074"
 TestHarness new run: #('TestHarness.som' 'ArrayTest').
 TestHarness new run: #('TestHarness.som' 'BlockTest').
 TestHarness new run: #('TestHarness.som' 'ClassLoadingTest').
@@ -57,4 +57,6 @@ Metaclass class class = Metaclass "=> true"
 (system global: #UnknownObject) = nil "=> true"
 system loadFile: '/etc/passwd'
 
+"Emacs"
 (setq stsc3-interpreter (list "stsc3-som" "repl"))
+(setq stsc3-interpreter (list "gst"))
