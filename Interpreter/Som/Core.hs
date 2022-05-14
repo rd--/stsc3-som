@@ -9,7 +9,6 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
---import qualified Data.Text as Text {- text -}
 import qualified Data.Vector as Vector {- vector -}
 
 import qualified Control.Monad.State as State {- mtl -}
@@ -20,7 +19,6 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
---import Interpreter.Som.Primitives
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
@@ -125,6 +123,9 @@ contextAddBlockContext blockObject arguments = do
   when (length blockArguments /= length arguments) (vmError "contextAddBlockContext: arity error")
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
   return (contextAdd blockContext (BlockContext blockObject localVariables))
+
+-- | (Holder, selector), code, receiver, arguments, answer.
+type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
 
 -- | Lookup value in current context.
 vmContextLookup :: PrimitiveDispatcher -> Symbol -> Vm Object
@@ -245,7 +246,7 @@ The home context is the method the block was defined in.
 -}
 evalMethod :: PrimitiveDispatcher -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
 evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
-  -- printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
+  --printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
   let requiredArguments = length methodArguments
       providedArguments = length arguments
       arityError = printf "evalMethod: wrong number of arguments: %s %d" (St.methodSignature methodDefinition) providedArguments
@@ -258,22 +259,25 @@ evalMethod pd methodDefinition methodArguments methodTemporaries methodStatement
     (Object "Return" (DataReturn ctxId _ x)) -> if ctxId == pc then return x else return result
     _ -> return receiver
 
-type PrimitiveDispatcher = Symbol -> Symbol -> St.Literal -> Object -> [Object] -> Vm Object
-
 -- | Evaluate method, deferring to Primitive if required.
 evalMethodOrPrimitive :: PrimitiveDispatcher -> ObjectData -> Object -> [Object] -> Vm Object
-evalMethodOrPrimitive pd dat =
+evalMethodOrPrimitive pd dat rcv arg =
   let (DataMethod holder methodDefinition expr) = dat
       (Expr.Lambda _ methodArguments methodTemporaries methodStatements) = expr
-  in case St.methodDefinitionPrimitiveLabel methodDefinition of
-       Just k -> pd holder (St.methodSignature methodDefinition) k
-       Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements
+  in case St.methodDefinitionPrimitiveCode methodDefinition of
+       Just k -> do
+         --printTrace "evalMethodOrPrimitive: primitive" (rcv : arg)
+         answer <- pd (holder, St.methodSignature methodDefinition) k rcv arg
+         case answer of
+           Just result -> return result
+           Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements rcv arg
+       Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements rcv arg
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: PrimitiveDispatcher -> Object -> Object -> St.Selector -> [Object] -> Vm Object
 findAndEvalMethodOrPrimitive pd receiver methodReceiver selector arguments = do
   maybeMethod <- findMethodMaybe methodReceiver selector
-  -- printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) arguments
+  --printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) (receiver : arguments)
   case maybeMethod of
     Nothing -> do
       argumentsArray <- arrayFromList arguments
@@ -302,7 +306,10 @@ evalMessageSend pd isSuper receiver selector arguments = do
                  else return receiverClass
   findAndEvalMethodOrPrimitive pd receiver methodClass selector arguments
 
--- | Evaluate expression
+{- | Evaluate expression.
+
+When evaluating a method after a primitive has failed the primitive expression is ignored.
+-}
 evalExpr :: PrimitiveDispatcher -> StExpr -> Vm Object
 evalExpr pd expr =
   case expr of
@@ -327,7 +334,7 @@ evalExpr pd expr =
     Expr.Array exprList -> mapM (evalExpr pd) exprList >>= arrayFromList
     Expr.Begin exprList -> evalExprSequence pd exprList
     Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence pd exprList
-    Expr.Primitive _ -> error "evalExpr: primitive?"
+    Expr.Primitive _ -> return nilObject
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
 evalString :: PrimitiveDispatcher -> String -> Vm Object

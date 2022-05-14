@@ -73,6 +73,8 @@ prSystemLoadFile aString = do
     maybeText <- liftIO (readFileMaybe fn)
     maybe onFailure (return . somStringObject) maybeText
 
+type SomPrimitiveDispatcher = (Symbol, Symbol) -> Object -> [Object] -> Vm Object
+
 {- | Primitives that do not require access to interpreter state.
 
 Notes:
@@ -82,8 +84,8 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 System>>ticks is elapsed time in microseconds.
 System>>time is elapsed time in milliseconds.
 -}
-somNonCorePrimitives :: PrimitiveDispatcher
-somNonCorePrimitives prClass prMethod _prCode receiver@(Object receiverName receiverObj) arguments =
+somNonCorePrimitives :: SomPrimitiveDispatcher
+somNonCorePrimitives (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("Array", "at:", DataArray ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
@@ -159,8 +161,8 @@ somNonCorePrimitives prClass prMethod _prCode receiver@(Object receiverName rece
     ("System", "time", DataSystem, []) -> fmap (somIntegerObject . toLargeInteger . (`div` 1000)) vmSystemTicksInt
     _ -> prError (printf "%s>>%s (%s)" prClass prMethod (fromSymbol receiverName))
 
-somPrimitives :: PrimitiveDispatcher
-somPrimitives prClass prMethod prCode receiver@(Object _ receiverObj) arguments =
+somCorePrimitives :: SomPrimitiveDispatcher
+somCorePrimitives (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Block1", "value", DataBlock {}, []) -> evalBlock somPrimitives receiver []
     ("Block2", "value:", DataBlock {}, [arg]) -> evalBlock somPrimitives receiver [arg]
@@ -178,9 +180,12 @@ somPrimitives prClass prMethod prCode receiver@(Object _ receiverObj) arguments 
     ("Object", "perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataString True sel), arg, cl]) -> prObjectPerformWithArgumentsInSuperclass somPrimitives receiver sel arg cl
     ("Primitive", "invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
     ("System", "load:", DataSystem, [Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
-    _ -> somNonCorePrimitives prClass prMethod prCode receiver arguments
+    _ -> somNonCorePrimitives (prClass, prMethod) receiver arguments
 
-
+somPrimitives :: PrimitiveDispatcher
+somPrimitives hs _cd rcv arg = do
+  answer <- somCorePrimitives hs rcv arg
+  return (Just answer)
 
 {-
 import System.Exit {- base -}
