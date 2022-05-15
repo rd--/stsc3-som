@@ -9,7 +9,6 @@ module Interpreter.Som.Types where
 
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
-import Data.IORef {- base -}
 import Data.List {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
@@ -26,6 +25,7 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
+import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
 import Interpreter.Som.Str.Text
@@ -37,7 +37,7 @@ import Interpreter.Som.Vec
 type ObjectDictionary = DictRef Symbol Object
 
 -- | Indexable mutable association list (zero-indexed) of named objects.
-type ObjectTable = Vec (Symbol, IORef Object)
+type ObjectTable = Vec (Symbol, Ref Object)
 
 -- | Identifier.
 type Id = Int
@@ -83,14 +83,14 @@ type StExpr = Expr.Expr
        Symbol is a subclass of String
 -}
 data ObjectData
-  = DataNil
+  = DataUndefinedObject -- ^ nil
   | DataBoolean Bool
   | DataSmallInteger SmallInteger -- ^ Not in Som
   | DataLargeInteger LargeInteger -- ^ Som Integer
   | DataDouble Double
   | DataCharacter Char -- ^ Not in Som
   | DataString Bool UnicodeString -- ^ IsSymbol
-  | DataArray (IORef (Vec Object)) -- ^ Arrays are mutable
+  | DataArray (Ref (Vec Object)) -- ^ Arrays are mutable
   | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
@@ -107,6 +107,13 @@ objectDataAsDouble o =
     DataLargeInteger x -> Just (fromIntegral x)
     DataDouble x -> Just x
     _ -> Nothing
+
+arrayAt :: MonadIO m => Ref (Vec Object) -> Int -> m (Maybe Object)
+arrayAt ref ix = do
+  v <- deRef ref
+  if ix <= vecLength v
+    then return (Just (vecAt v (ix - 1)))
+    else return Nothing
 
 -- | Object represented as class name and object data.
 data Object = Object Symbol ObjectData deriving (Eq)
@@ -133,10 +140,6 @@ vmStateInit globalDictionary = do
   let programCounter = 0
   workspace <- dictRefEmpty
   return (startTime, programCounter, nilContext, globalDictionary, workspace)
-
--- | Alias for Except.throwError
-vmError :: String -> Vm t
-vmError = Except.throwError
 
 -- | Fetch start time.
 vmStartTime :: Vm Double
@@ -266,7 +269,7 @@ vmShowDetailed = do
 objectToString :: Object -> String
 objectToString (Object nm obj) =
   case obj of
-    DataNil -> "nil"
+    DataUndefinedObject -> "nil"
     DataBoolean x -> map Data.Char.toLower (show x)
     DataSmallInteger x -> show x
     DataLargeInteger x -> show x
@@ -360,15 +363,33 @@ objectAssignInstanceVariable object key value =
 
 -- * Object constructors
 
--- | Make reserved identifier object.  These are stored in the global dictionary.
+{- | Make reserved identifier object.  These are stored in the global dictionary.
+
+In Som the class of nil is Nil and in St-80 it is UndefinedObject.
+-}
 reservedObject :: String -> Object
 reservedObject x =
   case x of
     "true" -> Object (toSymbol "True") (DataBoolean True)
     "false" -> Object (toSymbol "False") (DataBoolean False)
-    "nil" -> Object (toSymbol "Nil") DataNil
+    "nil" -> Object (toSymbol "Nil") DataUndefinedObject
     "system" -> Object (toSymbol "System") DataSystem
+    "Smalltalk" -> Object (toSymbol "SmalltalkImage") DataSystem
     _ -> error "reservedObject"
+
+data SystemType = SomSystem | SmalltalkSystem
+
+systemReserverIdentifier :: SystemType -> String
+systemReserverIdentifier typ =
+  case typ of
+    SomSystem -> "system"
+    SmalltalkSystem  -> "Smalltalk"
+
+-- | Table of reserved identifiers: nil, true, false and either system or Smalltalk.
+reservedObjectTableFor :: SystemType -> ObjectAssociationList
+reservedObjectTableFor typ =
+  let f x = (x, reservedObject x)
+  in map f (systemReserverIdentifier typ : words "nil true false")
 
 -- | nil
 nilObject :: Object
@@ -409,10 +430,6 @@ smallIntegerObject x = Object (toSymbol "SmallInteger") (DataSmallInteger x)
 largeIntegerObject :: LargeInteger -> Object
 largeIntegerObject x = Object (toSymbol "LargeInteger") (DataLargeInteger x)
 
--- move
-somIntegerObject :: LargeInteger -> Object
-somIntegerObject x = Object (toSymbol "Integer") (DataLargeInteger x)
-
 doubleObject :: Double -> Object
 doubleObject x = Object (toSymbol "Double") (DataDouble x)
 
@@ -432,10 +449,6 @@ characterObject x = Object (toSymbol "Character") (DataCharacter x)
 unicodeStringObject :: UnicodeString -> Object
 unicodeStringObject x = Object (toSymbol "String") (DataString False x)
 
--- move...
-somStringObject :: String -> Object
-somStringObject = unicodeStringObject . toUnicodeString . Som.somEscapedString
-
 unicodeSymbolObject :: UnicodeString -> Object
 unicodeSymbolObject x = Object (toSymbol "Symbol") (DataString True x)
 
@@ -453,7 +466,7 @@ trueObject = booleanObject True
 
 arrayFromVec :: MonadIO m => Vec Object -> m Object
 arrayFromVec e = do
-  a <- liftIO (newIORef e)
+  a <- liftIO (toRef e)
   return (Object (toSymbol "Array") (DataArray a))
 
 arrayFromList :: MonadIO m => [Object] -> m Object
@@ -481,10 +494,10 @@ arrayLiteralElemObject opt e =
      and the Block that is returning (if it is a Block and not a Method).
      It is an error if the object returned is already Return Object.
 -}
-returnObject :: Except.MonadError String m => Id -> Maybe Object -> Object -> m Object
+returnObject :: StError m => Id -> Maybe Object -> Object -> m Object
 returnObject pc blockObject x =
   if isReturnObject x
-  then Except.throwError "returnObject: Return"
+  then vmError "returnObject: Return"
   else return (Object (toSymbol "Return") (DataReturn pc blockObject x))
 
 -- * Object predicates
@@ -555,11 +568,11 @@ contextAdd ctx nd = Context nd (Just ctx)
 {- | Deleting a context with no parent is an error.
      (Root contexts ought to have the NilContext as a parent.)
 -}
-contextDelete :: Except.MonadError String m => Context -> m Context
+contextDelete :: StError m => Context -> m Context
 contextDelete ctx =
   case ctx of
     Context _ (Just p) -> return p
-    Context _ Nothing -> Except.throwError "contextDelete: empty context"
+    Context _ Nothing -> vmError "contextDelete: empty context"
 
 -- * Hash
 
@@ -567,10 +580,10 @@ mHash :: (Monad m,Hashable.Hashable t) => t -> m LargeInteger
 mHash = return . toLargeInteger . Hashable.hash
 
 -- | Hash of object.  Used for object equality.
-objectIntHash :: (MonadIO m, Except.MonadError String m) => Object -> m LargeInteger
+objectIntHash :: (MonadIO m, StError m) => Object -> m LargeInteger
 objectIntHash (Object nm obj) =
   case obj of
-    DataNil -> mHash (nm,"nil")
+    DataUndefinedObject -> mHash (nm,"nil")
     DataBoolean x -> mHash x
     DataSmallInteger x -> return (fromIntegral x) -- c.f. Integer>>hashcode
     DataLargeInteger x -> return x -- c.f. Integer>>hashcode
@@ -582,6 +595,6 @@ objectIntHash (Object nm obj) =
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
     DataBlock x _ _ -> mHash ("Block",x)
-    DataReturn _ _ _ -> Except.throwError ("Object>>hashcode: Return")
+    DataReturn _ _ _ -> vmError ("Object>>hashcode: Return")
     DataSystem -> mHash (nm,"system")
     DataUser x _ -> mHash (nm,x)

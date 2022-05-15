@@ -19,10 +19,19 @@ import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
+import Interpreter.Som.Error
+import Interpreter.Som.Int
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
+
+-- | (Holder, selector), code, receiver, arguments, answer.
+type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
+
+type LiteralConstructors = (LargeInteger -> Object, String -> Object)
+
+type CoreOpt = (LiteralConstructors, PrimitiveDispatcher)
 
 -- * Lookup
 
@@ -58,11 +67,11 @@ mAssignSequence l k v =
 objectLookupClassVariable :: Object -> Symbol -> Vm (Maybe Object)
 objectLookupClassVariable object key =
   case object of
-    Object _ DataNil -> return Nothing
+    Object _ DataUndefinedObject -> return Nothing
     Object _ (DataClass (cd,isMeta) tbl _) ->
       mLookupSequence [tblAtKeyMaybe tbl
-                      ,\k -> prClassSuperclass cd isMeta >>= \sp -> objectLookupClassVariable sp k] key
-    _ -> prObjectClass object >>= \cl -> objectLookupClassVariable cl key
+                      ,\k -> classSuperclass cd isMeta >>= \sp -> objectLookupClassVariable sp k] key
+    _ -> objectClass object >>= \cl -> objectLookupClassVariable cl key
 
 -- | Lookup a name in a Context.  See Context for description of lookup rules.
 contextLookup :: Context -> Symbol -> Vm (Maybe Object)
@@ -88,11 +97,11 @@ contextLookup (Context c p) k =
 objectAssignClassVariable :: Object -> Symbol -> Object -> Vm (Maybe Object)
 objectAssignClassVariable object key value =
   case object of
-    Object _ DataNil -> return Nothing
+    Object _ DataUndefinedObject -> return Nothing
     Object _ (DataClass (cd,isMeta) tbl _) ->
       mAssignSequence [tblAtKeyPutMaybe tbl
-                      ,\k v -> prClassSuperclass cd isMeta >>= \sp -> objectAssignClassVariable sp k v] key value
-    _ -> prObjectClass object >>= \cl -> objectAssignClassVariable cl key value
+                      ,\k v -> classSuperclass cd isMeta >>= \sp -> objectAssignClassVariable sp k v] key value
+    _ -> objectClass object >>= \cl -> objectAssignClassVariable cl key value
 
 {- | Set a name in a Context.
      Assignments at NilContext (the empty context) set variables in the Workspace.
@@ -124,15 +133,12 @@ contextAddBlockContext blockObject arguments = do
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
   return (contextAdd blockContext (BlockContext blockObject localVariables))
 
--- | (Holder, selector), code, receiver, arguments, answer.
-type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
-
 -- | Lookup value in current context.
-vmContextLookup :: PrimitiveDispatcher -> Symbol -> Vm Object
-vmContextLookup pd k = do
+vmContextLookup :: CoreOpt -> Symbol -> Vm Object
+vmContextLookup opt k = do
   ctx <- vmContext
   res <- contextLookup ctx k
-  maybe (vmUnknownGlobal pd ctx k) return res
+  maybe (vmUnknownGlobal opt ctx k) return res
 
 -- | Assign value in current context
 vmContextAssign :: Symbol -> Object -> Vm Object
@@ -148,16 +154,16 @@ vmContextAssignAllToNil = mapM_ (\name -> vmContextAssign name nilObject)
 -- * Vm
 
 -- | When a method lookup fails, the doesNotUnderstand:arguments: message is sent to the receiver.
-vmDoesNotUnderstand :: PrimitiveDispatcher -> Object -> String -> Object -> Vm Object
-vmDoesNotUnderstand pd receiver k argsArray = do
+vmDoesNotUnderstand :: CoreOpt -> Object -> String -> Object -> Vm Object
+vmDoesNotUnderstand opt receiver k argsArray = do
   let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
-  evalMessageSend pd False receiver sel [symbolObject k, argsArray]
+  evalMessageSend opt False receiver sel [symbolObject k, argsArray]
 
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
-vmUnknownGlobal :: PrimitiveDispatcher -> Context -> String -> Vm Object
-vmUnknownGlobal pd ctx k =
+vmUnknownGlobal :: CoreOpt -> Context -> String -> Vm Object
+vmUnknownGlobal opt ctx k =
   case contextReceiverMaybe ctx of
-    Just receiver -> evalMessageSend pd False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
+    Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a Return escapes we send an escapedBlock: message to the Object that the Block that Returned escaped from.
@@ -166,14 +172,14 @@ vmUnknownGlobal pd ctx k =
      The Block that sent Return will be the current BlockContext.
      The Object that received the message that created a block will be the current MethodContext.
 -}
-vmEscapedBlock :: PrimitiveDispatcher -> Maybe Object -> Vm Object
-vmEscapedBlock pd maybeBlock =
+vmEscapedBlock :: CoreOpt -> Maybe Object -> Vm Object
+vmEscapedBlock opt maybeBlock =
   case maybeBlock of
     Just block ->
       case block of
         Object _ (DataBlock _ context _) ->
           case contextReceiverMaybe context of
-            Just receiver -> evalMessageSend pd False receiver (St.KeywordSelector "escapedBlock:") [block]
+            Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "escapedBlock:") [block]
             Nothing -> vmError "escaped context: no receiver"
         _ -> vmError "escaped context: bad block"
     Nothing -> vmError "escaped context?"
@@ -199,18 +205,18 @@ vmGlobalResolveOrError key = vmGlobalResolveMaybe key >>= maybe (vmError ("vmGlo
 -- * Eval
 
 -- | Evaluate StExpr in sequence.  If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
-evalExprSequence :: PrimitiveDispatcher -> [StExpr] -> Vm Object
-evalExprSequence pd st =
+evalExprSequence :: CoreOpt -> [StExpr] -> Vm Object
+evalExprSequence opt st =
   case st of
     [] -> error "evalExprSequence: empty sequence"
-    [e] -> evalExpr pd e
+    [e] -> evalExpr opt e
     e0:eN -> do
-      r <- evalExpr pd e0
-      if isReturnObject r then return r else evalExprSequence pd eN
+      r <- evalExpr opt e0
+      if isReturnObject r then return r else evalExprSequence opt eN
 
 -- | An empty sequence returns nil, otherwise either a Return value or the value of the last StExpr is returned.
-evalStatements :: PrimitiveDispatcher -> [StExpr] -> Vm Object
-evalStatements pd st = if null st then return nilObject else evalExprSequence pd st
+evalStatements :: CoreOpt -> [StExpr] -> Vm Object
+evalStatements opt st = if null st then return nilObject else evalExprSequence opt st
 
 {- | evalBlock works by:
    1. extending the stored (block) context with a context frame
@@ -219,18 +225,18 @@ evalStatements pd st = if null st then return nilObject else evalExprSequence pd
    4. restoring the saved context
    5. returning the saved result
 -}
-evalBlock :: PrimitiveDispatcher -> Object -> [Object] -> Vm Object
-evalBlock pd blockObject arguments = do
+evalBlock :: CoreOpt -> Object -> [Object] -> Vm Object
+evalBlock opt blockObject arguments = do
   let Object _ (DataBlock _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
   extendedBlockContext <- contextAddBlockContext blockObject arguments
   currentContext <- vmContextReplace extendedBlockContext
-  result <- evalStatements pd blockStatements
+  result <- evalStatements opt blockStatements
   _ <- vmContextReplace currentContext
   case result of
     Object _ (DataReturn pc maybeBlock _) ->
       if contextHasId pc currentContext
       then return result
-      else vmEscapedBlock pd maybeBlock
+      else vmEscapedBlock opt maybeBlock
     _ -> return result
 
 {- | evalMethod is similar to evalBlock, except that methods:
@@ -244,8 +250,8 @@ Returns in Blocks are non-local, they return to the blocks home context.
 The home context is the method the block was defined in.
 
 -}
-evalMethod :: PrimitiveDispatcher -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
-evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
+evalMethod :: CoreOpt -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
+evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
   --printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
   let requiredArguments = length methodArguments
       providedArguments = length arguments
@@ -253,36 +259,36 @@ evalMethod pd methodDefinition methodArguments methodTemporaries methodStatement
   when (requiredArguments /= providedArguments) (vmError arityError)
   pc <- vmProgramCounterIncrement
   vmContextAdd =<< methodContextNode pc receiver (zip methodArguments arguments) methodTemporaries
-  result <- evalStatements pd methodStatements
+  result <- evalStatements opt methodStatements
   _ <- vmContextDelete
   case result of
     (Object "Return" (DataReturn ctxId _ x)) -> if ctxId == pc then return x else return result
     _ -> return receiver
 
 -- | Evaluate method, deferring to Primitive if required.
-evalMethodOrPrimitive :: PrimitiveDispatcher -> ObjectData -> Object -> [Object] -> Vm Object
-evalMethodOrPrimitive pd dat rcv arg =
+evalMethodOrPrimitive :: CoreOpt -> ObjectData -> Object -> [Object] -> Vm Object
+evalMethodOrPrimitive opt dat rcv arg =
   let (DataMethod holder methodDefinition expr) = dat
       (Expr.Lambda _ methodArguments methodTemporaries methodStatements) = expr
   in case St.methodDefinitionPrimitiveCode methodDefinition of
        Just k -> do
          --printTrace "evalMethodOrPrimitive: primitive" (rcv : arg)
-         answer <- pd (holder, St.methodSignature methodDefinition) k rcv arg
+         answer <- (snd opt) (holder, St.methodSignature methodDefinition) k rcv arg
          case answer of
            Just result -> return result
-           Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements rcv arg
-       Nothing -> evalMethod pd methodDefinition methodArguments methodTemporaries methodStatements rcv arg
+           Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
+       Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
-findAndEvalMethodOrPrimitive :: PrimitiveDispatcher -> Object -> Object -> St.Selector -> [Object] -> Vm Object
-findAndEvalMethodOrPrimitive pd receiver methodReceiver selector arguments = do
+findAndEvalMethodOrPrimitive :: CoreOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object
+findAndEvalMethodOrPrimitive opt receiver methodReceiver selector arguments = do
   maybeMethod <- findMethodMaybe methodReceiver selector
   --printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) (receiver : arguments)
   case maybeMethod of
     Nothing -> do
       argumentsArray <- arrayFromList arguments
-      vmDoesNotUnderstand pd receiver (St.selectorIdentifier selector) argumentsArray
-    Just (Object "Method" dat) -> evalMethodOrPrimitive pd dat receiver arguments
+      vmDoesNotUnderstand opt receiver (St.selectorIdentifier selector) argumentsArray
+    Just (Object "Method" dat) -> evalMethodOrPrimitive opt dat receiver arguments
     _ -> vmError "findAndEvalMethodOrPrimitive"
 
 -- | Look in the methods of the class, then in the superclass.
@@ -298,47 +304,47 @@ findMethodMaybe o sel =
          _ -> vmError "findMethodMaybe"
 
 -- | Evaluate message send.
-evalMessageSend :: PrimitiveDispatcher -> Bool -> Object -> St.Selector -> [Object] -> Vm Object
-evalMessageSend pd isSuper receiver selector arguments = do
-  receiverClass <- prObjectClass receiver
+evalMessageSend :: CoreOpt -> Bool -> Object -> St.Selector -> [Object] -> Vm Object
+evalMessageSend opt isSuper receiver selector arguments = do
+  receiverClass <- objectClass receiver
   methodClass <- if isSuper
                  then classSuperclassOf receiverClass
                  else return receiverClass
-  findAndEvalMethodOrPrimitive pd receiver methodClass selector arguments
+  findAndEvalMethodOrPrimitive opt receiver methodClass selector arguments
 
 {- | Evaluate expression.
 
 When evaluating a method after a primitive has failed the primitive expression is ignored.
 -}
-evalExpr :: PrimitiveDispatcher -> StExpr -> Vm Object
-evalExpr pd expr =
+evalExpr :: CoreOpt -> StExpr -> Vm Object
+evalExpr opt expr =
   case expr of
-    Expr.Identifier x -> vmContextLookup pd (if x == "super" then "self" else x)
-    Expr.Literal x -> literalObject (somIntegerObject, somStringObject) x
-    Expr.Assignment lhs rhs -> evalExpr pd rhs >>= vmContextAssign lhs
+    Expr.Identifier x -> vmContextLookup opt (if x == "super" then "self" else x)
+    Expr.Literal x -> literalObject (fst opt) x
+    Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmContextAssign lhs
     Expr.Return x -> do
-      result <- evalExpr pd x
+      result <- evalExpr opt x
       if isReturnObject result
       then return result
       else do pc <- vmContextId
               blk <- vmContextCurrentBlock
               returnObject pc blk result
     Expr.Send e (Expr.Message selector exprList) ->
-      do receiver <- evalExpr pd e
-         arguments <- mapM (evalExpr pd) exprList
-         evalMessageSend pd (Expr.exprIsSuper e) receiver selector arguments
+      do receiver <- evalExpr opt e
+         arguments <- mapM (evalExpr opt) exprList
+         evalMessageSend opt (Expr.exprIsSuper e) receiver selector arguments
     Expr.Lambda _ld arg _tmp _stm -> do
       ctx <- vmContext
       pc <- vmProgramCounterIncrement
       return (Object ("Block" ++ show (length arg + 1)) (DataBlock pc ctx expr))
-    Expr.Array exprList -> mapM (evalExpr pd) exprList >>= arrayFromList
-    Expr.Begin exprList -> evalExprSequence pd exprList
-    Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence pd exprList
+    Expr.Array exprList -> mapM (evalExpr opt) exprList >>= arrayFromList
+    Expr.Begin exprList -> evalExprSequence opt exprList
+    Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence opt exprList
     Expr.Primitive _ -> return nilObject
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
-evalString :: PrimitiveDispatcher -> String -> Vm Object
-evalString pd txt = evalExpr pd (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
+evalString :: CoreOpt -> String -> Vm Object
+evalString opt txt = evalExpr opt (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
 
 deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
@@ -346,11 +352,11 @@ deleteLeadingSpaces = dropWhile Data.Char.isSpace
 {- | Run evalString given initial state and input text.
      If the text is empty (or whitespace only) return nil.
 -}
-vmEval :: PrimitiveDispatcher -> VmState -> String -> IO (Either String Object, VmState)
-vmEval pd vmState str =
+vmEval :: CoreOpt -> VmState -> String -> IO (Either String Object, VmState)
+vmEval opt vmState str =
   case deleteLeadingSpaces str of
     [] -> return (Right nilObject, vmState)
-    txt -> State.runStateT (Except.runExceptT (evalString pd txt)) vmState
+    txt -> State.runStateT (Except.runExceptT (evalString opt txt)) vmState
 
 -- * Class Primitives
 
@@ -371,25 +377,14 @@ classAllVariableNames fn cd = do
            _ -> vmError "classAllVariableNames"
     Nothing -> return (fn cd)
 
--- | Class>>fields => Array[Symbol]
-prClassFields :: St.ClassDefinition -> Bool -> Vm Object
-prClassFields cd isMeta =
-  case isMeta of
-    False -> do
-      fld <- classAllVariableNames St.classInstanceVariableNames cd
-      arrayFromList (map symbolObject fld)
-    True -> do
-      fld <- classAllVariableNames St.classVariableNames cd
-      arrayFromList (map symbolObject fld)
-
-{- | Create instance of class that is not defined primitively.
+{- | Create instance of a class that is not defined primitively.
      Allocate reference for instance variables and initialize to nil.
      The instance variables of an object are:
          - the instance variables of it's class definition
          - all of the instance variables of all of it's superclasses.
 -}
-prClassNew :: St.ClassDefinition -> Vm Object
-prClassNew cd = do
+classNew :: St.ClassDefinition -> Vm Object
+classNew cd = do
   instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
   tbl <- variablesTbl instVarNames
   pc <- vmProgramCounterIncrement
@@ -397,18 +392,18 @@ prClassNew cd = do
 
 {- | Class>>superclass => Class|nil
 
-In Som the superclass of "Object" is "nil".
-In Som the superclass of "Object class" is "Class".
+In a ClassDefinition the superclass of the final class (i.e. Object or ProtoObject) is Nothing, and in Smalltalk it is nil.
+In Smalltalks the superclass of the meta class of the final class (i.e. Object class or ProtoObject class) is "Class".
 This is the only case where a Metaclass has a superclass which is not a Metaclass.
 For all other classes "C class superclass = C superclass class".
 
-> Object superclass = nil                         "=> true"
-> Object class superclass = Class                 "=> true"
-> Nil class superclass = Nil superclass class     "=> true"
+> Object superclass = nil "=> true"
+> Object class superclass = Class "=> true"
+> Integer class superclass = Integer superclass class "=> true"
 -}
-prClassSuperclass :: St.ClassDefinition -> Bool -> Vm Object
-prClassSuperclass cd isMeta =
-  if St.className cd == "Object"
+classSuperclass :: St.ClassDefinition -> Bool -> Vm Object
+classSuperclass cd isMeta =
+  if St.superclassName cd == Nothing
   then if isMeta then vmGlobalLookupOrError "Class" else return nilObject
   else do
     sp <- maybe (return nilObject) vmGlobalResolveOrNil (St.superclassName cd)
@@ -417,21 +412,14 @@ prClassSuperclass cd isMeta =
 classSuperclassOf :: Object -> Vm Object
 classSuperclassOf (Object _ obj) =
   case obj of
-    DataClass (cd,isMeta) _ _ -> prClassSuperclass cd isMeta
+    DataClass (cd,isMeta) _ _ -> classSuperclass cd isMeta
     _ -> vmError "classSuperclassOf"
-
--- * Method Primitives
-
-prMethodInvokeOnWith :: PrimitiveDispatcher -> ObjectData -> Object -> Object -> Vm Object
-prMethodInvokeOnWith pd obj receiver argumentsArray = do
-  arguments <- arrayElements argumentsArray
-  evalMethodOrPrimitive pd obj receiver arguments
 
 -- * Object Primitives
 
 {- | Class of class (Metaclass).
      If the Class object isMeta then return Metaclass, else set isMeta.
-     Metaclass is a standard Som class, it is looked up in the global dictionary.
+     Metaclass should be an ordinary class, it is looked up in the global dictionary.
 -}
 classMetaclass :: Object -> Vm Object
 classMetaclass (Object _ obj) =
@@ -440,30 +428,30 @@ classMetaclass (Object _ obj) =
       if isMeta
       then vmGlobalResolveOrError "Metaclass"
       else return (Object "Class" (DataClass (cd,True) cVar mCache))
-    _ -> Except.throwError "classMetaclass"
+    _ -> vmError "classMetaclass"
 
-prObjectClass :: Object -> Vm Object
-prObjectClass rcv@(Object nm obj) =
+objectClass :: Object -> Vm Object
+objectClass rcv@(Object nm obj) =
   case obj of
     DataClass {} -> classMetaclass rcv
     _ -> vmGlobalLookupOrError nm
 
-prObjectInspect :: Object -> Vm Object
-prObjectInspect rcv = objectToInspector rcv >>= liftIO . putStrLn >> return rcv
+objectInspect :: Object -> Vm Object
+objectInspect rcv = objectToInspector rcv >>= liftIO . putStrLn >> return rcv
 
-prObjectPerformInSuperclass :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Vm Object
-prObjectPerformInSuperclass pd rcv sel cl = findAndEvalMethodOrPrimitive pd rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
-
-prObjectPerform :: PrimitiveDispatcher -> Object -> UnicodeString -> Vm Object
-prObjectPerform pd rcv sel = prObjectClass rcv >>= \cl -> prObjectPerformInSuperclass pd rcv sel cl
-
-prObjectPerformWithArgumentsInSuperclass :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Object -> Vm Object
-prObjectPerformWithArgumentsInSuperclass pd rcv sel argumentsArray cl = do
+objectPerformWithArgumentsInSuperclass :: CoreOpt -> Object -> UnicodeString -> Object -> Object -> Vm Object
+objectPerformWithArgumentsInSuperclass opt rcv sel argumentsArray cl = do
   arguments <- arrayElements argumentsArray
-  findAndEvalMethodOrPrimitive pd rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
+  findAndEvalMethodOrPrimitive opt rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) arguments
 
-prObjectPerformWithArguments :: PrimitiveDispatcher -> Object -> UnicodeString -> Object -> Vm Object
-prObjectPerformWithArguments pd rcv sel argArray = prObjectClass rcv >>= \cl -> prObjectPerformWithArgumentsInSuperclass pd rcv sel argArray cl
+objectPerformWithArguments :: CoreOpt -> Object -> UnicodeString -> Object -> Vm Object
+objectPerformWithArguments opt rcv sel argArray = objectClass rcv >>= \cl -> objectPerformWithArgumentsInSuperclass opt rcv sel argArray cl
+
+objectPerformInSuperclass :: CoreOpt -> Object -> UnicodeString -> Object -> Vm Object
+objectPerformInSuperclass opt rcv sel cl = findAndEvalMethodOrPrimitive opt rcv cl (St.stParse St.quotedSelector ('#' : fromUnicodeString sel)) []
+
+objectPerform :: CoreOpt -> Object -> UnicodeString -> Vm Object
+objectPerform opt rcv sel = objectClass rcv >>= \cl -> objectPerformInSuperclass opt rcv sel cl
 
 -- * System Primitives
 
@@ -504,28 +492,11 @@ systemLoadAndAssignClassesAbove x = do
 
 -- * Tables
 
--- | Load the core Som classes and generate an object Table.
-loadClassTable :: MonadIO m => FilePath -> m ObjectAssociationList
-loadClassTable somDirectory = do
-  classLibrary <- liftIO (Som.somLoadClassList somDirectory Som.somStandardClassList) -- todo: un-som
-  let classNames = map fst classLibrary
-  classObjects <- mapM (classObject . snd) classLibrary
+makeClassTable :: MonadIO m => [St.ClassDefinition] -> m ObjectAssociationList
+makeClassTable classLibrary = do
+  let classNames = map St.className classLibrary
+  classObjects <- mapM classObject classLibrary
   return (zip classNames classObjects)
-
-{- | Table of reserved identifiers: nil, true, false and system.
-     These words are defined in System>>global.
--}
-reservedIdentifiersTable :: ObjectAssociationList
-reservedIdentifiersTable =
-  let f x = (x, reservedObject x)
-  in map f (words "nil true false system") -- todo: un-som
-
--- | The initial global dictionary holds the class table and the reserved identifiers table.
-initialGlobalDictionary :: MonadIO m => FilePath -> m ObjectDictionary
-initialGlobalDictionary somDirectory = do
-  classTable <- loadClassTable somDirectory -- todo: un-som
-  let compositeTable = concat [classTable, reservedIdentifiersTable]
-  dictRefFromList compositeTable
 
 -- * Trace
 
