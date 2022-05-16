@@ -1,0 +1,31 @@
+Float = Number (
+
+isFloat = (
+	^true
+)
+
+abs = (
+	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
+)
+
+negated = (
+	^-1.0 * self
+)
+
+reciprocal = (
+	^1.0 / self
+)
+
+rounded = (
+	self fractionPart abs < 0.5
+		ifTrue: [^self truncated]
+		ifFalse: [^self truncated + self sign rounded]
+)
+
+----
+
+pi = (
+	^  3.141592653589793
+)
+
+)

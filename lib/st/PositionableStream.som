@@ -1,0 +1,111 @@
+PositionableStream = Stream (
+
+| collection position readLimit |
+
+contents = (
+	^collection copyFrom: 1 to: readLimit
+)
+
+next: anInteger = (
+	| newArray |
+	newArray := self contents species new: anInteger.
+	1 to: anInteger do: [:index | newArray at: index put: self next].
+	^newArray
+)
+
+peek = (
+	| nextObject |
+	self atEnd ifTrue: [^nil].
+	nextObject := self next.
+	position := position - 1.
+	^nextObject
+)
+
+peekFor: anObject = (
+	| nextObject |
+	self atEnd ifTrue: [^false].
+	nextObject := self next.
+	"peek for matching element"
+	anObject = nextObject ifTrue: [^true].
+	"gobble it if found"
+	position := position - 1.
+	^false
+)
+
+through: anObject = (
+	| newStream element |
+	newStream := WriteStream on: (collection species new: 64).
+	[(self atEnd or: [(element := self next) = anObject]) or: [newStream size > 64000]]
+		whileFalse: [newStream nextPut: element].
+	self atEnd
+		ifFalse:	[newStream nextPut: element].
+	^newStream contents
+)
+
+upTo: anObject = (
+	| newStream element |
+	newStream := WriteStream on: (collection species new: 64).
+	[self atEnd or: [(element := self next) = anObject]]
+		whileFalse: [newStream nextPut: element].
+	^newStream contents
+)
+
+position = (
+	^position
+)
+
+position: anInteger = (
+	anInteger >= 0 & (anInteger <= readLimit)
+		ifTrue: [position := anInteger]
+		ifFalse: [self positionError]
+)
+
+reset = (
+	position := 0
+)
+
+setToEnd = (
+	position := readLimit
+)
+
+skip: anInteger = (
+	self position: position + anInteger
+)
+
+skipTo: anObject = (
+	[self atEnd]
+		whileFalse: [self next = anObject ifTrue: [^true]].
+	^false
+)
+
+on: aCollection = (
+	collection := aCollection.
+	readLimit := aCollection size.
+	position := 0.
+	self reset
+)
+
+positionError = (
+	self error: 'Attempt to set the position of a PositionableStream out of bounds'
+)
+
+atEnd = (
+	<primitive: 67>
+	^position >= readLimit
+)
+
+isEmpty = (
+	^position = 0
+)
+
+----
+
+on: aCollection = (
+	^self basicNew on: aCollection
+)
+
+on: aCollection from: firstIndex to: lastIndex = (
+	^self basicNew on: (aCollection copyFrom: firstIndex to: lastIndex)
+)
+
+)

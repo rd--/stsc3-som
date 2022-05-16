@@ -1,0 +1,50 @@
+Stream = Object (
+
+contents = (
+	self subclassResponsibility
+)
+
+next = (
+	self subclassResponsibility
+)
+
+next: anInteger = (
+	| aCollection |
+	aCollection := OrderedCollection new.
+	anInteger timesRepeat: [ aCollection addLast: self next ].
+	^aCollection
+)
+
+next: anInteger put: anObject = (
+	anInteger timesRepeat: [ self nextPut: anObject ] .
+	^anObject
+)
+
+nextMatchFor: anObject = (
+	^anObject = self next
+)
+
+nextPut: anObject = (
+	self subclassResponsibility
+)
+
+nextPutAll: aCollection = (
+	aCollection do: [ :v | self nextPut: v ] .
+	^aCollection
+)
+
+do: aBlock = (
+	[ self atEnd ] whileFalse: [ aBlock value: self next ]
+)
+
+atEnd = (
+	self subclassResponsibility
+)
+
+----------------------------
+
+new = (
+	self error: 'Streams are created with on: and with:'
+)
+
+)

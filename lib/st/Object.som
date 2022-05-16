@@ -1,0 +1,193 @@
+Object = nil (
+
+== other = (
+	<primitive: 100>
+	self primitiveFailed
+)
+
+at: index = (
+	<primitive: 60>
+	index isInteger ifTrue:
+		[self class isVariable
+			ifTrue: [self errorSubscriptBounds: index]
+			ifFalse: [self errorNotIndexable]].
+	index isNumber
+		ifTrue: [^self at: index asInteger]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
+at: index put: value = (
+	<primitive: 61>
+	index isInteger ifTrue:
+		[self class isVariable
+			ifTrue: [(index >= 1 and: [index <= self size])
+					ifTrue: [self errorImproperStore]
+					ifFalse: [self errorSubscriptBounds: index]]
+			ifFalse: [self errorNotIndexable]].
+	index isNumber
+		ifTrue: [^self at: index asInteger put: value]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
+basicAt: index = (
+	<primitive: 60>
+	index isInteger ifTrue: [self errorSubscriptBounds: index].
+	index isNumber
+		ifTrue: [^self basicAt: index asInteger]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
+basicAt: index put: value = (
+	<primitive: 61>
+	index isInteger
+		ifTrue: [(index >= 1 and: [index <= self size])
+					ifTrue: [self errorImproperStore]
+					ifFalse: [self errorSubscriptBounds: index]].
+	index isNumber
+		ifTrue: [^self basicAt: index asInteger put: value]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
+basicSize = (
+	<primitive: 62>
+	^0
+)
+
+class = (
+	<primitive: 111>
+	self primitiveFailed
+)
+
+species = (
+	<primitive: 111>
+	^self class
+)
+
+adaptToFloat: rcvr andCompare: selector = (
+	^ self adaptToFloat: rcvr andSend: selector
+)
+
+adaptToFloat: rcvr andSend: selector = (
+	^ self adaptToNumber: rcvr andSend: selector
+)
+
+asArray = (
+    ^Array with: self
+)
+
+errorImproperStore = (
+	self error: 'Improper store into indexable object'
+)
+
+errorNotIndexable = (
+	self error: 'Object not indexable'
+)
+
+errorSubscriptBounds: index = (
+	self error: 'subscript is out of bounds: ' , index asString
+)
+
+isInteger = (
+	^ true
+)
+
+isNil = (
+	^false
+)
+isNumber = (
+	^false
+)
+
+notNil = (
+	^true
+)
+
+primitiveFailed = (
+	('Object>>primitiveFailed: ' , self asString) println.
+)
+
+value = (
+	^self
+)
+
+yourself = (
+	^self
+)
+
+    objectSize = primitive  "size in bytes"
+
+    "Comparing"
+
+    " If you override =, you MUST override hashcode as well.  The rule
+      obj1 = obj2 =>  obj1 hashcode = obj2 hashcode
+      must be valid for all objects, or Hashtable will not work"
+    =  other = ( ^self == other )
+    <> argument = ( ^(self = argument) not )
+    ~= other = (^ (self == other) not )
+
+    "Converting"
+    asString = ( ^'instance of ' , (self class) )
+    hashcode = primitive
+
+    "Convenience"
+    ifNil: aBlock = (^self)
+    ifNotNil: aBlock = (^aBlock value)
+    ifNil: noGoBlock ifNotNil: goBlock = (^goBlock value)
+
+    "Printing"
+    print = ( self asString print )
+    println = ( self print. Smalltalk printNewline )
+
+    "Debugging"
+    inspect = primitive
+    halt = primitive
+
+    "Error handling"
+    error: string = ( '' println. ('Object>>error: ' , string) println. )
+    fatalError: string = ( '' println. ('Object>>fatalError: ' , string) println. Smalltalk exit: 1 )
+
+    "Abstract method support"
+    subclassResponsibility = (
+        self error: 'This method is abstract and should be overridden'
+    )
+
+    "Error recovering"
+    doesNotUnderstand: selector arguments: arguments = (
+        self error:
+            ('Method ' , selector , ' not found in class ' , self class name)
+    )
+
+    escapedBlock: block = (
+        self error: 'Block has escaped and cannot be executed'
+    )
+
+    unknownGlobal: name = ( ^Smalltalk resolve: name )
+
+    "Reflection"
+    respondsTo: aSymbol = (
+        (self class hasMethod: aSymbol)
+            ifTrue:  [ ^true ]
+            ifFalse: [ | cls |
+                cls := self class superclass.
+                [ cls isNil ] whileFalse: [
+                    (cls hasMethod: aSymbol)
+                        ifTrue:  [ ^true ]
+                        ifFalse: [ cls := cls superclass ] ].
+                ^ false ]
+    )
+
+    perform: aSymbol = primitive
+    perform: aSymbol with: anObject = (
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { anObject }
+    )
+    perform: aSymbol withArguments: args = primitive
+
+    perform: aSymbol inSuperclass: cls = primitive
+    perform: aSymbol withArguments: args inSuperclass: cls = primitive
+
+    instVarAt: idx = primitive
+    instVarAt: idx put: obj = primitive
+    instVarNamed: sym = primitive
+
+)

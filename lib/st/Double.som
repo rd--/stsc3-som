@@ -1,0 +1,134 @@
+Double = Float (
+
++ aNumber = (
+	<primitive: 41>
+	^ aNumber adaptToFloat: self andSend: #+
+)
+
+- aNumber = (
+	<primitive: 42>
+	^ aNumber adaptToFloat: self andSend: #-
+)
+
+< aNumber = (
+	<primitive: 43>
+	^ aNumber adaptToFloat: self andCompare: #<
+)
+
+> aNumber = (
+	<primitive: 44>
+	^ aNumber adaptToFloat: self andCompare: #>
+)
+
+<= aNumber = (
+	<primitive: 45>
+	^ aNumber adaptToFloat: self andCompare: #<=
+)
+
+>= aNumber = (
+	<primitive: 46>
+	^ aNumber adaptToFloat: self andCompare: #>=
+)
+
+= aNumber = (
+	<primitive: 47>
+	aNumber isNumber ifFalse: [^ false].
+	^ aNumber adaptToFloat: self andCompare: #=
+)
+
+~= aNumber = (
+	<primitive: 48>
+	^ aNumber adaptToFloat: self andCompare: #~=
+)
+
+* aNumber = (
+	<primitive: 49>
+	^ aNumber adaptToFloat: self andSend: #*
+)
+
+/ aNumber = (
+	<primitive: 50>
+	^ aNumber adaptToFloat: self andSend: #/
+)
+
+truncated = (
+	<primitive: 51>
+	self primitiveFailed
+)
+
+fractionPart = (
+	<primitive: 52>
+	^self - self truncated asFloat
+)
+
+sqrt = (
+	<primitive: 55>
+	self primitiveFailed
+)
+
+sin = (
+	<primitive: 56>
+	self primitiveFailed
+)
+
+ln = (
+	<primitive: 58>
+	self primitiveFailed
+)
+
+exp = (
+	<primitive: 59>
+	self primitiveFailed
+)
+
+
+adaptToInteger: rcvr andSend: selector = (
+	^ rcvr asFloat perform: selector with: self
+)
+
+adaptToInteger: rcvr andCompare: selector = (
+	^ rcvr asFloat perform: selector with: self
+)
+
+// argument = primitive
+% argument = primitive
+asInteger = primitive
+cos = primitive
+
+raisedTo: exponent = (
+	"Raise the receiver to the given exponent.
+	 Currently only positive integer exponents
+	 are fully supported."
+	| output |
+	output := 1.0.
+	exponent asInteger
+	  timesRepeat: [ output := output * self ].
+	^ output
+)
+
+"Comparing"
+between: a and: b = ( ^(self > a) and: [ self < b ] )
+
+"Converting"
+asString = primitive
+
+"Iterating"
+to: limit do: block = (
+	| i |
+	i := self.
+	[ i <= limit ] whileTrue: [ block value: i. i := i + 1.0 ]
+)
+
+downTo: limit do: block = (
+	| i |
+	i := self.
+	[ i >= limit ] whileTrue: [ block value: i. i := i - 1.0 ]
+)
+
+----
+
+PositiveInfinity = primitive
+
+"Convert string into Double. In case of any errors, the result is NaN"
+fromString: aString = primitive
+)

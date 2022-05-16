@@ -14,11 +14,14 @@ toUnicodeString = id
 fromUnicodeString :: UnicodeString -> String
 fromUnicodeString = id
 
-unicodeStringReadInteger :: UnicodeString -> Maybe LargeInteger
-unicodeStringReadInteger = read
+unicodeStringReadSmallInteger :: UnicodeString -> Maybe SmallInteger
+unicodeStringReadSmallInteger = read
+
+unicodeStringReadLargeInteger :: UnicodeString -> Maybe LargeInteger
+unicodeStringReadLargeInteger = read
 
 unicodeStringReadDouble :: UnicodeString -> Maybe Double
 unicodeStringReadDouble = read
 
-unicodeStringSubstringFromTo :: UnicodeString -> LargeInteger -> LargeInteger -> UnicodeString
-unicodeStringSubstringFromTo x i j = drop (fromLargeInteger i - 1) (take (fromLargeInteger j) x)
+unicodeStringSubstringFromTo :: UnicodeString -> SmallInteger -> SmallInteger -> UnicodeString
+unicodeStringSubstringFromTo x i j = drop (i - 1) (take j x)

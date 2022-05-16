@@ -1,0 +1,44 @@
+ArrayedCollection = SequenceableCollection (
+
+inject: anObject into: aBlock = (
+	| result |
+	result := anObject.
+	1 to: self size do: [:i | result := aBlock value: result value: (self at: i)].
+	^result
+)
+
+----
+
+new: size withAll: value = (
+	^(self new: size) atAllPut: value
+)
+
+withAll: aCollection = (
+	^ (self new: aCollection size) replaceFrom: 1 to: aCollection size with: aCollection
+)
+
+with: anObject = (
+	| newCollection |
+	newCollection := self new: 1.
+	newCollection at: 1 put: anObject.
+	^newCollection
+)
+
+with: firstObject with: secondObject = (
+	| newCollection |
+	newCollection := self new: 2.
+	newCollection at: 1 put: firstObject.
+	newCollection at: 2 put: secondObject.
+	^newCollection
+)
+
+with: firstObject with: secondObject with: thirdObject = (
+	| newCollection |
+	newCollection := self new: 3.
+	newCollection at: 1 put: firstObject.
+	newCollection at: 2 put: secondObject.
+	newCollection at: 3 put: thirdObject.
+	^newCollection
+)
+
+)

@@ -1,6 +1,6 @@
 {-# Language FlexibleContexts #-}
 
--- | Som primitives
+-- | Som primitives either succeed or raise an error.
 module Interpreter.Som.Primitives.Som where
 
 import Control.Monad.IO.Class {- base -}
@@ -154,7 +154,7 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("String", "isLetters", DataString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
     ("String", "isWhiteSpace", DataString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
     ("String", "length", DataString _ str, []) -> Just (intObject (toLargeInteger (Text.length str)))
-    ("String", "primSubstringFrom:to:", DataString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str int1 int2))
+    ("String", "primSubstringFrom:to:", DataString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
     ("Symbol", "asString", DataString True x, []) -> Just (unicodeStringObject x)
     _ -> Nothing
 
@@ -171,7 +171,7 @@ somPrimitivesM (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("Double", "//", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (/) lhs rhs -- Som?
     ("Double", "<", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (<) lhs rhs
     ("Double", "=", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (==) lhs rhs
-    ("Integer class", "fromString:", DataClass {}, [Object _ (DataString _ x)]) -> fmap intObject (unicodeStringReadInteger x)
+    ("Integer class", "fromString:", DataClass {}, [Object _ (DataString _ x)]) -> fmap intObject (unicodeStringReadLargeInteger x)
     ("Integer", "%", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
     ("Integer", "*", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (*) (*) lhs rhs
     ("Integer", "+", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (+) (+) lhs rhs
@@ -200,11 +200,11 @@ somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) ar
     ("Class", "name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("Integer", "atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
     ("Object", "==", _, [arg]) -> prObjectEqual receiver arg
-    ("Object", "hashcode", _, []) -> fmap intObject (objectIntHash receiver)
+    ("Object", "hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
     ("Object", "instVarAt:", DataUser _ tbl, [Object _ (DataLargeInteger ix)]) -> tblAtDefault tbl (fromLargeInteger ix - 1) (prError "Object>>instVarAt:")
     ("Object", "instVarAt:put:", DataUser _ tbl, [Object _ (DataLargeInteger ix), newObject]) -> tblAtPutDefault tbl (fromLargeInteger ix - 1) newObject (prError "Object>>instVarAt:put")
     ("Object", "instVarNamed:", DataUser _ tbl, [Object _ (DataString True key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
-    ("String", "hashcode", _, []) -> fmap intObject (objectIntHash receiver)
+    ("String", "hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
     ("System", "errorPrintln:", DataSystem, [Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x >> putChar '\n') >> error "System>>error"
     ("System", "exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
     ("System", "fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
@@ -278,7 +278,7 @@ somPrimitives hs _cd rcv arg = do
   return (Just answer)
 
 somCoreOpt :: CoreOpt
-somCoreOpt = ((intObject, strObject), somPrimitives)
+somCoreOpt = CoreOpt SomSystem (intObject, strObject) somPrimitives
 
 {-
 > fromIntegral (maxBound::Int) >= ((2::Integer) ^ 62) -- True

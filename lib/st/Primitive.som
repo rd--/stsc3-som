@@ -1,0 +1,7 @@
+Primitive = (
+
+    signature = primitive
+    holder = primitive
+    invokeOn: obj with: args = primitive
+
+)

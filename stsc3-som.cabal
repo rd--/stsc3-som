@@ -30,6 +30,7 @@ library
                     Interpreter.Som.DictRef
                     Interpreter.Som.Error
                     Interpreter.Som.Int
+                    Interpreter.Som.Primitives.Smalltalk
                     Interpreter.Som.Primitives.Som
                     Interpreter.Som.Ref
                     Interpreter.Som.Repl

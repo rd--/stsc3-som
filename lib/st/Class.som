@@ -1,0 +1,48 @@
+Class = (
+
+basicNew = (
+	<primitive: 70>
+	self isVariable ifTrue: [^self basicNew: 0].
+	self primitiveFailed
+)
+
+basicNew: sizeRequested = (
+	<primitive: 71>
+	self isVariable ifFalse: [self error: self asString , ' cannot have variable sized instances'].
+	self primitiveFailed
+)
+
+new = (
+	^ self basicNew initialize
+)
+
+new: sizeRequested = (
+	^ (self basicNew: sizeRequested) initialize
+)
+
+isVariable = (
+           ^self class = Array
+)
+
+    "Accessing"
+    name = primitive
+
+    "Converting"
+    asString = ( ^self name asString )
+
+    "Allocation"
+    new = primitive
+
+    "Meta Information"
+    superclass = primitive
+    fields = primitive
+    methods = primitive
+    selectors = ( ^self methods collect: [:inv | inv signature ] )
+
+    hasMethod: aSymbol = (
+        self methods do: [ :m |
+            m signature = aSymbol ifTrue: [ ^true ] ].
+        ^false
+    )
+
+)

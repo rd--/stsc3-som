@@ -1,0 +1,54 @@
+Magnitude = Object (
+
+<=> aMagnitude = (
+	self = aMagnitude ifTrue: [ ^0 ].
+	self < aMagnitude ifTrue: [ ^-1 ].
+	^1
+)
+
+between: min and: max = (
+	min <= self ifFalse: [ ^false ].
+	^self <= max
+)
+
+clampHigh: highMagnitude = (
+	^ self min: highMagnitude
+)
+
+clampLow: lowMagnitude = (
+	^ self max: lowMagnitude
+)
+
+clampLow: lowMagnitude high: highMagnitude = (
+	^ self min: highMagnitude max: lowMagnitude
+)
+
+inRangeOf: first and: second = (
+	^ first < second
+		ifTrue:
+			[ self
+				between: first
+				and: second ]
+		ifFalse:
+			[ self
+				between: second
+				and: first ]
+)
+
+max: aMagnitude = (
+	self > aMagnitude
+		ifTrue: [^self]
+		ifFalse: [^aMagnitude]
+)
+
+min: aMagnitude = (
+	self < aMagnitude
+		ifTrue: [^self]
+		ifFalse: [^aMagnitude]
+)
+
+min: aMin max: aMax = (
+	^ (self min: aMin) max: aMax
+)
+
+)

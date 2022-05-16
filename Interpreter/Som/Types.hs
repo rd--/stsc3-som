@@ -472,7 +472,7 @@ arrayFromVec e = do
 arrayFromList :: MonadIO m => [Object] -> m Object
 arrayFromList e = arrayFromVec (Vector.fromList e)
 
-literalObject :: MonadIO m => (Integer -> Object, String -> Object) -> St.Literal -> m Object
+literalObject :: MonadIO m => (LargeInteger -> Object, String -> Object) -> St.Literal -> m Object
 literalObject (integerObject, stringObject) l =
   case l of
     St.NumberLiteral (St.Int x) -> return (integerObject x)
@@ -576,17 +576,17 @@ contextDelete ctx =
 
 -- * Hash
 
-mHash :: (Monad m,Hashable.Hashable t) => t -> m LargeInteger
-mHash = return . toLargeInteger . Hashable.hash
+mHash :: (Monad m,Hashable.Hashable t) => t -> m SmallInteger
+mHash = return . Hashable.hash
 
 -- | Hash of object.  Used for object equality.
-objectIntHash :: (MonadIO m, StError m) => Object -> m LargeInteger
+objectIntHash :: (MonadIO m, StError m) => Object -> m SmallInteger
 objectIntHash (Object nm obj) =
   case obj of
     DataUndefinedObject -> mHash (nm,"nil")
     DataBoolean x -> mHash x
-    DataSmallInteger x -> return (fromIntegral x) -- c.f. Integer>>hashcode
-    DataLargeInteger x -> return x -- c.f. Integer>>hashcode
+    DataSmallInteger x -> return x -- c.f. Integer>>hashcode
+    DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hashcode
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
     DataString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode

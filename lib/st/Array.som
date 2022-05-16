@@ -1,0 +1,80 @@
+Array = ArrayedCollection (
+
+at: index = (
+	<primitive: 60>
+	self primitiveFailed
+)
+
+at: index put: value = (
+	<primitive: 61>
+	self primitiveFailed
+)
+
+size = (
+	<primitive: 62>
+	self primitiveFailed
+)
+
+doIndexes: block = (
+	1 to: self size do: [:i | block value: i. ]
+)
+
+prependedWith: val = (
+	| result |
+	result := Array new: self size + 1.
+	self doIndexes: [:i |
+	result at: i + 1 put: (self at: i)].
+	result at: 1 put: val.
+	^ result
+)
+
+extendedWith: val = (
+	| result |
+	result := Array new: self size + 1.
+	self doIndexes: [:i |
+	result at: i put: (self at: i)].
+	result at: result size put: val.
+	^ result
+)
+
+join: joiner = (
+	| result first |
+	first := true.
+	self do: [:e |
+	first
+		ifTrue: [
+		result := e.
+		first := false]
+		ifFalse: [
+		result := result + joiner + e] ].
+	^ result
+)
+
+union: aCollection = (
+	| new |
+	new := Set new.
+	new addAll: self.
+	new addAll: aCollection.
+	^ new
+)
+
+----------------------------
+
+basicNew: size = (
+	<primitive: 71>
+	self primitiveFailed
+)
+
+basicNew = (
+	self basicNew: 0
+)
+
+new: size = (
+	^self basicNew: size
+)
+
+new = (
+	^self new: 0
+)
+
+)

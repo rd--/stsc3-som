@@ -1,0 +1,108 @@
+Set = HashedCollection (
+
+| items |
+
+asSet = (
+	^self
+)
+
+= otherSet = (
+	self size = otherSet size ifFalse: [^ false ].
+	self do: [:item | (otherSet contains: item) ifFalse: [^ false]. ].
+	^ true.
+)
+
+add: anObject = (
+	(self contains: anObject)
+		ifFalse: [ items addLast: anObject ]
+)
+
+addAll: aCollection = (
+	aCollection do: [:each |
+		self add: each]
+)
+
+union: aCollection = (
+	| new |
+	new := Set new.
+	new addAll: self.
+	new addAll: aCollection.
+	^ new
+)
+
+intersection: aCollection = (
+	| new |
+	new := Set new.
+	self do: [:it |
+		(aCollection contains: it) ifTrue: [ new add: it ]].
+	^ new
+)
+
+- aCollection = (
+	| new |
+	new := Set new.
+	self do: [:it |
+		(aCollection contains: it) ifFalse: [ new add: it ]].
+	^ new
+)
+
+contains: anObject = (
+	items do: [ :it | it == anObject ifTrue: [ ^true ] ].
+	^false
+)
+
+remove: anObject = (
+	| newItems |
+	newItems := OrderedCollection new.
+	items do: [:it |
+		it == anObject ifFalse: [ newItems addLast: it ] ].
+	items := newItems
+)
+
+isEmpty = (
+	^items isEmpty
+)
+
+do: block = (
+	items do: block
+)
+
+collect: block = (
+	| coll |
+	coll := OrderedCollection new.
+	self do: [ :e | coll addLast: (block value: e) ].
+	^coll
+)
+
+println = (
+	'(' print.
+	self do: [ :it | '(' print. it print. ')' print ].
+	')' println
+)
+
+asString = (
+	| result |
+	result := 'a Set('.
+	items do: [:e | result := result , e asString , ', '].
+	result := result , ')'.
+	^ result
+)
+
+size = (
+	^ items size
+)
+
+items: it = (
+	items := it
+)
+
+----
+
+new = (
+	| newSet |
+	newSet := self basicNew.
+	newSet items: OrderedCollection new.
+	^newSet
+)
+
+)

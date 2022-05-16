@@ -1,0 +1,21 @@
+Integer = Number (
+
+asInteger = (
+	^self
+)
+
+isInteger = (
+	^ true
+)
+
+rounded = (
+)
+
+timesRepeat: aBlock = (
+	| remaining |
+	remaining := self.
+	[ (remaining := remaining - 1) >= 0 ] whileTrue: [
+		aBlock value ]
+)
+
+)

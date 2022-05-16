@@ -1,0 +1,16 @@
+BlockClosure = (
+
+    value = primitive
+    value: arg = primitive
+    value: arg1 with: arg2 = primitive
+
+    whileFalse: aBlock = (
+        [ self value not ] whileTrue: aBlock
+    )
+
+    whileTrue: aBlock = (
+        self value ifFalse: [ ^nil ].
+        aBlock value.
+        self whileTrue: aBlock.
+    )
+)

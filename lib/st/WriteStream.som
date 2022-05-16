@@ -1,0 +1,112 @@
+WriteStream = PositionableStream (
+
+| writeLimit |
+
+nextPut: anObject = (
+	<primitive: 66>
+	position = writeLimit
+		ifTrue: [^self pastEndPut: anObject]
+		ifFalse:
+			[^collection at: (position := position + 1) put: anObject]
+)
+
+contents = (
+	readLimit := readLimit max: position.
+	^collection copyFrom: 1 to: position
+)
+
+next = (
+	self shouldNotImplement
+)
+
+size = (
+	^readLimit := readLimit max: position
+)
+
+cr = (
+	self nextPut: Character cr
+)
+
+crtab = (
+	self nextPut: Character cr.
+	self nextPut: Character tab
+)
+
+crtab: anInteger = (
+	self nextPut: Character cr.
+	anInteger timesRepeat: [self nextPut: Character tab]
+)
+
+space = (
+	self nextPut: Character space
+)
+
+tab = (
+	self nextPut: Character tab
+)
+
+position: anInteger = (
+	readLimit := readLimit max: position.
+	super position: anInteger
+)
+
+reset = (
+	readLimit := readLimit max: position.
+	position := 0
+)
+
+print: anObject = (
+	anObject printOn: self
+)
+
+store: anObject = (
+	anObject storeOn: self
+)
+
+on: aCollection = (
+	super on: aCollection.
+	readLimit := 0.
+	writeLimit := aCollection size
+)
+
+on: aCollection from: firstIndex to: lastIndex = (
+	| len |
+	collection := aCollection.
+	readLimit :=
+		writeLimit := lastIndex > (len := collection size)
+						ifTrue: [len]
+						ifFalse: [lastIndex].
+	position := firstIndex <= 1
+				ifTrue: [0]
+				ifFalse: [firstIndex - 1]
+)
+
+pastEndPut: anObject = (
+	collection grow.
+	writeLimit := collection size.
+	collection at: (position := position + 1) put: anObject
+)
+
+with: aCollection = (
+	super on: aCollection.
+	position := readLimit := writeLimit := aCollection size
+)
+
+----
+
+on: aCollection from: firstIndex to: lastIndex = (
+	^self basicNew
+		on: aCollection
+		from: firstIndex
+		to: lastIndex
+)
+
+with: aCollection = (
+	^self basicNew with: aCollection
+)
+
+with: aCollection from: firstIndex to: lastIndex = (
+	^self basicNew with: (aCollection copyFrom: firstIndex to: lastIndex)
+)
+
+)

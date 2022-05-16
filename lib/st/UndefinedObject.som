@@ -1,0 +1,27 @@
+UndefinedObject = Object (
+
+asString = (
+	^'nil'
+)
+
+isNil = (
+	^true
+)
+
+notNil = (
+	^false
+)
+
+ifNil: aBlock = (
+	^aBlock value
+)
+
+ifNotNil: ignoredBlock = (
+	^self
+)
+
+ifNil: aBlock ifNotNil: ignoredBlock = (
+	^aBlock value
+)
+
+)

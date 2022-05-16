@@ -1,0 +1,110 @@
+Collection = (
+
+anySatisfy: aBlock = (
+	self do: [:each | (aBlock value: each) ifTrue: [^ true]].
+	^ false
+)
+
+asArray = (
+	| array index |
+	array := Array new: self size.
+	index := 0.
+	self do: [:each | array at: (index := index + 1) put: each].
+	^ array
+)
+
+asSet = (
+	^ Set withAll: self
+)
+
+average = (
+	^ self sum / self size
+)
+
+collect: aBlock = (
+	| newCollection |
+	newCollection := self species new.
+	self do: [:each | newCollection add: (aBlock value: each)].
+	^ newCollection
+)
+
+contains: aBlock = (
+	^self anySatisfy: aBlock
+)
+
+difference: aCollection = (
+	^ self reject: [:each | aCollection includes: each]
+)
+
+do: aBlock = (
+	self subclassResponsibility
+)
+
+emptyCheck = (
+	self isEmpty ifTrue: [self errorEmptyCollection]
+)
+
+errorEmptyCollection = (
+	self error: 'this collection is empty'
+)
+
+inject: thisValue into: binaryBlock = (
+	| nextValue |
+	nextValue := thisValue.
+	self do: [:each | nextValue := binaryBlock value: nextValue value: each].
+	^nextValue
+)
+
+intersection: aCollection = (
+	^ self select: [:each | aCollection includes: each]
+)
+
+isEmpty = (
+	^self size = 0
+)
+
+reduce: binaryBlock = (
+	| first nextValue |
+	first := true.
+	self do: [ :each |
+		first
+			ifTrue: [ nextValue := each. first := false ]
+			ifFalse: [ nextValue := binaryBlock value: nextValue value: each ] ].
+	first ifTrue: [ self errorEmptyCollection ].
+	^nextValue
+)
+
+reject: aBlock = (
+	^self select: [:element | (aBlock value: element) == false]
+)
+
+reject: rejectBlock thenDo: doBlock = (
+	^ (self reject: rejectBlock) do: doBlock
+)
+
+select: aBlock = (
+	| newCollection |
+	newCollection := self species new.
+	self do: [:each | (aBlock value: each) ifTrue: [newCollection add: each]].
+	^newCollection
+)
+
+select: selectBlock thenCollect: collectBlock = (
+	^ (self select: selectBlock) collect: collectBlock
+)
+
+select: selectBlock thenDo: doBlock = (
+	^ (self select: selectBlock) do: doBlock
+)
+
+sum = (
+	^self reduce: [:a :b| a + b]
+)
+
+union: aCollection = (
+	| answer |
+        answer := self asSet addAll: aCollection.
+        ^ answer
+)
+
+)

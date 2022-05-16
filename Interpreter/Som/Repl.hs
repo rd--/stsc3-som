@@ -5,11 +5,11 @@ import System.Environment {- base -}
 import System.IO {- base -}
 import Text.Printf {- base -}
 
+import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.Core {- stsc3 -}
 import Interpreter.Som.DictRef {- stsc3 -}
-import Interpreter.Som.Primitives.Som {- stsc3 -}
 import Interpreter.Som.Types {- stsc3 -}
 
 -- | Read lines from Handle while there is input waiting.
@@ -23,38 +23,55 @@ replReadInput s h = do
 {- | The read-eval-print loop continue function.
      Read program text, evaluate it, report errors or result, continue with the modified state.
 -}
-replContinue :: VmState -> IO ()
-replContinue vmState = do
+replContinue :: CoreOpt -> VmState -> IO ()
+replContinue opt vmState = do
   str <- replReadInput "" stdin
-  (result,vmState') <- vmEval somCoreOpt vmState str
+  (result,vmState') <- vmEval opt vmState str
   case result of
-    Left msg -> putStrLn ("error: " ++ msg) >> replContinue vmState
-    Right res -> putStr "result: " >> objectPrint res >> replContinue vmState'
+    Left msg -> putStrLn ("error: " ++ msg) >> replContinue opt vmState
+    Right res -> putStr "result: " >> objectPrint res >> replContinue opt vmState'
 
+stStandardClassList :: [St.Identifier]
+stStandardClassList =
+    ["Collection", "SequenceableCollection", "ArrayedCollection", "Array", "String","Symbol", "Set", "Dictionary"
+    ,"BlockClosure"
+    ,"Boolean", "True", "False"
+    ,"Class", "Metaclass"
+    ,"Magnitude", "Number", "Integer", "SmallInteger", "Float", "Double"
+    ,"Method" ,"Primitive"
+    ,"Object", "UndefinedObject", "Nil"
+    ,"SmalltalkImage"
+    ]
+
+standardClassListFor :: SystemType -> [St.Identifier]
+standardClassListFor sys =
+  case sys of
+    SomSystem -> Som.somStandardClassList
+    SmalltalkSystem -> stStandardClassList
 
 -- | Load the core Som classes and generate an object Table.
-somLoadClassTable :: FilePath -> IO ObjectAssociationList
-somLoadClassTable somDirectory = do
-  classLibrary <- Som.somLoadClassList somDirectory Som.somStandardClassList
+somLoadClassTable :: SystemType -> FilePath -> IO ObjectAssociationList
+somLoadClassTable sys somDirectory = do
+  classLibrary <- Som.somLoadClassList somDirectory (standardClassListFor sys)
   makeClassTable classLibrary
 
 -- | The initial global dictionary holds the class table and the reserved identifiers table.
-somInitialGlobalDictionary :: FilePath -> IO ObjectDictionary
-somInitialGlobalDictionary somDirectory = do
-  somClassTable <- somLoadClassTable somDirectory
-  dictRefFromList (concat [somClassTable, reservedObjectTableFor SomSystem])
+somInitialGlobalDictionary :: SystemType -> FilePath -> IO ObjectDictionary
+somInitialGlobalDictionary sys somDirectory = do
+  somClassTable <- somLoadClassTable sys somDirectory
+  dictRefFromList (concat [somClassTable, reservedObjectTableFor sys])
 
 {- | Main function for read-eval-print loop.
      Requires the SOM class directory.
 -}
-replMain :: FilePath -> IO ()
-replMain dir = somInitialGlobalDictionary dir >>= vmStateInit >>= replContinue
+replMain :: CoreOpt -> FilePath -> IO ()
+replMain opt dir = somInitialGlobalDictionary (coreOptTyp opt) dir >>= vmStateInit >>= replContinue opt
 
 {- | Generate Smalltalk expression to load and run class.
 
 > runSomClassSmalltalk "TestHarness" ["BlockTest"]
 -}
-runSomClassSmalltalk :: String -> [String] -> String
+runSomClassSmalltalk :: St.Identifier -> [String] -> String
 runSomClassSmalltalk cl arg =
   let quote x = printf "'%s'" x
   in printf "%s new run: #(%s)" cl (unwords (map quote (cl : arg)))
@@ -66,10 +83,10 @@ runSomClassSmalltalk cl arg =
 > loadAndRunClass "TestHarness" ["String"]
 > loadAndRunClass "Harness" ["Bounce"]
 -}
-loadAndRunClass :: FilePath -> String -> [String] -> IO ()
-loadAndRunClass dir cl arg = do
-  st <- somInitialGlobalDictionary dir >>= vmStateInit
-  (result,_) <- vmEval somCoreOpt st (runSomClassSmalltalk cl arg)
+loadAndRunClass :: CoreOpt -> FilePath -> St.Identifier -> [String] -> IO ()
+loadAndRunClass opt dir cl arg = do
+  st <- somInitialGlobalDictionary (coreOptTyp opt) dir >>= vmStateInit
+  (result,_) <- vmEval opt st (runSomClassSmalltalk cl arg)
   case result of
     Left msg -> putStrLn ("error: " ++ msg)
     Right res -> putStr "result: " >> objectPrint res >> return ()
@@ -78,10 +95,10 @@ loadAndRunClass dir cl arg = do
      If there is on or more arguments,
      load the class defined at the first and call the run: method with the remainder.
 -}
-somReplMain :: IO ()
-somReplMain = do
+somReplMain :: CoreOpt -> IO ()
+somReplMain opt = do
   dir <- Som.somSystemClassPath
   arg <- getArgs
   case arg of
-    [] -> replMain dir
-    cl:somArg -> loadAndRunClass dir cl somArg
+    [] -> replMain opt dir
+    cl:somArg -> loadAndRunClass opt dir cl somArg

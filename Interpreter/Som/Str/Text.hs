@@ -17,11 +17,14 @@ toUnicodeString = Text.pack
 fromUnicodeString :: UnicodeString -> String
 fromUnicodeString = Text.unpack
 
-unicodeStringReadInteger :: UnicodeString -> Maybe LargeInteger
-unicodeStringReadInteger = either (const Nothing) (Just . fst) . Text.Read.signed Text.Read.decimal
+unicodeStringReadSmallInteger :: UnicodeString -> Maybe SmallInteger
+unicodeStringReadSmallInteger = either (const Nothing) (Just . fst) . Text.Read.signed Text.Read.decimal
+
+unicodeStringReadLargeInteger :: UnicodeString -> Maybe LargeInteger
+unicodeStringReadLargeInteger = either (const Nothing) (Just . fst) . Text.Read.signed Text.Read.decimal
 
 unicodeStringReadDouble :: UnicodeString -> Maybe Double
 unicodeStringReadDouble = either (const Nothing) (Just . fst) . Text.Read.double
 
-unicodeStringSubstringFromTo :: UnicodeString -> LargeInteger -> LargeInteger -> UnicodeString
-unicodeStringSubstringFromTo x i j = Text.drop (fromLargeInteger i - 1) (Text.take (fromLargeInteger j) x)
+unicodeStringSubstringFromTo :: UnicodeString -> SmallInteger -> SmallInteger -> UnicodeString
+unicodeStringSubstringFromTo x i j = Text.drop (i - 1) (Text.take j x)

@@ -1,0 +1,360 @@
+OrderedCollection = SequenceableCollection (
+
+| array firstIndex lastIndex |
+
+after: oldObject = (
+	| index |
+	index := self find: oldObject.
+	index = lastIndex ifTrue: [ ^self errorLastObject ] ifFalse: [ ^array at: index + 1 ]
+)
+
+asArray = (
+	| result size |
+	result := Array new: (size := self size).
+	result
+		replaceFrom: 1
+		to: size
+		with: array
+		startingAt: firstIndex.
+	^result
+)
+
+at: anInteger = (
+	(anInteger < 1 or: [ anInteger + firstIndex - 1 > lastIndex ])
+		ifTrue: [ self errorNoSuchElement ]
+		ifFalse: [ ^array at: anInteger + firstIndex - 1 ]
+)
+
+at: anInteger put: anObject = (
+	| index |
+	index := anInteger truncated.
+	(index < 1 or: [ index + firstIndex - 1 > lastIndex ])
+		ifTrue: [ self errorNoSuchElement ]
+		ifFalse: [ ^array at: index + firstIndex - 1 put: anObject ]
+)
+
+before: oldObject = (
+	| index |
+	index := self find: oldObject.
+	index = firstIndex ifTrue: [ ^self errorFirstObject ] ifFalse: [ ^array at: index - 1 ]
+)
+
+first = (
+	self emptyCheck.
+	^array at: firstIndex
+)
+
+last = (
+	self emptyCheck.
+	^array at: lastIndex
+)
+
+size = (
+	^lastIndex - firstIndex + 1
+)
+
+add: newObject = (
+	^self addLast: newObject
+)
+
+add: newObject after: oldObject = (
+	| index |
+	index := self find: oldObject.
+	self insert: newObject before: index + 1.
+	^newObject
+)
+
+add: newObject before: oldObject = (
+	| index |
+	index := self find: oldObject.
+	self insert: newObject before: index.
+	^newObject
+)
+
+addAll: anOrderedCollection = (
+	^self addAllLast: anOrderedCollection
+)
+
+addAllFirst: anOrderedCollection = (
+	anOrderedCollection reverseDo: [ :each | self addFirst: each ].
+	^anOrderedCollection
+)
+
+addAllLast: anOrderedCollection = (
+	anOrderedCollection do: [ :each | self addLast: each ].
+	^anOrderedCollection
+)
+
+addFirst: newObject = (
+	firstIndex = 1 ifTrue: [ self makeRoomAtFirst ].
+	firstIndex := firstIndex - 1.
+	array at: firstIndex put: newObject.
+	^newObject
+)
+
+addLast: newObject = (
+	lastIndex = array size ifTrue: [ self makeRoomAtLast ].
+	lastIndex := lastIndex + 1.
+	array at: lastIndex put: newObject.
+	^newObject
+)
+
+grow = (
+	| newSelf |
+	newSelf := self species new: self size + self growSize.
+	self do: [ :each | newSelf addLast: each ].
+	self become: newSelf.
+)
+
+copyEmpty = (
+	^self species new
+)
+
+copyFrom: startIndex to: endIndex = (
+	| targetCollection index |
+	endIndex < startIndex ifTrue: [ ^self species new: 0 ].
+	targetCollection := self species new: endIndex + 1 - startIndex.
+	startIndex to: endIndex do: [ :index | targetCollection add: (self at: index) ].
+	^targetCollection
+)
+
+copyReplaceFrom: start to: stop with: replacementCollection = (
+	| newOrderedCollection delta newIndex index mySize startIndex stopIndex |
+	delta := 0.
+	startIndex := start.
+	stopIndex := stop.
+	(start < 1)
+		ifTrue: [ startIndex := stopIndex := 0 ]
+		ifFalse: [ startIndex > self size
+			ifTrue: [ startIndex := stopIndex := self size + 1 ]
+			ifFalse: [
+ 				(stopIndex < (startIndex - 1) or: [ stopIndex > self size ]) ifTrue: [ self errorOutOfBounds ].
+ 				delta := stopIndex - startIndex + 1
+ 			]
+ 		].
+	newOrderedCollection := self species new: self size + replacementCollection size - delta.
+	1 to: startIndex - 1 do: [ :index | newOrderedCollection add: (self at: index) ].
+	1 to: replacementCollection size do: [ :index | newOrderedCollection add: (replacementCollection at: index) ].
+	stopIndex + 1 to: self size do: [ :index | newOrderedCollection add: (self at: index) ].
+	^newOrderedCollection
+)
+
+copyWith: newElement = (
+	| newCollection |
+	newCollection := self copy.
+	newCollection add: newElement.
+	^newCollection
+)
+
+copyWithout: oldElement = (
+	| newCollection each |
+	newCollection := self species new: self size.
+	self do: [ :each | oldElement = each ifFalse: [ newCollection add: each ] ].
+	^newCollection
+)
+
+collect: aBlock = (
+	| newCollection |
+	newCollection := self species new.
+	self do: [ :each | newCollection add: (aBlock value: each) ].
+	^newCollection
+)
+
+do: aBlock = (
+	| index |
+	index := firstIndex.
+	[ index <= lastIndex ] whileTrue: [
+		aBlock value: (array at: index).
+		index := index + 1
+	]
+)
+
+reverse = (
+	| newCollection |
+	newCollection := self species new.
+	self reverseDo: [ :each | newCollection add: each ].
+	^newCollection
+)
+
+reverseDo: aBlock = (
+	| index |
+	index := lastIndex.
+	[ index >= firstIndex ] whileTrue: [
+		aBlock value: (array at: index).
+		index := index - 1
+	]
+)
+
+select: aBlock = (
+	| newCollection |
+	newCollection := self copyEmpty.
+	self do: [ :each | (aBlock value: each) ifTrue: [ newCollection add: each ] ].
+	^newCollection
+)
+
+errorFirstObject = (
+	self error: 'specified object is first objecte'
+)
+
+errorLastObject = (
+	self error: 'specified object is last object'
+)
+
+errorNoSuchElement = (
+	self error: 'attempt to index non-existent element in an ordered collection'
+)
+
+errorNotFound = (
+	self error: 'element not found'
+)
+
+find: oldObject = (
+	| index |
+	index := firstIndex.
+	[ index <= lastIndex and: [ oldObject ~= (array at: index) ] ] whileTrue: [ index := index + 1 ].
+	index <= lastIndex ifTrue: [ ^index ] ifFalse: [ self errorNotFound ]
+)
+
+insert: anObject before: spot = (
+	| index delta spotIndex |
+	spotIndex := spot.
+	delta := spotIndex - firstIndex.
+	firstIndex = 1 ifTrue: [ self makeRoomAtFirst.
+	spotIndex := firstIndex + delta ].
+	index := firstIndex := firstIndex - 1.
+	[ index < (spotIndex - 1) ] whileTrue: [ array at: index put: (array at: index + 1). index := index + 1 ].
+	array at: index put: anObject.
+	^anObject
+)
+
+makeRoomAtFirst = (
+	| delta index |
+	delta := array size - self size.
+	delta = 0 ifTrue: [ self grow.
+	delta := array size - self size ].
+	lastIndex = array size ifTrue: [ ^self ].
+	index := array size.
+	[ index > delta ] whileTrue: [
+		array at: index put: (array at: index - delta + firstIndex - 1).
+		array at: index - delta + firstIndex - 1 put: nil.
+		index := index - 1.
+	].
+	firstIndex := delta + 1.
+	lastIndex := array size
+)
+
+makeRoomAtLast = (
+	| index newLast |
+	newLast := self size.
+	array size - self size = 0 ifTrue: [ self grow ].
+	firstIndex = 1 ifTrue: [ ^self ].
+	index := 1.
+	[ index <= newLast ] whileTrue: [
+		array at: index put: (array at: index + firstIndex - 1).
+		array at: index + firstIndex - 1 put: nil.
+		index := index + 1.
+	].
+	firstIndex := 1.
+	lastIndex := newLast
+)
+
+removeIndex: removedIndex = (
+	| index |
+	index := removedIndex.
+	[ index < lastIndex ] whileTrue: [
+		array at: index put: (array at: index + 1).
+		index := index + 1
+	].
+	array at: lastIndex put: nil.
+	lastIndex := lastIndex - 1
+)
+
+remove: oldObject ifAbsent: absentBlock = (
+	| index |
+	index := firstIndex.
+	[ index <= lastIndex ] whileTrue: [
+		oldObject = (array at: index) ifTrue: [ self removeIndex: index. ^oldObject ] ifFalse: [ index := index + 1 ]
+	].
+	^absentBlock value
+)
+
+removeAllSuchThat: aBlock = (
+	| index element newCollection |
+	newCollection := self species new.
+	index := firstIndex.
+	[ index <= lastIndex ] whileTrue: [
+		element := array at: index.
+ 		(aBlock value: element)
+			ifTrue: [ newCollection add: element. self removeIndex: index ]
+			ifFalse: [ index := index + 1 ]
+	].
+	^newCollection
+)
+
+removeFirst = (
+	| firstObject |
+	self emptyCheck.
+	firstObject := array at: firstIndex.
+	array at: firstIndex put: nil.
+	firstIndex := firstIndex + 1.
+	^firstObject
+)
+
+removeLast = (
+	| lastObject |
+	self emptyCheck.
+	lastObject := array at: lastIndex.
+	array at: lastIndex put: nil.
+	lastIndex := lastIndex - 1.
+	^lastObject
+)
+
+reset = (
+	self resetTo: 1
+)
+
+resetTo: index = (
+	firstIndex := index.
+	lastIndex := firstIndex - 1
+)
+
+reverseDo: aBlock = (
+	| index |
+	index := lastIndex.
+	[index >= firstIndex]
+		whileTrue:
+			[aBlock value: (array at: index).
+			index := index - 1]
+)
+
+setCollection: anArray = (
+	array := anArray.
+	self reset
+)
+
+----------------------------
+
+arrayType = (
+	^ Array
+)
+
+new = (
+	^self new: 10
+)
+
+new: anInteger = (
+	^ self basicNew setCollection: (self arrayType new: anInteger)
+)
+
+new: anInteger withAll: anObject = (
+	^ self basicNew setContents: (self arrayType new: anInteger withAll: anObject)
+)
+
+newFrom: aCollection = (
+	| answer |
+	answer := self new: aCollection size.
+	answer addAll: aCollection.
+	^answer
+)
+
+)

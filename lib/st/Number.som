@@ -1,0 +1,89 @@
+Number = Magnitude (
+
+abs = (
+	^(self < 0) ifTrue: [ self negated ] ifFalse: [ self ]
+)
+
+downTo: stop = (
+	| answer index |
+	answer := Array new: self - stop + 1.
+	index := 1.
+	self downTo: stop do: [ :item |
+		answer at: index put: item.
+		index := index + 1
+	].
+	^answer
+)
+
+downTo: stop do: aBlock = (
+	self to: stop by: -1 do: aBlock
+)
+
+downTo: stop by: step do: aBlock = (
+	self to: stop by: step negated do: aBlock
+)
+
+isNumber = (
+	^true
+)
+
+negated = (
+	^0 - self
+)
+
+negative = (
+	^self < 0
+)
+
+rounded = (
+	^(self + (self sign / 2)) truncated
+)
+
+roundTo: quantum = (
+	^(self / quantum) rounded * quantum
+)
+
+sign = (
+	self > 0 ifTrue: [^1].
+	self < 0 ifTrue: [^-1].
+	^0
+)
+
+sin = (
+	^self asFloat sin
+)
+
+to: stop = (
+	| answer |
+	answer := Array new: stop - self + 1.
+	self to: stop do: [ :item |
+		answer at: item put: item.
+	].
+	^answer
+)
+
+to: stop do: aBlock = (
+	| nextValue |
+	nextValue := self.
+	[nextValue <= stop]
+		whileTrue:
+			[aBlock value: nextValue.
+			nextValue := nextValue + 1]
+)
+
+to: stop by: step do: aBlock = (
+	| nextValue |
+	nextValue := self.
+	step = 0 ifTrue: [self error: 'step must be non-zero'].
+	step < 0
+		ifTrue: [[stop <= nextValue]
+				whileTrue:
+					[aBlock value: nextValue.
+					nextValue := nextValue + step]]
+		ifFalse: [[stop >= nextValue]
+				whileTrue:
+					[aBlock value: nextValue.
+					nextValue := nextValue + step]]
+)
+
+)

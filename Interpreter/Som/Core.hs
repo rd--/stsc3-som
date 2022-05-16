@@ -31,7 +31,7 @@ type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> 
 
 type LiteralConstructors = (LargeInteger -> Object, String -> Object)
 
-type CoreOpt = (LiteralConstructors, PrimitiveDispatcher)
+data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstructors, coreOptPrim :: PrimitiveDispatcher }
 
 -- * Lookup
 
@@ -157,6 +157,7 @@ vmContextAssignAllToNil = mapM_ (\name -> vmContextAssign name nilObject)
 vmDoesNotUnderstand :: CoreOpt -> Object -> String -> Object -> Vm Object
 vmDoesNotUnderstand opt receiver k argsArray = do
   let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
+  --printTrace ("vmDoesNotUnderstand: " ++ k ++ " <= ") [receiver, argsArray]
   evalMessageSend opt False receiver sel [symbolObject k, argsArray]
 
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
@@ -273,7 +274,7 @@ evalMethodOrPrimitive opt dat rcv arg =
   in case St.methodDefinitionPrimitiveCode methodDefinition of
        Just k -> do
          --printTrace "evalMethodOrPrimitive: primitive" (rcv : arg)
-         answer <- (snd opt) (holder, St.methodSignature methodDefinition) k rcv arg
+         answer <- (coreOptPrim opt) (holder, St.methodSignature methodDefinition) k rcv arg
          case answer of
            Just result -> return result
            Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
@@ -312,15 +313,18 @@ evalMessageSend opt isSuper receiver selector arguments = do
                  else return receiverClass
   findAndEvalMethodOrPrimitive opt receiver methodClass selector arguments
 
-{- | Evaluate expression.
+closureClass :: SystemType -> Int -> String
+closureClass typ numArg =
+  case typ of
+    SomSystem -> "Block" ++ show (numArg + 1)
+    SmalltalkSystem -> "BlockClosure"
 
-When evaluating a method after a primitive has failed the primitive expression is ignored.
--}
+-- | Evaluate expression.
 evalExpr :: CoreOpt -> StExpr -> Vm Object
 evalExpr opt expr =
   case expr of
     Expr.Identifier x -> vmContextLookup opt (if x == "super" then "self" else x)
-    Expr.Literal x -> literalObject (fst opt) x
+    Expr.Literal x -> literalObject (coreOptLit opt) x
     Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmContextAssign lhs
     Expr.Return x -> do
       result <- evalExpr opt x
@@ -336,11 +340,10 @@ evalExpr opt expr =
     Expr.Lambda _ld arg _tmp _stm -> do
       ctx <- vmContext
       pc <- vmProgramCounterIncrement
-      return (Object ("Block" ++ show (length arg + 1)) (DataBlock pc ctx expr))
+      return (Object (closureClass (coreOptTyp opt) (length arg)) (DataBlock pc ctx expr))
     Expr.Array exprList -> mapM (evalExpr opt) exprList >>= arrayFromList
     Expr.Begin exprList -> evalExprSequence opt exprList
     Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence opt exprList
-    Expr.Primitive _ -> return nilObject
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
 evalString :: CoreOpt -> String -> Vm Object

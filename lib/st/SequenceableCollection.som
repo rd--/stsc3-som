@@ -1,0 +1,141 @@
+SequenceableCollection = Collection (
+
+asArray = (
+	^ Array withAll: self
+)
+
+atAllPut: anObject = (
+	| size |
+	(size := self size) > 50
+		ifTrue: [self from: 1 to: size put: anObject]
+		ifFalse: [1 to: size do: [:index | self at: index put: anObject]]
+)
+
+collect: aBlock = (
+	| newCollection |
+	newCollection := self species new: self size.
+	1 to: self size do:
+		[:index |
+		newCollection at: index put: (aBlock value: (self at: index))].
+	^ newCollection
+)
+
+copy = (
+	^self copyFrom: 1
+)
+
+copyFrom: start = (
+	^self copyFrom: start to: self size
+)
+
+copyFrom: start to: stop = (
+	| newSize |
+	newSize := stop - start + 1.
+	^(self species new: newSize)
+		replaceFrom: 1
+		to: newSize
+		with: self
+		startingAt: start
+)
+
+do: aBlock = (
+	1 to: self size do:
+		[:index | aBlock value: (self at: index)]
+)
+
+first = (
+	^ self at: 1
+)
+
+from: start to: stop do: aBlock = (
+	start to: stop do: [:index | aBlock value: (self at: index)]
+)
+
+from: startIndex to: endIndex put: anObject = (
+	| written toWrite thisWrite |
+	startIndex > endIndex ifTrue: [^self].
+	self at: startIndex put: anObject.
+	written := 1.
+	toWrite := endIndex - startIndex + 1.
+	[written < toWrite] whileTrue:
+		[
+			thisWrite := written min: toWrite - written.
+			self
+				replaceFrom: startIndex + written
+				to: startIndex + written + thisWrite - 1
+				with: self
+				startingAt: startIndex.
+			written := written + thisWrite
+		].
+	^anObject
+)
+
+indexOf: anElement = (
+	^self indexOf: anElement startingAt: 1
+)
+
+indexOf: anElement startingAt: start = (
+	start to: self size do: [ :index |
+		(self at: index) = anElement ifTrue: [ ^index ] ].
+	^0
+)
+
+indexOf: anElement startingAt: start ifAbsent: exceptionBlock = (
+	| index |
+	(index := self indexOf: anElement startingAt: start) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+indexOf: anElement ifAbsent: exceptionBlock = (
+	| index |
+	(index := self indexOf: anElement startingAt: 1) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+last = (
+	^ self at: self size
+)
+
+lastIndexOf: anElement = (
+	^self lastIndexOf: anElement startingAt: self size
+)
+
+lastIndexOf: anElement startingAt: lastIndex = (
+	lastIndex to: 1 by: -1 do: [ :index |
+		(self at: index) = anElement ifTrue: [ ^index ] ].
+	^0
+)
+
+lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
+	| index |
+	(index := self lastIndexOf: anElement startingAt: lastIndex) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+replaceFrom: start to: stop with: replacement startingAt: repStart = (
+	| index repOff |
+	repOff := repStart - start.
+	index := start - 1.
+	[(index := index + 1) <= stop]
+		whileTrue: [self at: index put: (replacement at: repOff + index)]
+)
+
+second = (
+	^ self at: 2
+)
+
+select: aBlock = (
+	| aStream |
+	aStream := WriteStream on: (self species new: self size).
+	1 to: self size do:
+		[:index |
+		(aBlock value: (self at: index))
+			ifTrue: [aStream nextPut: (self at: index)]].
+	^ aStream contents
+)
+
+third = (
+	^ self at: 3
+)
+
+)

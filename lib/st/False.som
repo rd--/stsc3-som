@@ -1,0 +1,27 @@
+False = Boolean (
+
+asString = (
+	^'false'
+)
+
+ifTrue: ignoredBlock = (
+	^nil
+)
+
+ifFalse: aBlock = (
+	^aBlock value
+)
+
+not = (
+	^true
+)
+
+or: aBlock = (
+	^aBlock value
+)
+
+and: ignoredBlock = (
+	^false
+)
+
+)

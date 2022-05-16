@@ -1,0 +1,99 @@
+String = ArrayedCollection (
+
+size = (
+	<primitive: 62>
+	self primitiveFailed
+)
+
+asSymbol = primitive
+
+concatenate: argument = primitive
+
+hashcode = primitive
+
+isWhiteSpace = primitive
+
+isLetters = primitive
+
+isDigits = primitive
+
+= argument = primitive
+
+primSubstringFrom: start to: end = primitive
+
+, aString = (
+	^self concatenate: aString
+)
+
+asString = ( ^self )
+
+substringFrom: start to: end = (
+	((end <= self size) && (start > 0) && (start <= end))
+	ifTrue: [^self primSubstringFrom: start to: end]
+	ifFalse: [
+		self error: 'Attempting to index string out of its bounds (start: ' , start asString , ' end: ' , end asString , ' size: ' , self size asString , ')' ]
+)
+
+beginsWith: prefix = (
+	self size < prefix size ifTrue: [ ^ false ].
+	1 to: prefix size do: [:i |
+	((self charAt: i) = (prefix charAt: i)) ifFalse: [ ^ false ].
+	].
+	^ true
+)
+
+endsWith: suffix = (
+	| l sufL |
+	l := self size.
+	sufL := suffix size.
+	l < sufL ifTrue: [ ^ false ].
+	1 to: sufL do: [:i | (self charAt: l - sufL + i) = (suffix charAt: i) ifFalse: [ ^ false ]	].
+	^ true
+)
+
+asInteger = (
+	^ SmallInteger fromString: self
+)
+
+charAt: argument = (
+	^self substringFrom: argument to: argument
+)
+
+indexOf: aString = (
+	^ self indexOf: aString startingAt: 1
+)
+
+indexOf: aString startingAt: start = (
+	| l |
+	l := aString size.
+	start + l > (self size + 1) ifTrue: [ ^ -1 ].
+	start to: self size - l + 1 do: [:i |
+	(self primSubstringFrom: i to: i + l - 1) = aString ifTrue: [ ^ i ]. ].
+	^ -1
+)
+
+split: split = (
+	| start newStart result |
+	self size < split size ifTrue: [ ^ Array new: self ].
+	start := 1.
+	result := OrderedCollection new.
+	[start > 0] whileTrue: [
+		newStart := self indexOf: split startingAt: start.
+		newStart = -1
+		ifTrue: [
+			result addLast: (self primSubstringFrom: start to: self size).
+			^ result asArray
+		]
+		ifFalse: [
+			result addLast: (self primSubstringFrom: start to: newStart - 1).
+			start := newStart + split size
+		]
+	].
+	^ result asArray
+)
+
+print = (
+	Smalltalk printString: self
+)
+
+)
