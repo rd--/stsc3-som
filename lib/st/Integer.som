@@ -4,6 +4,10 @@ asInteger = (
 	^self
 )
 
+bitInvert = (
+	^ -1 - self
+)
+
 isInteger = (
 	^ true
 )
@@ -16,6 +20,13 @@ timesRepeat: aBlock = (
 	remaining := self.
 	[ (remaining := remaining - 1) >= 0 ] whileTrue: [
 		aBlock value ]
+)
+
+----
+
+new = (
+	self == Integer ifTrue: [^ self error: 'Integer is an abstract class.  Make a concrete subclass.'].
+	^ super new
 )
 
 )

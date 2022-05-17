@@ -59,14 +59,14 @@ numNumNumPrimitive f rcv arg = do
 intNumNumPrimitive :: Binop LargeInteger -> Binop Double -> LargeInteger -> ObjectData -> Maybe Object
 intNumNumPrimitive f1 f2 lhs rhs =
   case rhs of
-    DataLargeInteger rhs' -> return (intObject (f1 lhs rhs'))
+    DataSmallInteger rhs' -> return (intObject (f1 lhs rhs'))
     DataDouble rhs' -> return (doubleObject (f2 (fromIntegral lhs) rhs'))
     _ -> Nothing
 
 intNumBoolPrimitive :: Maybe Object -> Cmp LargeInteger -> Cmp Double -> LargeInteger -> ObjectData -> Maybe Object
 intNumBoolPrimitive def f1 f2 lhs rhs =
   case rhs of
-    DataLargeInteger rhs' -> Just (booleanObject (f1 lhs rhs'))
+    DataSmallInteger rhs' -> Just (booleanObject (f1 lhs rhs'))
     DataDouble rhs' -> Just (booleanObject (f2 (fromIntegral lhs) rhs'))
     _ -> def
 
@@ -96,12 +96,8 @@ stPrimitivesO :: PrimitiveDispatcherTo (Maybe Object)
 stPrimitivesO (prClass, prMethod) _prCode (Object _receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Double", "cos", DataDouble x, []) -> Just (doubleObject (cos x))
-    ("SmallInteger", "&", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (lhs Data.Bits..&. rhs))
-    ("SmallInteger", "<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (shiftLeft lhs rhs))
-    ("SmallInteger", ">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (shiftRight lhs rhs))
-    ("SmallInteger", "as32BitSignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitSignedValue x))
-    ("SmallInteger", "as32BitUnsignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
-    ("SmallInteger", "bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
+    ("SmallInteger", "as32BitSignedValue", DataSmallInteger x, []) -> Just (intObject (as32BitSignedValue x))
+    ("SmallInteger", "as32BitUnsignedValue", DataSmallInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
     _ -> Nothing
 
 -- | Primitives with no requirements that may fail.
@@ -110,16 +106,13 @@ stPrimitivesM (prClass, prMethod) prCode receiver@(Object _receiverName receiver
   case (prClass, prMethod, receiverObj, arguments) of
     ("Double", "%", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive doubleMod lhs rhs
     ("Double", "//", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (/) lhs rhs -- St?
-    ("SmallInteger", "%", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
+    ("SmallInteger", "%", DataSmallInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
     ("SmallInteger", "//", lhs, [Object _ rhs]) -> numNumNumPrimitive (/) lhs rhs
-    ("SmallInteger", "rem:", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
+    ("SmallInteger", "rem:", DataSmallInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
     ("SmallInteger", "sqrt", rcv, []) -> numNumPrimitive sqrt rcv
     _ -> stPrimitivesO (prClass, prMethod) prCode receiver arguments
 -}
 
-
-prArrayAt :: (StError m, MonadIO m) => Ref (Vec Object) -> SmallInteger -> m Object
-prArrayAt ref ix = arrayAt ref ix >>= maybe (prError "Array>>at: index out of range") return
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
@@ -185,7 +178,6 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("Method", "holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
     ("Method", "invokeOn:with:", rcv, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt rcv arg1 arg2)
     ("Method", "signature", DataMethod _ mth _, []) -> return (Just (symbolObject (St.selectorIdentifier (St.methodSelector mth))))
-    ("Object", "hashcode", _, []) -> fmap (Just . intObject) (objectIntHash receiver)
     ("Object", "inspect", _, []) -> fmap Just (objectInspect receiver)
     ("Object", "instVarAt:", DataUser _ tbl, [Object _ (DataSmallInteger ix)]) -> fmap Just (tblAtDefault tbl (ix - 1) (prError "Object>>instVarAt:"))
     ("Object", "instVarAt:put:", DataUser _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> fmap Just (tblAtPutDefault tbl (ix - 1) newObject (prError "Object>>instVarAt:put"))
@@ -225,6 +217,13 @@ prIntegerDivision lhs rhs =
     (answer, 0) -> Just (intObject answer)
     _ -> Nothing
 
+prBitShift :: SmallInteger -> SmallInteger -> Object
+prBitShift lhs rhs =
+  intObject
+  (if rhs >= 0
+   then Data.Bits.shiftL lhs rhs
+   else Data.Bits.shiftL lhs (negate rhs))
+
 stPrimitives :: PrimitiveDispatcher
 stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) arguments = do
   case (prClass, prMethod, prCode, receiverObj, arguments) of
@@ -238,6 +237,10 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     ("SmallInteger", "~=", 8, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (booleanObject (lhs /= rhs)))
     ("SmallInteger", "*", 9, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (intObject (lhs * rhs)))
     ("SmallInteger", "/", 10, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (prIntegerDivision lhs rhs)
+    ("SmallInteger", "bitAnd:", 14, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (intObject (lhs Data.Bits..&. rhs)))
+    ("SmallInteger", "bitOr:", 14, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (intObject (lhs Data.Bits..|. rhs)))
+    ("SmallInteger", "bitXor:", 16, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (intObject (Data.Bits.xor lhs rhs)))
+    ("SmallInteger", "bitShift:", 17, DataSmallInteger lhs, [Object _ (DataSmallInteger rhs)]) -> return (Just (prBitShift lhs rhs))
     ("SmallInteger", "asFloat", 40, DataSmallInteger x, []) -> return (Just (doubleObject (fromIntegral x)))
     ("Double", "+", 41, DataDouble lhs, [Object _ (DataDouble rhs)]) -> return (Just (doubleObject (lhs + rhs)))
     ("Double", "-", 42, DataDouble lhs, [Object _ (DataDouble rhs)]) -> return (Just (doubleObject (lhs - rhs)))
@@ -255,16 +258,19 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     ("Double", "sin", 56, DataDouble x, []) -> return (Just (doubleObject (sin x)))
     ("Double", "ln", 58, DataDouble x, []) -> return (Just (doubleObject (log x)))
     ("Double", "exp", 59, DataDouble x, []) -> return (Just (doubleObject (exp x)))
-    ("Array", "at:", 60, DataArray ref, [Object _ (DataSmallInteger ix)]) -> fmap Just (prArrayAt ref ix)
-    ("Array", "at:put:", 61, DataArray ref, [Object _ (DataSmallInteger ix), value]) -> fmap Just (vecRefWrite ref (ix - 1) value)
-    ("Array", "size", 62, DataArray ref, []) -> deRef ref >>= \v -> return (Just (intObject (vecLength v)))
+    (_, "at:", 60, DataIndexable ref, [Object _ (DataSmallInteger ix)]) -> vecRefAt ref ix
+    (_, "at:put:", 61, DataIndexable ref, [Object _ (DataSmallInteger ix), value]) -> fmap Just (vecRefWrite ref (ix - 1) value)
+    (_, "size", 62, DataIndexable ref, []) -> deRef ref >>= \v -> return (Just (intObject (vecLength v)))
     ("String", "size", 62, DataString _ str, []) -> return (Just (intObject (Text.length str)))
-    ("Class", "basicNew", 70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd)
+    (_, "basicNew", 70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd)
     ("Array class", "basicNew:", 71, DataClass {},[Object _ (DataSmallInteger size)]) -> fmap Just (arrayFromList (genericReplicate size nilObject))
     --("Class", "basicNew:", 71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger sz)]) -> fmap Just (classNewWithArg cd sz)
+    ("Object", "identityHash", 75, _, []) -> fmap (Just . intObject) (objectIntHash receiver)
     ("Object", "==", 110, _, [arg]) -> fmap Just (prObjectEqual receiver arg)
     ("Object","class", 111, _, []) -> fmap Just (objectClass receiver)
     ("SmalltalkImage", "exit:", 113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prSystemExit x)
+    ("Character class", "value:", 170, DataClass {}, [Object _ (DataSmallInteger ix)]) -> return (Just (characterObject (toEnum ix)))
+    ("Character", "asInteger", 171, DataCharacter char, []) -> return (Just (intObject (fromEnum char)))
     _ -> stPrimitivesC (prClass, prMethod) prCode receiver arguments
 
 stCoreOpt :: CoreOpt

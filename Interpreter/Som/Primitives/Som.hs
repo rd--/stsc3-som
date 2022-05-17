@@ -81,7 +81,7 @@ doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDou
 -- * Primtives
 
 prArrayAt :: (StError m, MonadIO m) => Ref (Vec Object) -> LargeInteger -> m Object
-prArrayAt ref ix = arrayAt ref (fromInteger ix) >>= maybe (prError "Array>>at: index out of range") return
+prArrayAt ref ix = vecRefAt ref (fromInteger ix) >>= maybe (prError "Array>>at: index out of range") return
 
 prObjectEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
 prObjectEqual rcv arg = do
@@ -136,9 +136,9 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("Double", "sqrt", DataDouble x, []) -> Just (doubleObject (sqrt x))
     ("Integer", "<", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive Nothing (<) (<) lhs rhs
     ("Integer", "&", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (lhs Data.Bits..&. rhs))
-    ("Integer", "<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (shiftLeft lhs rhs))
+    ("Integer", "<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftLeft lhs rhs))
     ("Integer", "=", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive (Just falseObject) (==) (==) lhs rhs
-    ("Integer", ">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (shiftRight lhs rhs))
+    ("Integer", ">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftRight lhs rhs))
     ("Integer", "as32BitSignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitSignedValue x))
     ("Integer", "as32BitUnsignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
     ("Integer", "asDouble", DataLargeInteger x, []) -> Just (doubleObject (fromIntegral x))
@@ -193,9 +193,9 @@ somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveM m
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
     ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
-    ("Array", "at:", DataArray ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
-    ("Array", "at:put:", DataArray ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
-    ("Array", "length", DataArray ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
+    ("Array", "at:", DataIndexable ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
+    ("Array", "at:put:", DataIndexable ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
+    ("Array", "length", DataIndexable ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
     ("Class", "methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
     ("Class", "name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("Integer", "atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))

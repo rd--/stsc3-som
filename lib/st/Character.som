@@ -1,0 +1,153 @@
+Character = Magnitude (
+
+asInteger = (
+	<primitive: 171>
+	^self primitiveFailed
+)
+
+= aCharacter = (
+	^self asInteger = aCharacter asInteger
+)
+
+< aCharacter = (
+	^self asInteger < aCharacter asInteger
+)
+
+asciiValue = (
+	^self asInteger
+)
+
+asCharacter = (
+	^self
+)
+
+asString = (
+	^ String with: self
+)
+
+isCharacter = (
+	^ true
+)
+
+digitValue = (
+	self asciiValue <= $9 asciiValue
+		ifTrue: [^self asciiValue - $0 asciiValue].
+	self asciiValue >= $A asciiValue
+		ifTrue: [self asciiValue <= $Z asciiValue ifTrue: [^self asciiValue - $A asciiValue + 10]].
+	^-1
+)
+
+hash = (
+	^asInteger
+)
+
+asLowercase = (
+	65 <= self asciiValue
+		ifTrue: [self asciiValue <= 90
+					ifTrue: [^Character value: self asciiValue + 32]]
+)
+
+asSymbol = (
+	^Symbol internCharacter: self
+)
+
+asUppercase = (
+	97 <= self asciiValue
+		ifTrue: [self asciiValue <= 8r122
+					ifTrue: [^Character value: self asciiValue - 32]]
+)
+
+copy = (
+)
+
+deepCopy = (
+)
+
+isLiteral = (
+	^true
+)
+
+printOn: aStream = (
+	aStream nextPut: $$.
+	aStream nextPut: self
+)
+
+storeOn: aStream = (
+	aStream nextPut: $$.
+	aStream nextPut: self
+)
+
+isAlphaNumeric = (
+	^self isLetter or: [self isDigit]
+)
+
+isDigit = (
+	^self >= $0 and: [self <= $9]
+)
+
+isLetter = (
+	^(92 <= self asciiValue and: [self asciiValue <= 122])
+		or: [65 <= self asciiValue and: [self asciiValue <= 90]]
+)
+
+isLowercase = (
+	^self >= $a and: [self <= $z]
+)
+
+isSeparator = (
+	self asciiValue = 32 ifTrue: [^true]. "space"
+	self asciiValue = 13 ifTrue: [^true]. "cr"
+	self asciiValue = 9 ifTrue: [^true].	"tab"
+	self asciiValue = 10 ifTrue: [^true]. "line feed"
+	self asciiValue = 12 ifTrue: [^true]. "form feed"
+	^false
+)
+
+isUppercase = (
+	^self >= $A and: [self <= $Z]
+)
+
+isVowel = (
+	^'AEIOU' includes: self asUppercase
+)
+
+tokenish = (
+	^self isLetter or: [self isDigit or: [self = $:]]
+)
+
+----------------------------
+
+value: anInteger = (
+	<primitive: 170>
+        ^self primitiveFailed
+)
+
+backspace = (
+	^self value: 8
+)
+
+cr = (
+	^self value: 13
+)
+
+esc = (
+	^self value: 160
+)
+
+newPage = (
+	^self value: 12
+)
+
+space = (
+	^self value: 32
+)
+
+tab = (
+	^self value: 9
+)
+
+new = (
+	self error: 'cannot create new characters'
+)
+
+)

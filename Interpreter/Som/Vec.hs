@@ -31,7 +31,7 @@ vecBoundsCheck msg vec ix =
     (ix < 0 || ix >= vecLength vec)
     (stError (msg ++ ": index out of range"))
 
-vecRefWrite :: (MonadIO m, StError m) => Ref (Vec t) -> Int -> t -> m t
+vecRefWrite :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
 vecRefWrite vecRef ix value = do
   vec <- deRef vecRef
   vecBoundsCheck "vecRefWrite" vec ix
@@ -40,3 +40,10 @@ vecRefWrite vecRef ix value = do
       vecRef
       (Vector.modify (\mutVec -> Vector.Mutable.write mutVec ix value) vec))
   return value
+
+vecRefAt :: MonadIO m => VecRef t -> Int -> m (Maybe t)
+vecRefAt ref ix = do
+  v <- deRef ref
+  if ix <= vecLength v
+    then return (Just (vecAt v (ix - 1)))
+    else return Nothing

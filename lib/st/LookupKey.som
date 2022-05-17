@@ -1,0 +1,37 @@
+LookupKey = Magnitude (
+
+| key |
+
+key = (
+	^key
+)
+
+key: anObject = (
+	key := anObject
+)
+
+< aLookupKey = (
+	^key < aLookupKey key
+)
+
+= aLookupKey = (
+	self species = aLookupKey species
+		ifTrue: [^key = aLookupKey key]
+		ifFalse: [^false]
+)
+
+hash = (
+	^key hash
+)
+
+printOn: aStream = (
+	key printOn: aStream
+)
+
+----------------------------
+
+key: aKey = (
+	^self new key: aKey
+)
+
+)

@@ -1,37 +1,10 @@
-Class = (
-
-basicNew = (
-	<primitive: 70>
-	self isVariable ifTrue: [^self basicNew: 0].
-	self primitiveFailed
-)
-
-basicNew: sizeRequested = (
-	<primitive: 71>
-	self isVariable ifFalse: [self error: self asString , ' cannot have variable sized instances'].
-	self primitiveFailed
-)
-
-new = (
-	^ self basicNew initialize
-)
-
-new: sizeRequested = (
-	^ (self basicNew: sizeRequested) initialize
-)
-
-isVariable = (
-           ^self class = Array
-)
+Class = Behavior (
 
     "Accessing"
     name = primitive
 
     "Converting"
     asString = ( ^self name asString )
-
-    "Allocation"
-    new = primitive
 
     "Meta Information"
     superclass = primitive

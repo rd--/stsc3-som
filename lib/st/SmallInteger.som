@@ -50,6 +50,27 @@ SmallInteger = Integer (
 	^ self asFloat / aNumber
 )
 
+bitAnd: arg = (
+	<primitive: 14>
+        self primitiveFailed
+)
+
+bitOr: arg  = (
+	<primitive: 15>
+        self primitiveFailed
+)
+
+bitXor: arg  = (
+	<primitive: 16>
+        self primitiveFailed
+)
+
+bitShift: arg = (
+	<primitive: 17>
+	self = 0 ifTrue: [^self].
+        self primitiveFailed
+)
+
 asFloat = (
 	<primitive: 40>
 	self primitiveFailed

@@ -1,5 +1,25 @@
 Magnitude = Object (
 
+< aMagnitude = (
+	^self subclassResponsibility
+)
+
+<= aMagnitude = (
+	^(self > aMagnitude) not
+)
+
+= aMagnitude = (
+	^self subclassResponsibility
+)
+
+> aMagnitude = (
+	^aMagnitude < self
+)
+
+>= aMagnitude = (
+	^aMagnitude <= self
+)
+
 <=> aMagnitude = (
 	self = aMagnitude ifTrue: [ ^0 ].
 	self < aMagnitude ifTrue: [ ^-1 ].
@@ -21,6 +41,10 @@ clampLow: lowMagnitude = (
 
 clampLow: lowMagnitude high: highMagnitude = (
 	^ self min: highMagnitude max: lowMagnitude
+)
+
+hash = (
+	^self subclassResponsibility
 )
 
 inRangeOf: first and: second = (

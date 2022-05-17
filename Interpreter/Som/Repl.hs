@@ -37,7 +37,7 @@ stStandardClassList =
     ,"BlockClosure"
     ,"Boolean", "True", "False"
     ,"Class", "Metaclass"
-    ,"Magnitude", "Number", "Integer", "SmallInteger", "Float", "Double"
+    ,"Magnitude", "Number", "Integer", "SmallInteger", "Float", "Double", "Character"
     ,"Method" ,"Primitive"
     ,"Object", "UndefinedObject", "Nil"
     ,"SmalltalkImage"

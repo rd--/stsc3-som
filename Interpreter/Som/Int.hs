@@ -16,11 +16,11 @@ fromLargeInteger = fromIntegral
 toLargeInteger :: SmallInteger -> LargeInteger
 toLargeInteger = fromIntegral
 
-shiftLeft ::  LargeInteger -> LargeInteger ->  LargeInteger
-shiftLeft x by = Data.Bits.shiftL x (fromLargeInteger by)
+largeIntegerShiftLeft ::  LargeInteger -> LargeInteger ->  LargeInteger
+largeIntegerShiftLeft x by = Data.Bits.shiftL x (fromLargeInteger by)
 
-shiftRight ::  LargeInteger -> LargeInteger ->  LargeInteger
-shiftRight x by = Data.Bits.shiftR x (fromLargeInteger by)
+largeIntegerShiftRight ::  LargeInteger -> LargeInteger ->  LargeInteger
+largeIntegerShiftRight x by = Data.Bits.shiftR x (fromLargeInteger by)
 
 as32BitUnsignedValue :: LargeInteger -> LargeInteger
 as32BitUnsignedValue x =

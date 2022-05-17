@@ -1,10 +1,5 @@
 Object = nil (
 
-== other = (
-	<primitive: 100>
-	self primitiveFailed
-)
-
 at: index = (
 	<primitive: 60>
 	index isInteger ifTrue:
@@ -53,6 +48,16 @@ basicSize = (
 	^0
 )
 
+identityHash = (
+	<primitive: 75>
+	self primitiveFailed
+)
+
+== other = (
+	<primitive: 110>
+	self primitiveFailed
+)
+
 class = (
 	<primitive: 111>
 	self primitiveFailed
@@ -61,6 +66,16 @@ class = (
 species = (
 	<primitive: 111>
 	^self class
+)
+
+~~ anObject = (
+	<primitive: 169>
+	self == anObject ifTrue: [^false].
+	^true
+)
+
+-> anObject = (
+	^Association basicNew key: self value: anObject
 )
 
 adaptToFloat: rcvr andCompare: selector = (
@@ -85,6 +100,9 @@ errorNotIndexable = (
 
 errorSubscriptBounds: index = (
 	self error: 'subscript is out of bounds: ' , index asString
+)
+
+initialize = (
 )
 
 isInteger = (

@@ -90,13 +90,13 @@ data ObjectData
   | DataDouble Double
   | DataCharacter Char -- ^ Not in Som
   | DataString Bool UnicodeString -- ^ IsSymbol
-  | DataArray (Ref (Vec Object)) -- ^ Arrays are mutable
   | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
   | DataBlock Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
   | DataSystem -- ^ Token for System instance.
+  | DataIndexable (Ref (Vec Object)) -- ^ Objects with a fixed number integer indexed of mutable slots
   | DataUser Id ObjectTable
   deriving (Eq)
 
@@ -107,13 +107,6 @@ objectDataAsDouble o =
     DataLargeInteger x -> Just (fromIntegral x)
     DataDouble x -> Just x
     _ -> Nothing
-
-arrayAt :: MonadIO m => Ref (Vec Object) -> Int -> m (Maybe Object)
-arrayAt ref ix = do
-  v <- deRef ref
-  if ix <= vecLength v
-    then return (Just (vecAt v (ix - 1)))
-    else return Nothing
 
 -- | Object represented as class name and object data.
 data Object = Object Symbol ObjectData deriving (Eq)
@@ -279,13 +272,13 @@ objectToString (Object nm obj) =
       if isSymbol -- nm == toSymbol "Symbol"
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
-    DataArray _ -> "instance of Array"
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
     DataBlock _ _ _ -> "instance of " ++ fromSymbol nm
     DataReturn _ _ o -> "Return: " ++ objectToString o
     DataSystem -> "instance of " ++ fromSymbol nm
+    DataIndexable _ -> "instance of " ++ fromSymbol nm
     DataUser _ _ -> "instance of " ++ fromSymbol nm
 
 instance Show Object where show = objectToString
@@ -309,10 +302,10 @@ tblToInspector tbl = do
 objectToInspector :: Object -> Vm String
 objectToInspector (Object nm obj) =
   case obj of
-    DataArray ref -> do
+    DataIndexable ref -> do
       x <- deRef ref
       let l = map objectToString (Vector.toList x)
-      return (concat ["{",intercalate ". " l,"}"])
+      return (concat ["instance of ", nm, " with {",intercalate ". " l,"}"])
     DataClass (x,_) tbl _ -> do
       tblStr <- tblToInspector tbl
       return (St.className x ++ ": " ++ tblStr)
@@ -342,10 +335,15 @@ classMethodsVec (Object _ obj) =
     DataClass (_,True) _ (_,classMethodsCache) -> Just classMethodsCache
     _ -> Nothing
 
+indexableObjectElements :: Object -> Vm [Object]
+indexableObjectElements o = case o of
+  Object _ (DataIndexable vectorRef) -> fmap Vector.toList (deRef vectorRef)
+  _ -> vmError ("indexableObjectElements: not indexable")
+
 arrayElements :: Object -> Vm [Object]
 arrayElements o = case o of
-  Object _ (DataArray vectorRef) -> fmap Vector.toList (deRef vectorRef)
-  _ -> vmError ("arrayElements: not array")
+  Object "Array" (DataIndexable vectorRef) -> fmap Vector.toList (deRef vectorRef)
+  _ -> vmError ("arrayElements: not indexable")
 
 -- | Lookup instance variable of Object.
 objectLookupInstanceVariable :: Object -> Symbol -> Vm (Maybe Object)
@@ -467,7 +465,7 @@ trueObject = booleanObject True
 arrayFromVec :: MonadIO m => Vec Object -> m Object
 arrayFromVec e = do
   a <- liftIO (toRef e)
-  return (Object (toSymbol "Array") (DataArray a))
+  return (Object (toSymbol "Array") (DataIndexable a))
 
 arrayFromList :: MonadIO m => [Object] -> m Object
 arrayFromList e = arrayFromVec (Vector.fromList e)
@@ -590,11 +588,11 @@ objectIntHash (Object nm obj) =
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
     DataString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode
-    DataArray x -> deRef x >>= \vec -> mapM objectIntHash (Vector.toList vec) >>= mHash
     DataClass (x,_) _ _ -> mHash (nm,St.className x)
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
     DataBlock x _ _ -> mHash ("Block",x)
     DataReturn _ _ _ -> vmError ("Object>>hashcode: Return")
     DataSystem -> mHash (nm,"system")
+    DataIndexable x -> deRef x >>= \vec -> mapM objectIntHash (Vector.toList vec) >>= \lst -> mHash (nm, lst)
     DataUser x _ -> mHash (nm,x)

@@ -1,0 +1,46 @@
+Behavior = Object (
+
+basicNew = (
+	<primitive: 70>
+	self isVariable ifTrue: [^self basicNew: 0].
+	self primitiveFailed
+)
+
+basicNew: sizeRequested = (
+	<primitive: 71>
+	self isVariable ifFalse: [self error: self asString , ' cannot have variable sized instances'].
+	self primitiveFailed
+)
+
+new = (
+	^ self basicNew initialize
+)
+
+new: sizeRequested = (
+	^ (self basicNew: sizeRequested) initialize
+)
+
+flushCache = (
+	<primitive: 89>
+	self primitiveFailed
+)
+
+isVariable = (
+           ^self class = Array
+)
+
+allSubclasses = (
+	| scan scanTop |
+	scan := OrderedCollection withAll: self subclasses.
+	scanTop := 1.
+	[scanTop > scan size]
+		whileFalse: [scan addAll: (scan at: scanTop) subclasses.
+			scanTop := scanTop + 1].
+	^ scan
+)
+
+isBehavior = (
+	^true
+)
+
+)

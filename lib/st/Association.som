@@ -1,0 +1,34 @@
+Association = LookupKey (
+
+| value |
+
+= anAssociation = (
+	^ super = anAssociation and: [value = anAssociation value]
+)
+
+key: aKey value: anObject = (
+	key := aKey.
+	value := anObject
+)
+
+value = (
+	^value
+)
+
+value: anObject = (
+	value := anObject
+)
+
+printOn: aStream = (
+	super printOn: aStream.
+	aStream nextPutAll: '->'.
+	value printOn: aStream
+)
+
+----------------------------
+
+key: newKey value: newValue = (
+	^(super key: newKey) value: newValue
+)
+
+)
