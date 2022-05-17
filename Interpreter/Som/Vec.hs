@@ -22,14 +22,32 @@ type VecRef t = Ref (Vec t)
 vecAt :: Vec t -> Int -> t
 vecAt vec ix = vec Vector.! ix
 
+vecAtMaybe :: Vec t -> Int -> Maybe t
+vecAtMaybe vec ix =
+  if ix > 0 && ix <= vecLength vec
+  then Just (vecAt vec (ix - 1))
+  else Nothing
+
 vecLength :: Vec t -> Int
 vecLength = Vector.length
+
+vecToList :: Vec t -> [t]
+vecToList = Vector.toList
+
+vecFromList :: [t] -> Vec t
+vecFromList = Vector.fromList
+
+vecFind :: (t -> Bool) -> Vec t -> Maybe t
+vecFind =  Vector.find
 
 vecBoundsCheck :: StError m => String -> Vec t -> Int -> m ()
 vecBoundsCheck msg vec ix =
   when
     (ix < 0 || ix >= vecLength vec)
     (stError (msg ++ ": index out of range"))
+
+vecShallowCopy :: Vec t -> Vec t
+vecShallowCopy v = Vector.generate (vecLength v) (\i -> vecAt v i)
 
 vecRefWrite :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
 vecRefWrite vecRef ix value = do
@@ -43,7 +61,10 @@ vecRefWrite vecRef ix value = do
 
 vecRefAt :: MonadIO m => VecRef t -> Int -> m (Maybe t)
 vecRefAt ref ix = do
-  v <- deRef ref
-  if ix <= vecLength v
-    then return (Just (vecAt v (ix - 1)))
-    else return Nothing
+  vec <- deRef ref
+  return (vecAtMaybe vec ix)
+
+vecRefShallowCopy :: MonadIO m => VecRef t -> m (VecRef t)
+vecRefShallowCopy ref = do
+  vec <- deRef ref
+  toRef (vecShallowCopy vec)

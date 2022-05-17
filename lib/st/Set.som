@@ -1,108 +1,125 @@
 Set = HashedCollection (
 
-| items |
+add: newObject = (
+	| index |
+	index := self scanFor: newObject.
+	(array at: index) ifNil: [self atNewIndex: index put: newObject asSetElement].
+	^ newObject
+)
+
+addIfNotPresent: anObject = (
+	^self add: anObject
+)
+
+ifAbsentAdd: anObject = (
+	| index |
+	index := self scanFor: anObject.
+	(array at: index) ifNil:
+		[self
+			atNewIndex: index
+			put: anObject asSetElement.
+		^true].
+	^false
+)
+
+= anObject = (
+	self == anObject ifTrue: [ ^true ].
+	self species == anObject species ifFalse: [ ^false ].
+	self size = anObject size ifFalse: [ ^false ].
+	^self allSatisfy: [ :each | anObject includes: each ]
+)
 
 asSet = (
 	^self
 )
 
-= otherSet = (
-	self size = otherSet size ifFalse: [^ false ].
-	self do: [:item | (otherSet contains: item) ifFalse: [^ false]. ].
-	^ true.
+copyWithout: oldElement = (
+	| answer |
+	answer := self copy	remove: oldElement ifAbsent: [].
+	^answer
 )
 
-add: anObject = (
-	(self contains: anObject)
-		ifFalse: [ items addLast: anObject ]
+postCopy = (
+	super postCopy.
+	array := array copy
 )
 
-addAll: aCollection = (
-	aCollection do: [:each |
-		self add: each]
-)
-
-union: aCollection = (
-	| new |
-	new := Set new.
-	new addAll: self.
-	new addAll: aCollection.
-	^ new
-)
-
-intersection: aCollection = (
-	| new |
-	new := Set new.
-	self do: [:it |
-		(aCollection contains: it) ifTrue: [ new add: it ]].
-	^ new
-)
-
-- aCollection = (
-	| new |
-	new := Set new.
-	self do: [:it |
-		(aCollection contains: it) ifFalse: [ new add: it ]].
-	^ new
-)
-
-contains: anObject = (
-	items do: [ :it | it == anObject ifTrue: [ ^true ] ].
-	^false
-)
-
-remove: anObject = (
-	| newItems |
-	newItems := OrderedCollection new.
-	items do: [:it |
-		it == anObject ifFalse: [ newItems addLast: it ] ].
-	items := newItems
-)
-
-isEmpty = (
-	^items isEmpty
-)
-
-do: block = (
-	items do: block
-)
-
-collect: block = (
-	| coll |
-	coll := OrderedCollection new.
-	self do: [ :e | coll addLast: (block value: e) ].
-	^coll
-)
-
-println = (
-	'(' print.
-	self do: [ :it | '(' print. it print. ')' print ].
-	')' println
-)
-
-asString = (
-	| result |
-	result := 'a Set('.
-	items do: [:e | result := result , e asString , ', '].
-	result := result , ')'.
-	^ result
-)
-
-size = (
-	^ items size
-)
-
-items: it = (
-	items := it
-)
-
-----
-
-new = (
+collect: aBlock = (
 	| newSet |
-	newSet := self basicNew.
-	newSet items: OrderedCollection new.
+	newSet := Set new: self size.
+	self do: [ :each | newSet add: (aBlock value: each) ].
 	^newSet
+)
+
+do: aBlock = (
+	tally = 0 ifTrue: [ ^self ].
+	1 to: array size do: [ :index |
+		(array at: index) ifNotNil: [ :element |
+			aBlock value: element enclosedSetElement] ]
+)
+
+occurrencesOf: anObject = (
+	(self includes: anObject) ifTrue: [ ^1 ].
+	^0
+)
+
+select: aBlock = (
+	| newCollection |
+	newCollection := self copyEmpty.
+	self do: [:each | (aBlock value: each) ifTrue: [newCollection add: each]].
+	^newCollection
+)
+
+remove: oldObject ifAbsent: aBlock = (
+	| index |
+	index := self scanFor: oldObject.
+	(array at: index) ifNil: [ ^ aBlock value ].
+	array at: index put: nil.
+	tally := tally - 1.
+	self fixCollisionsFrom: index.
+	^ oldObject
+)
+
+includes: anObject = (
+	(array at: (self scanFor: anObject)) ifNil: [ ^false ] ifNotNil: [ ^true ]
+)
+
+fixCollisionsFrom: start = (
+	| element index |
+	index := start.
+	[ (element := array at: (index := index \\ array size + 1)) == nil ] whileFalse: [
+		| newIndex |
+		(newIndex := self scanFor: element enclosedSetElement) = index ifFalse: [
+			array at: newIndex put: element.
+			array at: index put: nil ] ]
+)
+
+noCheckNoGrowFillFrom: anArray = (
+	1 to: anArray size do: [ :index |
+		(anArray at: index) ifNotNil: [ :object |
+			array
+				at: (self scanForEmptySlotFor: object enclosedSetElement)
+				put: object ] ]
+)
+
+scanFor: anObject = (
+	| index start size |
+	index := start := anObject hash \\ (size := array size) + 1.
+	[
+		| element |
+		((element := array at: index) == nil or: [ anObject = element enclosedSetElement ]) ifTrue: [ ^index ].
+		(index := index \\ size + 1) = start
+	] whileFalse.
+	self errorNoFreeSpace
+)
+
+----------------------------
+
+newFrom: aCollection = (
+	| newCollection |
+	newCollection := self new: aCollection size.
+	newCollection addAll: aCollection.
+	^ newCollection
 )
 
 )

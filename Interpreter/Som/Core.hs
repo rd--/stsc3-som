@@ -9,8 +9,6 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
-import qualified Data.Vector as Vector {- vector -}
-
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
 
@@ -21,10 +19,12 @@ import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 import Interpreter.Som.DictRef
 import Interpreter.Som.Error
 import Interpreter.Som.Int
+import Interpreter.Som.Ref
 import Interpreter.Som.Str.Text
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
+import Interpreter.Som.Vec
 
 -- | (Holder, selector), code, receiver, arguments, answer.
 type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
@@ -32,6 +32,30 @@ type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> 
 type LiteralConstructors = (LargeInteger -> Object, String -> Object)
 
 data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstructors, coreOptPrim :: PrimitiveDispatcher }
+
+-- * Copy
+
+objectDataShallowCopy :: ObjectData -> Vm ObjectData
+objectDataShallowCopy od =
+  case od of
+  DataArrayLiteral vec -> do
+    pc <- vmProgramCounterIncrement
+    ref <- toRef (vecShallowCopy vec)
+    return (DataIndexable pc ref)
+  DataIndexable _ ref -> do
+    pc <- vmProgramCounterIncrement
+    cpy <- vecRefShallowCopy ref
+    return (DataIndexable pc cpy)
+  DataUser _ tbl -> do
+    pc <- vmProgramCounterIncrement
+    cpy <- objectTableShallowCopy tbl
+    return (DataUser pc cpy)
+  _ -> return od
+
+objectShallowCopy :: Object -> Vm Object
+objectShallowCopy (Object nm obj) = do
+  cpy <- objectDataShallowCopy obj
+  return (Object nm cpy)
 
 -- * Lookup
 
@@ -205,7 +229,11 @@ vmGlobalResolveOrError key = vmGlobalResolveMaybe key >>= maybe (vmError ("vmGlo
 
 -- * Eval
 
--- | Evaluate StExpr in sequence.  If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
+{- | Evaluate StExpr in sequence.
+
+If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
+Note that the return value of e0 being a Return object is not the same as e0 being a Return expression.
+-}
 evalExprSequence :: CoreOpt -> [StExpr] -> Vm Object
 evalExprSequence opt st =
   case st of
@@ -263,7 +291,12 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
   result <- evalStatements opt methodStatements
   _ <- vmContextDelete
   case result of
-    (Object "Return" (DataReturn ctxId _ x)) -> if ctxId == pc then return x else return result
+    (Object "Return" (DataReturn ctxId _ x)) ->
+      if ctxId == pc
+      then --printTrace ("Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result] >>
+           return x
+      else --(vmContextIdSequence >>= \sq -> printTrace ("Return: ctxId not at pc: " ++ show (ctxId, pc, sq)) [receiver, result]) >>
+           return result
     _ -> return receiver
 
 -- | Evaluate method, deferring to Primitive if required.
@@ -279,6 +312,15 @@ evalMethodOrPrimitive opt dat rcv arg =
            Just result -> return result
            Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
        Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
+
+arrayFromVec :: Vec Object -> Vm Object
+arrayFromVec vec = do
+  pc <- vmProgramCounterIncrement
+  ref <- liftIO (toRef vec)
+  return (Object (toSymbol "Array") (DataIndexable pc ref))
+
+arrayFromList :: [Object] -> Vm Object
+arrayFromList e = arrayFromVec (vecFromList e)
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: CoreOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object
@@ -299,7 +341,7 @@ findMethodMaybe o sel =
   then return Nothing
   else case classMethodsVec o of
          Just mth ->
-          case Vector.find (\(Object _ (DataMethod _ m _)) -> sel == St.methodSelector m) mth of
+          case vecFind (\(Object _ (DataMethod _ m _)) -> sel == St.methodSelector m) mth of
             Just m -> return (Just m)
             Nothing -> classSuperclassOf o >>= \sc -> findMethodMaybe sc sel
          _ -> vmError "findMethodMaybe"
@@ -313,18 +355,30 @@ evalMessageSend opt isSuper receiver selector arguments = do
                  else return receiverClass
   findAndEvalMethodOrPrimitive opt receiver methodClass selector arguments
 
+-- | Som/St.  Som has distinct numbered Block classes.
 closureClass :: SystemType -> Int -> String
 closureClass typ numArg =
   case typ of
     SomSystem -> "Block" ++ show (numArg + 1)
     SmalltalkSystem -> "BlockClosure"
 
--- | Evaluate expression.
+-- | Som/St.  Som array literals are mutable.
+sysLiteralObject :: SystemType -> Object -> Vm Object
+sysLiteralObject typ obj =
+  case typ of
+    SomSystem -> objectShallowCopy obj
+    SmalltalkSystem -> return obj
+
+{- | Evaluate expression.
+
+The evaluator handles non-local returns by making a "Return" object that short-circuits further evaluation.
+See calls to isReturnObject.
+-}
 evalExpr :: CoreOpt -> StExpr -> Vm Object
 evalExpr opt expr =
   case expr of
     Expr.Identifier x -> vmContextLookup opt (if x == "super" then "self" else x)
-    Expr.Literal x -> literalObject (coreOptLit opt) x
+    Expr.Literal x -> sysLiteralObject (coreOptTyp opt) (literalObject (coreOptLit opt) x)
     Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmContextAssign lhs
     Expr.Return x -> do
       result <- evalExpr opt x
@@ -333,10 +387,12 @@ evalExpr opt expr =
       else do pc <- vmContextId
               blk <- vmContextCurrentBlock
               returnObject pc blk result
-    Expr.Send e (Expr.Message selector exprList) ->
-      do receiver <- evalExpr opt e
-         arguments <- mapM (evalExpr opt) exprList
-         evalMessageSend opt (Expr.exprIsSuper e) receiver selector arguments
+    Expr.Send e (Expr.Message selector exprList) -> do
+      receiver <- evalExpr opt e
+      if (isReturnObject receiver)
+      then return receiver
+      else do arguments <- mapM (evalExpr opt) exprList
+              evalMessageSend opt (Expr.exprIsSuper e) receiver selector arguments
     Expr.Lambda _ld arg _tmp _stm -> do
       ctx <- vmContext
       pc <- vmProgramCounterIncrement
@@ -504,4 +560,4 @@ makeClassTable classLibrary = do
 -- * Trace
 
 printTrace :: MonadIO m => String -> [Object] -> m ()
-printTrace msg o = liftIO (putStr msg) >> objectListPrint o >> return ()
+printTrace msg o = liftIO (putStr (msg ++ " with: ")) >> objectListPrint o >> return ()

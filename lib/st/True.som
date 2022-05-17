@@ -4,12 +4,20 @@ asString = (
 	^'true'
 )
 
-ifTrue: aBlock = (
-	^aBlock value
+ifFalse: falseAlternativeBlock ifTrue: trueAlternativeBlock = (
+	^trueAlternativeBlock value
 )
 
 ifFalse: ignoredBlock = (
 	^nil
+)
+
+ifTrue: aBlock = (
+	^aBlock value
+)
+
+ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock = (
+	^trueAlternativeBlock value
 )
 
 not = (

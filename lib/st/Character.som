@@ -13,6 +13,10 @@ asInteger = (
 	^self asInteger < aCharacter asInteger
 )
 
+adaptToNumber: rcvr andSend: selector = (
+	^ rcvr perform: selector with: self asInteger
+)
+
 asciiValue = (
 	^self asInteger
 )
@@ -57,7 +61,7 @@ asUppercase = (
 					ifTrue: [^Character value: self asciiValue - 32]]
 )
 
-copy = (
+shallowCopy = (
 )
 
 deepCopy = (

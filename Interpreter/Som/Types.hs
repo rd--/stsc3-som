@@ -15,7 +15,6 @@ import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
 import qualified Data.Time.Clock.System as Time {- time -}
-import qualified Data.Vector as Vector {- vector -}
 
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
@@ -39,6 +38,9 @@ type ObjectDictionary = DictRef Symbol Object
 -- | Indexable mutable association list (zero-indexed) of named objects.
 type ObjectTable = Vec (Symbol, Ref Object)
 
+objectTableShallowCopy :: MonadIO m => ObjectTable -> m ObjectTable
+objectTableShallowCopy = undefined
+
 -- | Identifier.
 type Id = Int
 
@@ -58,17 +60,26 @@ data ContextNode =
 {- | A Context is the environment a Smalltalk expression is evaluated in.
      The Name lookup rules are:
 
-     For methods: 1. temporaries & arguments,
+     For methods:
+                  1. temporaries & arguments,
                   2. receiver instance variables,
                   3. receiver class variables,
                   4. globals.
 
-     For blocks:  1. temporaries & arguments,
+     For blocks:
+                  1. temporaries & arguments,
                   2. parent context chain,
                   3. globals,
                   4. workspace.
 -}
 data Context = Context ContextNode (Maybe Context) deriving (Eq)
+
+contextIdSequence :: Context -> [Id]
+contextIdSequence ctx =
+  case ctx of
+    Context (MethodContext ctxId _ _) next -> ctxId : maybe [] contextIdSequence next
+    Context _ (Just next) -> contextIdSequence next
+    Context _ Nothing -> []
 
 -- | Smalltalk expression
 type StExpr = Expr.Expr
@@ -79,7 +90,7 @@ type StExpr = Expr.Expr
 
      Som:
        Som has no Character class
-       Som strings are primitive and immutable
+       Som strings are primitive and immutable, St strings are mutable.
        Symbol is a subclass of String
 -}
 data ObjectData
@@ -96,8 +107,9 @@ data ObjectData
   | DataBlock Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
   | DataSystem -- ^ Token for System instance.
-  | DataIndexable (Ref (Vec Object)) -- ^ Objects with a fixed number integer indexed of mutable slots
-  | DataUser Id ObjectTable
+  | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
+  | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number integer indexed of mutable slots
+  | DataUser Id ObjectTable -- ^ Objects with named and index addressable instance variables
   deriving (Eq)
 
 objectDataAsDouble :: ObjectData -> Maybe Double
@@ -112,7 +124,7 @@ objectDataAsDouble o =
 data Object = Object Symbol ObjectData deriving (Eq)
 
 -- | Association list of named objects.
-type ObjectAssociationList = [(Symbol,Object)]
+type ObjectAssociationList = [(Symbol, Object)]
 
 {- | The Vm state holds:
      - startTime, required for System>>ticks and System>>time
@@ -166,6 +178,9 @@ vmContext = State.get >>= \(_,_,ctx,_,_) -> return ctx
 -- | Fetch Id of Method context, else error.
 vmContextId :: Vm Id
 vmContextId = vmContext >>= \ctx -> maybe (vmError "vmContextId: lookup failed") return (contextIdMaybe ctx)
+
+vmContextIdSequence :: Vm [Id]
+vmContextIdSequence = fmap contextIdSequence vmContext
 
 -- | Fetch current block, else Nothing
 vmContextCurrentBlock :: Vm (Maybe Object)
@@ -278,7 +293,8 @@ objectToString (Object nm obj) =
     DataBlock _ _ _ -> "instance of " ++ fromSymbol nm
     DataReturn _ _ o -> "Return: " ++ objectToString o
     DataSystem -> "instance of " ++ fromSymbol nm
-    DataIndexable _ -> "instance of " ++ fromSymbol nm
+    DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
+    DataIndexable _ _ -> "instance of " ++ fromSymbol nm
     DataUser _ _ -> "instance of " ++ fromSymbol nm
 
 instance Show Object where show = objectToString
@@ -302,10 +318,10 @@ tblToInspector tbl = do
 objectToInspector :: Object -> Vm String
 objectToInspector (Object nm obj) =
   case obj of
-    DataIndexable ref -> do
-      x <- deRef ref
-      let l = map objectToString (Vector.toList x)
-      return (concat ["instance of ", nm, " with {",intercalate ". " l,"}"])
+    DataIndexable x ref -> do
+      vec <- deRef ref
+      let lst = map objectToString (vecToList vec)
+      return (printf "instance of %s <pc:%d> with: {%s}" nm x (intercalate ". " lst))
     DataClass (x,_) tbl _ -> do
       tblStr <- tblToInspector tbl
       return (St.className x ++ ": " ++ tblStr)
@@ -337,13 +353,20 @@ classMethodsVec (Object _ obj) =
 
 indexableObjectElements :: Object -> Vm [Object]
 indexableObjectElements o = case o of
-  Object _ (DataIndexable vectorRef) -> fmap Vector.toList (deRef vectorRef)
+  Object _ (DataIndexable _ vectorRef) -> fmap vecToList (deRef vectorRef)
   _ -> vmError ("indexableObjectElements: not indexable")
+
+{-
+arrayLiteralElements :: Object -> [Object]
+arrayLiteralElements o = case o of
+  Object "Array" (DataArrayLiteral vector) -> return vector
+  _ -> vmError ("arrayLiteralElements: not literal array")
+-}
 
 arrayElements :: Object -> Vm [Object]
 arrayElements o = case o of
-  Object "Array" (DataIndexable vectorRef) -> fmap Vector.toList (deRef vectorRef)
-  _ -> vmError ("arrayElements: not indexable")
+  Object "Array" (DataIndexable _ vectorRef) -> fmap vecToList (deRef vectorRef)
+  _ -> vmError ("arrayElements: not indexable object")
 
 -- | Lookup instance variable of Object.
 objectLookupInstanceVariable :: Object -> Symbol -> Vm (Maybe Object)
@@ -398,7 +421,7 @@ classMethodCache :: St.ClassDefinition -> (Vec Object,Vec Object)
 classMethodCache cd =
   let im = map (methodObject (toSymbol (St.className cd))) (St.instanceMethods cd)
       cm = map (methodObject (toSymbol (St.classMetaclassName cd))) (St.classMethods cd)
-  in (Vector.fromList im,Vector.fromList cm)
+  in (vecFromList im,vecFromList cm)
 
 -- | An ObjectTable with all variables set to nil.
 variablesTbl :: MonadIO m => [Symbol] -> m ObjectTable
@@ -462,40 +485,35 @@ falseObject = booleanObject False
 trueObject :: Object
 trueObject = booleanObject True
 
-arrayFromVec :: MonadIO m => Vec Object -> m Object
-arrayFromVec e = do
-  a <- liftIO (toRef e)
-  return (Object (toSymbol "Array") (DataIndexable a))
+arrayLiteralObject :: [Object] -> Object
+arrayLiteralObject lst = Object (toSymbol "Array") (DataArrayLiteral (vecFromList lst))
 
-arrayFromList :: MonadIO m => [Object] -> m Object
-arrayFromList e = arrayFromVec (Vector.fromList e)
-
-literalObject :: MonadIO m => (LargeInteger -> Object, String -> Object) -> St.Literal -> m Object
+literalObject :: (LargeInteger -> Object, String -> Object) -> St.Literal -> Object
 literalObject (integerObject, stringObject) l =
   case l of
-    St.NumberLiteral (St.Int x) -> return (integerObject x)
-    St.NumberLiteral (St.Float x) -> return (doubleObject x)
-    St.StringLiteral x -> return (stringObject x)
-    St.CharacterLiteral x -> return (characterObject x) -- Note: Som has no Character object
-    St.SymbolLiteral x -> return (symbolObject x)
-    St.SelectorLiteral x -> return (symbolObject (St.selectorIdentifier x))
-    St.ArrayLiteral x -> arrayFromList =<< mapM (arrayLiteralElemObject (integerObject, stringObject)) x
+    St.NumberLiteral (St.Int x) -> integerObject x
+    St.NumberLiteral (St.Float x) -> doubleObject x
+    St.StringLiteral x -> stringObject x
+    St.CharacterLiteral x -> characterObject x -- Note: Som has no Character object
+    St.SymbolLiteral x -> symbolObject x
+    St.SelectorLiteral x -> symbolObject (St.selectorIdentifier x)
+    St.ArrayLiteral x -> arrayLiteralObject (map (arrayLiteralElemObject (integerObject, stringObject)) x)
 
-arrayLiteralElemObject :: MonadIO m => (Integer -> Object, String -> Object) -> Either St.Literal String -> m Object
+arrayLiteralElemObject :: (Integer -> Object, String -> Object) -> Either St.Literal String -> Object
 arrayLiteralElemObject opt e =
   case e of
     Left x -> literalObject opt x
-    Right x -> return (reservedObject x)
+    Right x -> reservedObject x
 
 {- | Mark an Object as being a Return Object (from a Block or Method).
      Include the contextId the value is returning to,
      and the Block that is returning (if it is a Block and not a Method).
-     It is an error if the object returned is already Return Object.
+     It is an error if the object returned is already a Return Object.
 -}
 returnObject :: StError m => Id -> Maybe Object -> Object -> m Object
 returnObject pc blockObject x =
   if isReturnObject x
-  then vmError "returnObject: Return"
+  then vmError "returnObject: already Return"
   else return (Object (toSymbol "Return") (DataReturn pc blockObject x))
 
 -- * Object predicates
@@ -556,8 +574,7 @@ contextCurrentBlock :: Context -> Maybe Object
 contextCurrentBlock (Context c _x) =
   case c of
     BlockContext blockObject _ -> Just blockObject
-    MethodContext _ _ _ -> Nothing
-    NilContext -> Nothing
+    _ -> Nothing
 
 -- | Add a node to the start of the Context.
 contextAdd :: Context -> ContextNode -> Context
@@ -594,5 +611,6 @@ objectIntHash (Object nm obj) =
     DataBlock x _ _ -> mHash ("Block",x)
     DataReturn _ _ _ -> vmError ("Object>>hashcode: Return")
     DataSystem -> mHash (nm,"system")
-    DataIndexable x -> deRef x >>= \vec -> mapM objectIntHash (Vector.toList vec) >>= \lst -> mHash (nm, lst)
+    DataArrayLiteral vec -> mapM objectIntHash (vecToList vec) >>= \lst -> mHash (nm, lst)
+    DataIndexable x _ -> mHash (nm,x)
     DataUser x _ -> mHash (nm,x)

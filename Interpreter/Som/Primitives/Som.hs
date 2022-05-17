@@ -80,7 +80,7 @@ doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDou
 
 -- * Primtives
 
-prArrayAt :: (StError m, MonadIO m) => Ref (Vec Object) -> LargeInteger -> m Object
+prArrayAt :: (StError m, MonadIO m) => VecRef Object -> LargeInteger -> m Object
 prArrayAt ref ix = vecRefAt ref (fromInteger ix) >>= maybe (prError "Array>>at: index out of range") return
 
 prObjectEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
@@ -192,11 +192,9 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveM m
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
-    ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
-    ("Array", "at:", DataIndexable ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
-    ("Array", "at:put:", DataIndexable ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
-    ("Array", "length", DataIndexable ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
-    ("Class", "methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
+    ("Array", "at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
+    ("Array", "at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
+    ("Array", "length", DataIndexable _ ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
     ("Class", "name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("Integer", "atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
     ("Object", "==", _, [arg]) -> prObjectEqual receiver arg
@@ -224,6 +222,8 @@ System>>time is elapsed time in milliseconds.
 somPrimitivesV :: SomPrimitiveDispatcher
 somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
   case (prClass, prMethod, receiverObj, arguments) of
+    ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
+    ("Class", "methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
     ("System", "global:", DataSystem, [Object _ (DataString True x)]) -> vmGlobalLookupOrNil (Text.unpack x)
     ("System", "global:put:", DataSystem, [Object _ (DataString True x), e]) -> vmGlobalAssign (Text.unpack x) e
     ("System", "hasGlobal:", DataSystem, [Object _ (DataString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))

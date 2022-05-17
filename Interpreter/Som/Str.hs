@@ -1,6 +1,6 @@
 {- | String type.
      Requires efficient substring function.
-     SOM has no Char type.
+     Som has no Char type.
 -}
 module Interpreter.Som.Str where
 

@@ -10,4 +10,7 @@ print = (
 	'#' print. super print
 )
 
+shallowCopy = (
+)
+
 )

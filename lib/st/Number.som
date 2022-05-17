@@ -1,5 +1,29 @@
 Number = Magnitude (
 
++ aNumber = (
+	self subclassResponsibility
+)
+
+* aNumber = (
+	self subclassResponsibility
+)
+
+- aNumber = (
+	self subclassResponsibility
+)
+
+/ aNumber = (
+	self subclassResponsibility
+)
+
+// aNumber = (
+	^(self / aNumber) floor
+)
+
+\\ aNumber = (
+	^self - (self // aNumber * aNumber)
+)
+
 abs = (
 	^(self < 0) ifTrue: [ self negated ] ifFalse: [ self ]
 )
@@ -33,6 +57,14 @@ negated = (
 
 negative = (
 	^self < 0
+)
+
+quo: aNumber = (
+	^(self / aNumber) truncated
+)
+
+reciprocal = (
+	^1 / self
 )
 
 rounded = (

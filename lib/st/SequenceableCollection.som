@@ -1,5 +1,11 @@
 SequenceableCollection = Collection (
 
+= otherCollection = (
+	self == otherCollection ifTrue: [^ true].
+	self class = otherCollection class ifFalse: [^ false].
+	^ self hasEqualElements: otherCollection
+)
+
 asArray = (
 	^ Array withAll: self
 )
@@ -41,6 +47,16 @@ copyFrom: start to: stop = (
 do: aBlock = (
 	1 to: self size do:
 		[:index | aBlock value: (self at: index)]
+)
+
+hasEqualElements: otherCollection = (
+	| size |
+	otherCollection isSequenceable ifFalse: [^ false].
+	(size := self size) = otherCollection size ifFalse: [^ false].
+	1 to: size do:
+		[:index |
+		(self at: index) = (otherCollection at: index) ifFalse: [^ false]].
+	^ true
 )
 
 first = (
@@ -136,6 +152,22 @@ select: aBlock = (
 
 third = (
 	^ self at: 3
+)
+
+----
+
+new: newSize streamContents: blockWithArg = (
+	| stream originalContents |
+	stream := WriteStream on: (self new: newSize).
+	blockWithArg value: stream.
+	originalContents := stream originalContents.
+	originalContents size =  stream position
+		ifTrue: [ ^originalContents ]
+		ifFalse: [ ^stream contents ]
+)
+
+streamContents: blockWithArg = (
+		^self new: 100 streamContents: blockWithArg
 )
 
 )

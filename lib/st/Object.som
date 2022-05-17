@@ -53,6 +53,27 @@ identityHash = (
 	self primitiveFailed
 )
 
+perform: aSymbol = (
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: {}
+)
+
+perform: selector withArguments: argArray = (
+	<primitive: 84>
+	^ self perform: selector withArguments: argArray inSuperclass: self class
+)
+
+perform: aSymbol withArguments: args = (
+	<primitive: 100>
+	(selector isSymbol)
+		ifFalse: [^ self error: 'selector argument must be a Symbol'].
+	(selector numArgs = argArray size)
+		ifFalse: [^ self error: 'incorrect number of arguments'].
+	(self class == lookupClass or: [self class inheritsFrom: lookupClass])
+		ifFalse: [^ self error: 'lookupClass is not in my inheritance chain'].
+	self primitiveFailed
+)
+
 == other = (
 	<primitive: 110>
 	self primitiveFailed
@@ -66,6 +87,11 @@ class = (
 species = (
 	<primitive: 111>
 	^self class
+)
+
+shallowCopy = (
+	<primitive: 148>
+	^self primitiveFailed
 )
 
 ~~ anObject = (
@@ -86,8 +112,22 @@ adaptToFloat: rcvr andSend: selector = (
 	^ self adaptToNumber: rcvr andSend: selector
 )
 
+adaptToInteger: rcvr andCompare: selector = (
+	^ self adaptToInteger: rcvr andSend: selector
+)
+
+adaptToInteger: rcvr andSend: selector = (
+	^ self adaptToNumber: rcvr andSend: selector
+)
+
 asArray = (
     ^Array with: self
+)
+
+asSetElement = (
+)
+
+enclosedSetElement = (
 )
 
 errorImproperStore = (
@@ -102,6 +142,10 @@ errorSubscriptBounds: index = (
 	self error: 'subscript is out of bounds: ' , index asString
 )
 
+hash = (
+	^self identityHash
+)
+
 initialize = (
 )
 
@@ -112,6 +156,7 @@ isInteger = (
 isNil = (
 	^false
 )
+
 isNumber = (
 	^false
 )
@@ -136,16 +181,12 @@ yourself = (
 
     "Comparing"
 
-    " If you override =, you MUST override hashcode as well.  The rule
-      obj1 = obj2 =>  obj1 hashcode = obj2 hashcode
-      must be valid for all objects, or Hashtable will not work"
     =  other = ( ^self == other )
     <> argument = ( ^(self = argument) not )
     ~= other = (^ (self == other) not )
 
     "Converting"
     asString = ( ^'instance of ' , (self class) )
-    hashcode = primitive
 
     "Convenience"
     ifNil: aBlock = (^self)
@@ -161,7 +202,7 @@ yourself = (
     halt = primitive
 
     "Error handling"
-    error: string = ( '' println. ('Object>>error: ' , string) println. )
+    error: string = ( '' println. ('Object>>error: ' , string , ' at: ', self class name) println. ^ nil )
     fatalError: string = ( '' println. ('Object>>fatalError: ' , string) println. Smalltalk exit: 1 )
 
     "Abstract method support"
@@ -199,7 +240,6 @@ yourself = (
 	<primitive: 83>
 	^ self perform: aSymbol withArguments: { anObject }
     )
-    perform: aSymbol withArguments: args = primitive
 
     perform: aSymbol inSuperclass: cls = primitive
     perform: aSymbol withArguments: args inSuperclass: cls = primitive

@@ -1,16 +1,31 @@
 BlockClosure = (
 
-    value = primitive
-    value: arg = primitive
-    value: arg1 with: arg2 = primitive
+value = primitive
 
-    whileFalse: aBlock = (
-        [ self value not ] whileTrue: aBlock
-    )
+value: arg = primitive
 
-    whileTrue: aBlock = (
-        self value ifFalse: [ ^nil ].
-        aBlock value.
-        self whileTrue: aBlock.
-    )
+value: arg1 with: arg2 = primitive
+
+whileFalse: aBlock = (
+	self value ifTrue: [ ^nil ].
+	aBlock value.
+	self whileFalse: aBlock.
+)
+
+whileTrue: aBlock = (
+	self value ifFalse: [ ^nil ].
+	aBlock value.
+	self whileTrue: aBlock.
+)
+
+whileFalse = (
+	self value ifTrue: [ ^nil ].
+	self whileFalse
+)
+
+whileTrue = (
+	self value ifFalse: [ ^nil ].
+	self whileTrue
+)
+
 )

@@ -1,7 +1,4 @@
-{- | String type.
-     Requires efficient substring function.
-     SOM has no Char type.
--}
+-- | String type implemented as Text.
 module Interpreter.Som.Str.Text where
 
 import qualified Data.Text as Text {- text -}

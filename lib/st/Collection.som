@@ -1,5 +1,21 @@
 Collection = (
 
+adaptToCollection: rcvr andSend: selector = (
+	rcvr isSequenceable & self isSequenceable ifFalse:
+		[self error: 'Only sequenceable collections may be combined arithmetically'].
+	^ rcvr with: self collect:
+		[:rcvrElement :myElement | rcvrElement perform: selector with: myElement]
+)
+
+adaptToNumber: rcvr andSend: selector = (
+	^ self collect: [:element | rcvr perform: selector with: element]
+)
+
+addAll: aCollection = (
+	aCollection do: [:each | self add: each].
+	^ aCollection
+)
+
 anySatisfy: aBlock = (
 	self do: [:each | (aBlock value: each) ifTrue: [^ true]].
 	^ false
@@ -15,6 +31,10 @@ asArray = (
 
 asSet = (
 	^ Set withAll: self
+)
+
+associationsDo: aBlock = (
+	self do: aBlock
 )
 
 average = (
@@ -105,6 +125,14 @@ union: aCollection = (
 	| answer |
         answer := self asSet addAll: aCollection.
         ^ answer
+)
+
+----
+
+withAll: aCollection = (
+	| answer |
+	answer := (self new: aCollection size) addAll: aCollection.
+	^ answer
 )
 
 )

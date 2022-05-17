@@ -1,8 +1,11 @@
 Boolean = (
 
-ifTrue: trueBlock ifFalse: falseBlock = (
-	self ifTrue:  [ ^trueBlock value  ].
-	self ifFalse: [ ^falseBlock value ].
+ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock = (
+	self subclassResponsibility
+)
+
+ifFalse: falseAlternativeBlock ifTrue: trueAlternativeBlock = (
+	self subclassResponsibility
 )
 
 || boolean = (
@@ -11,6 +14,9 @@ ifTrue: trueBlock ifFalse: falseBlock = (
 
 && boolean = (
 	^self and: boolean
+)
+
+shallowCopy = (
 )
 
 )

@@ -4,6 +4,10 @@ asString = (
 	^'nil'
 )
 
+asSetElement = (
+	^ SetElement withNil
+)
+
 isNil = (
 	^true
 )
@@ -22,6 +26,9 @@ ifNotNil: ignoredBlock = (
 
 ifNil: aBlock ifNotNil: ignoredBlock = (
 	^aBlock value
+)
+
+shallowCopy = (
 )
 
 )

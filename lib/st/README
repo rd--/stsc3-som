@@ -1,0 +1,5 @@
+This follows Squeak rather than St-80.
+
+Squeak is more complicated.
+
+It might be nice to also have an St-80 with just the adaptTo protocols added in.

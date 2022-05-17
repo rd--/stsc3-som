@@ -1,0 +1,42 @@
+SetElement = Object (
+
+| enclosedElement |
+
+enclosedSetElement = (
+	^ enclosedElement
+)
+
+enclosedSetElement: anObject = (
+	enclosedElement := anObject
+)
+
+= anObject = (
+	^ anObject class = self class and: [ enclosedElement = anObject enclosedSetElement ]
+)
+
+hash = (
+	^ enclosedElement hash
+)
+
+asSetElement = (
+	^ SetElement with: self
+)
+
+----------------------------
+
+| NilElement |
+
+withNil = (
+	NilElement isNil ifTrue: [ self initialize ].
+	^ NilElement
+)
+
+initialize = (
+	NilElement := self with: nil.
+)
+
+with: anObject = (
+	^ self new enclosedSetElement: anObject
+)
+
+)

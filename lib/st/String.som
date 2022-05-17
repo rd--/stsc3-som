@@ -5,6 +5,21 @@ size = (
 	self primitiveFailed
 )
 
+at: index  = (
+	<primitive: 63>
+	index isInteger
+		ifTrue: [self errorSubscriptBounds: index]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
+at: index put: aCharacter = (
+	<primitive: 64>
+	aCharacter isCharacter ifFalse:[^self errorImproperStore].
+	index isInteger
+		ifTrue: [self errorSubscriptBounds: index]
+		ifFalse: [self errorNonIntegerIndex]
+)
+
 asSymbol = primitive
 
 concatenate: argument = primitive

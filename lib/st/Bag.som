@@ -1,0 +1,97 @@
+Bag = Collection (
+
+| contents |
+
+at: index = (
+	self errorNotKeyed
+)
+
+at: index put: anObject = (
+	self errorNotKeyed
+)
+
+size = (
+	| tally |
+	tally := 0.
+	contents do: [:each | tally := tally + each].
+	^tally
+)
+
+sortedCounts = (
+	| counts |
+	counts := SortedCollection sortBlock: [:x :y | x >= y].
+	contents associationsDo:
+		[:assn |
+		counts add: (Association key: assn value value: assn key)].
+	^ counts
+)
+
+sortedElements = (
+	| elements |
+	elements := SortedCollection new.
+	contents associationsDo: [:assn | elements add: assn].
+	^ elements
+)
+
+add: newObject = (
+	^self add: newObject withOccurrences: 1
+)
+
+add: newObject withOccurrences: anInteger = (
+	(self includes: newObject)
+		ifTrue: [contents at: newObject put: anInteger + (contents at: newObject)]
+		ifFalse: [contents at: newObject put: anInteger].
+	^newObject
+)
+
+do: aBlock = (
+	contents associationsDo: [:assoc | assoc value timesRepeat: [aBlock value: assoc key]]
+)
+
+setDictionary = (
+	contents := Dictionary new
+)
+
+remove: oldObject ifAbsent: exceptionBlock = (
+	| count |
+	(self includes: oldObject)
+		ifTrue: [(count := contents at: oldObject) = 1
+				ifTrue: [contents removeKey: oldObject]
+				ifFalse: [contents at: oldObject put: count - 1]]
+		ifFalse: [^exceptionBlock value].
+	^oldObject
+)
+
+includes: anObject = (
+	^contents includesKey: anObject
+)
+
+occurrencesOf: anObject = (
+	(self includes: anObject)
+		ifTrue: [^contents at: anObject]
+		ifFalse: [^0]
+)
+
+setContents: aDictionary = (
+	contents := aDictionary
+)
+
+----------------------------
+
+contentsClass = (
+	^Dictionary
+)
+
+new = (
+	^super new setDictionary
+)
+
+new: nElements = (
+	^ super new setContents: (self contentsClass new: nElements)
+)
+
+newFrom: aCollection = (
+	^ self withAll: aCollection
+)
+
+)
