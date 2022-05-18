@@ -1,11 +1,15 @@
 Float = Number (
 
-isFloat = (
-	^true
-)
-
 abs = (
 	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
+)
+
+cos = (
+	^ (self + Float halfPi) sin
+)
+
+isFloat = (
+	^true
 )
 
 negated = (
@@ -24,8 +28,20 @@ rounded = (
 
 ----
 
+halfPi = (
+	^  self pi / 2
+)
+
+one = (
+	^ 1.0
+)
+
 pi = (
 	^  3.141592653589793
+)
+
+zero = (
+	^ 0.0
 )
 
 )

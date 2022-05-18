@@ -24,8 +24,20 @@ Number = Magnitude (
 	^self - (self // aNumber * aNumber)
 )
 
+** aNumber = (
+	^ self raisedTo: aNumber
+)
+
 abs = (
 	^(self < 0) ifTrue: [ self negated ] ifFalse: [ self ]
+)
+
+asInteger = (
+	^self truncated
+)
+
+cos = (
+	^self asFloat cos
 )
 
 downTo: stop = (
@@ -47,8 +59,21 @@ downTo: stop by: step do: aBlock = (
 	self to: stop by: step negated do: aBlock
 )
 
+floor = (
+	| truncation |
+	truncation := self truncated.
+	self >= 0 ifTrue: [^truncation].
+	self = truncation
+		ifTrue: [^truncation]
+		ifFalse: [^truncation - 1]
+)
+
 isNumber = (
 	^true
+)
+
+ln = (
+	^self asFloat ln
 )
 
 negated = (
@@ -63,8 +88,29 @@ quo: aNumber = (
 	^(self / aNumber) truncated
 )
 
+raisedTo: aNumber = (
+	aNumber isInteger	ifTrue: [^self raisedToInteger: aNumber].
+	aNumber = 0 ifTrue: [^1].
+	aNumber = 1 ifTrue: [^self].
+	^(aNumber * self ln) exp
+)
+
+raisedToInteger: anInteger = (
+	anInteger isInteger ifFalse: [^self error: 'raisedToInteger: only works for integral arguments'].
+	anInteger = 0 ifTrue: [^1].
+	anInteger = 1 ifTrue: [^self].
+	anInteger > 1
+		ifTrue: [^(self * self raisedToInteger: anInteger // 2)
+					* (self raisedToInteger: anInteger \\ 2)].
+	^(self raisedToInteger: anInteger negated) reciprocal
+)
+
 reciprocal = (
 	^1 / self
+)
+
+rem: aNumber = (
+	^self - ((self quo: aNumber) * aNumber)
 )
 
 rounded = (
@@ -83,6 +129,14 @@ sign = (
 
 sin = (
 	^self asFloat sin
+)
+
+squared = (
+	^self * self
+)
+
+sqrt = (
+	self subclassResponsibility
 )
 
 to: stop = (
@@ -116,6 +170,16 @@ to: stop by: step do: aBlock = (
 				whileTrue:
 					[aBlock value: nextValue.
 					nextValue := nextValue + step]]
+)
+
+----
+
+one = (
+	^1
+)
+
+zero = (
+	^0
 )
 
 )

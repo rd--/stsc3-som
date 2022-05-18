@@ -14,6 +14,13 @@ bitInvert = (
 	^ -1 - self
 )
 
+floor = (
+)
+
+highBit = (
+	^ self subclassResponsibility
+)
+
 isInteger = (
 	^ true
 )

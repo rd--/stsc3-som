@@ -81,10 +81,9 @@ exp = (
 	self primitiveFailed
 )
 
-// argument = primitive
-% argument = primitive
-asInteger = primitive
-cos = primitive
+asString = (
+	<primitive: -1>
+)
 
 adaptToInteger: rcvr andSend: selector = (
 	^ rcvr asFloat perform: selector with: self
@@ -94,47 +93,23 @@ adaptToInteger: rcvr andCompare: selector = (
 	^ rcvr asFloat perform: selector with: self
 )
 
-hash = (
-	^self identityHash
+identityHash = (
+	<primitive: 75>
+	^self primitiveFailed
 )
 
 shallowCopy= (
 )
 
-raisedTo: exponent = (
-	"Raise the receiver to the given exponent.
-	 Currently only positive integer exponents
-	 are fully supported."
-	| output |
-	output := 1.0.
-	exponent asInteger
-	  timesRepeat: [ output := output * self ].
-	^ output
-)
-
-"Comparing"
-between: a and: b = ( ^(self > a) and: [ self < b ] )
-
-"Converting"
-asString = primitive
-
-"Iterating"
-to: limit do: block = (
-	| i |
-	i := self.
-	[ i <= limit ] whileTrue: [ block value: i. i := i + 1.0 ]
-)
-
-downTo: limit do: block = (
-	| i |
-	i := self.
-	[ i >= limit ] whileTrue: [ block value: i. i := i - 1.0 ]
-)
-
 ----
 
-PositiveInfinity = primitive
+infinity = (
+	<primitive: -1>
+        ^1.0 / 0.0
+)
 
-"Convert string into Double. In case of any errors, the result is NaN"
-fromString: aString = primitive
+fromString: aString = (
+	<primitive: -1>
+)
+
 )

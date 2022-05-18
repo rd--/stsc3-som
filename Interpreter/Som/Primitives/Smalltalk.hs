@@ -8,11 +8,9 @@ module Interpreter.Som.Primitives.Smalltalk where
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
 import qualified Data.Char {- base -}
-import Data.Fixed {- base -}
 import Data.List {- base -}
 import System.Exit {- base -}
 import System.Mem {- base -}
-import Text.Printf {- base -}
 
 import System.Random {- random -}
 
@@ -45,74 +43,6 @@ intObject x = Object (toSymbol "SmallInteger") (DataSmallInteger x)
 
 strObject :: String -> Object
 strObject = unicodeStringObject . toUnicodeString
-
-{-
-numNumPrimitive :: Uop Double -> ObjectData -> Maybe Object
-numNumPrimitive f = fmap (doubleAsFractional intObject . f) . objectDataAsDouble
-
-numNumNumPrimitive :: Binop Double -> ObjectData -> ObjectData -> Maybe Object
-numNumNumPrimitive f rcv arg = do
-  lhs <- objectDataAsDouble rcv
-  rhs <- objectDataAsDouble arg
-  return (doubleAsFractional intObject (f lhs rhs))
-
-intNumNumPrimitive :: Binop LargeInteger -> Binop Double -> LargeInteger -> ObjectData -> Maybe Object
-intNumNumPrimitive f1 f2 lhs rhs =
-  case rhs of
-    DataSmallInteger rhs' -> return (intObject (f1 lhs rhs'))
-    DataDouble rhs' -> return (doubleObject (f2 (fromIntegral lhs) rhs'))
-    _ -> Nothing
-
-intNumBoolPrimitive :: Maybe Object -> Cmp LargeInteger -> Cmp Double -> LargeInteger -> ObjectData -> Maybe Object
-intNumBoolPrimitive def f1 f2 lhs rhs =
-  case rhs of
-    DataSmallInteger rhs' -> Just (booleanObject (f1 lhs rhs'))
-    DataDouble rhs' -> Just (booleanObject (f2 (fromIntegral lhs) rhs'))
-    _ -> def
-
-doubleNumDoublePrimitive :: Binop Double -> Double -> ObjectData -> Maybe Object
-doubleNumDoublePrimitive f lhs rhs = fmap (doubleObject . f lhs) (objectDataAsDouble rhs)
-
-doubleNumBoolPrimitive :: Cmp Double -> Double -> ObjectData -> Maybe Object
-doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDouble rhs)
-
--- * Primtives
-
-{- | C.f. DoubleTest, c.f. Js
-
-(doubleMod (-3) 2, mod' (-3) 2) == (-1, 1)
-(doubleMod 3 (-2), mod' 3 (-2)) == (1, -1)
--}
-doubleMod :: Real t => t -> t -> t
-doubleMod p q =
-  let r = mod' p q
-  in case (p < 0, q < 0) of
-       (True, False) -> -r
-       (False, True) -> -r
-       _ -> r
-
--- | Primitives with no requirements that, given types have matched, do not fail.
-stPrimitivesO :: PrimitiveDispatcherTo (Maybe Object)
-stPrimitivesO (prClass, prMethod) _prCode (Object _receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Double", "cos", DataDouble x, []) -> Just (doubleObject (cos x))
-    ("SmallInteger", "as32BitSignedValue", DataSmallInteger x, []) -> Just (intObject (as32BitSignedValue x))
-    ("SmallInteger", "as32BitUnsignedValue", DataSmallInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
-    _ -> Nothing
-
--- | Primitives with no requirements that may fail.
-stPrimitivesM :: StPrimitiveDispatcherTo (Maybe Object)
-stPrimitivesM (prClass, prMethod) prCode receiver@(Object _receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Double", "%", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive doubleMod lhs rhs
-    ("Double", "//", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (/) lhs rhs -- St?
-    ("SmallInteger", "%", DataSmallInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
-    ("SmallInteger", "//", lhs, [Object _ rhs]) -> numNumNumPrimitive (/) lhs rhs
-    ("SmallInteger", "rem:", DataSmallInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
-    ("SmallInteger", "sqrt", rcv, []) -> numNumPrimitive sqrt rcv
-    _ -> stPrimitivesO (prClass, prMethod) prCode receiver arguments
--}
-
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
@@ -163,7 +93,6 @@ stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("=", DataImmutableString typ str, [Object _ arg]) -> return (Just (prStringEqual (typ, str) arg))
-    ("PositiveInfinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
     ("asString", DataDouble x, []) -> return (Just (strObject (show x)))
     ("asString", DataImmutableString True x, []) -> return (Just (unicodeStringObject x))
     ("asString", DataSmallInteger x, []) -> return (Just (strObject (show x)))
@@ -181,9 +110,9 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap Just (vmGlobalLookupOrNil (Text.unpack x))
     ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> fmap Just (vmGlobalAssign (Text.unpack x) e)
     ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap (Just . booleanObject) (vmHasGlobal (Text.unpack x))
-    ("hashcode", _, []) -> fmap (Just . intObject) (objectIntHash receiver)
     ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
     ("holder", DataPrimitive x _, []) -> return (Just (symbolObject x))
+    ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
     ("inspect", _, []) -> fmap Just (objectInspect receiver)
     ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> fmap Just (tblAtDefault tbl (ix - 1) (prError "Object>>instVarAt:"))
     ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> fmap Just (tblAtPutDefault tbl (ix - 1) newObject (prError "Object>>instVarAt:put"))

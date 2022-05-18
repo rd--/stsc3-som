@@ -86,6 +86,16 @@ asFloat = (
 	self primitiveFailed
 )
 
+asString = (
+	<primitive: -1>
+        self primitiveFailed
+)
+
+atRandom = (
+	<primitive: -1>
+        self primitiveFailed
+)
+
 adaptToFloat: rcvr andSend: selector = (
 	^ rcvr perform: selector with: self asFloat
 )
@@ -94,46 +104,51 @@ adaptToFloat: rcvr andCompare: selector = (
 	^ rcvr perform: selector with: self asFloat
 )
 
-/ argument = primitive
-// argument = primitive
-% argument = primitive "modulo with sign of divisor"
-rem: argument=primitive "modulo with sign of dividend"
-& argument = primitive
-<< argument = primitive
->>> argument= primitive
-bitXor: argument = primitive
-sqrt = primitive
+highBit = (
+	self < 0 ifTrue: [^ self error: 'highBit is not defined for negative integers'].
+	^ self highBitOfPositiveReceiver
+)
+
+highBitOfByte = (
+	^ #(0 1 2 2 3 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8) at: self + 1
+)
+
+highBitOfPositiveReceiver = (
+	| shifted bitNo |
+	shifted := self.
+	bitNo := 0.
+	[shifted < 65536]
+		whileFalse:
+			[shifted := shifted bitShift: -16.
+			bitNo := bitNo + 16].
+	shifted < 256
+		ifFalse:
+			[shifted := shifted bitShift: -8.
+			bitNo := bitNo + 8].
+	^bitNo + shifted highBitOfByte
+)
+
+identityHash = (
+	^self
+)
 
 shallowCopy = (
 )
 
-raisedTo: exponent = (
-	"Raise the receiver to the given exponent.
-	 Currently only positive integer exponents
-	 are fully supported."
-	| output |
-	output := 1.
-	exponent asInteger
-	  timesRepeat: [ output := output * self ].
-	^ output
-)
-
-"Random numbers"
-atRandom = primitive
-
-"Comparing"
-== argument = ( ^self = argument )
-
-asString = primitive
-as32BitSignedValue = primitive " returns an int, with the value that a signed 32-bit integer would have"
-as32BitUnsignedValue = primitive " returns an int, with the value that a unsigned 32-bit integer would have"
-
-hash = (
-	^self
+sqrt = (
+	| floatResult integerResult |
+	self negative ifTrue: [ ^ DomainError signal: 'sqrt undefined for number less than zero.' ].
+	floatResult := self asFloat sqrt.
+	integerResult := floatResult truncated.
+	integerResult * integerResult = self ifTrue: [^integerResult].
+	^floatResult
 )
 
 ----
 
-fromString: aString = primitive
+fromString: aString = (
+	<primitive: -1>
+        self primitiveFailed
+)
 
 )

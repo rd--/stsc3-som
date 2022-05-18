@@ -117,6 +117,10 @@ select: selectBlock thenDo: doBlock = (
 	^ (self select: selectBlock) do: doBlock
 )
 
+sqrt = (
+	^ self collect: [:each | each sqrt]
+)
+
 sum = (
 	^self reduce: [:a :b| a + b]
 )
