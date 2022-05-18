@@ -72,7 +72,7 @@ data ContextNode =
                   3. globals,
                   4. workspace.
 -}
-data Context = Context ContextNode (Maybe Context) deriving (Eq)
+data Context = Context { contextNode :: ContextNode, contextParent :: Maybe Context } deriving (Eq)
 
 contextIdSequence :: Context -> [Id]
 contextIdSequence ctx =
@@ -95,21 +95,22 @@ type StExpr = Expr.Expr
 -}
 data ObjectData
   = DataUndefinedObject -- ^ nil
-  | DataBoolean Bool
+  | DataBoolean
   | DataSmallInteger SmallInteger -- ^ Not in Som
   | DataLargeInteger LargeInteger -- ^ Som Integer
   | DataDouble Double
   | DataCharacter Char -- ^ Not in Som
-  | DataString Bool UnicodeString -- ^ IsSymbol
+  | DataImmutableString Bool UnicodeString -- ^ IsSymbol
   | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
   | DataBlock Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
-  | DataSystem -- ^ Token for System instance.
+  | DataSystem -- ^ Token for system or Smalltalk singleton
   | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
-  | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number integer indexed of mutable slots
-  | DataUser Id ObjectTable -- ^ Objects with named and index addressable instance variables
+  | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number of integer indexed mutable slots
+  | DataNonIndexable Id ObjectTable -- ^ Objects with named and index addressable instance variables
+  | DataCharacterArray Id (VecRef Char) -- ^ Character array (for String and Symbol)
   deriving (Eq)
 
 objectDataAsDouble :: ObjectData -> Maybe Double
@@ -121,7 +122,7 @@ objectDataAsDouble o =
     _ -> Nothing
 
 -- | Object represented as class name and object data.
-data Object = Object Symbol ObjectData deriving (Eq)
+data Object = Object { objectClassName :: Symbol, objectData :: ObjectData } deriving (Eq)
 
 -- | Association list of named objects.
 type ObjectAssociationList = [(Symbol, Object)]
@@ -278,24 +279,25 @@ objectToString :: Object -> String
 objectToString (Object nm obj) =
   case obj of
     DataUndefinedObject -> "nil"
-    DataBoolean x -> map Data.Char.toLower (show x)
+    DataBoolean -> map Data.Char.toLower nm
     DataSmallInteger x -> show x
     DataLargeInteger x -> show x
     DataDouble x -> show x
     DataCharacter x -> ['$',x]
-    DataString isSymbol x ->
+    DataImmutableString isSymbol x ->
       if isSymbol -- nm == toSymbol "Symbol"
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
-    DataBlock _ _ _ -> "instance of " ++ fromSymbol nm
+    DataBlock {} -> "instance of " ++ fromSymbol nm
     DataReturn _ _ o -> "Return: " ++ objectToString o
     DataSystem -> "instance of " ++ fromSymbol nm
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
-    DataIndexable _ _ -> "instance of " ++ fromSymbol nm
-    DataUser _ _ -> "instance of " ++ fromSymbol nm
+    DataIndexable {} -> "instance of " ++ fromSymbol nm
+    DataNonIndexable {} -> "instance of " ++ fromSymbol nm
+    DataCharacterArray {} -> "instance of " ++ fromSymbol nm
 
 instance Show Object where show = objectToString
 
@@ -328,7 +330,7 @@ objectToInspector (Object nm obj) =
     DataMethod _ x _ -> return (show x)
     DataBlock x _ (Expr.Lambda ld _ _ _) ->
       return (printf "instance of %s <pc:%d, %s>" nm x (Expr.lambdaDefinitionShow ld))
-    DataUser x tbl -> do
+    DataNonIndexable x tbl -> do
       tblStr <- tblToInspector tbl
       return (printf "instance of %s <pc:%d>: %s" nm x tblStr)
     DataSystem -> vmShowDetailed
@@ -372,14 +374,14 @@ arrayElements o = case o of
 objectLookupInstanceVariable :: Object -> Symbol -> Vm (Maybe Object)
 objectLookupInstanceVariable o key =
   case o of
-    Object _ (DataUser _ tbl) -> tblAtKeyMaybe tbl key
+    Object _ (DataNonIndexable _ tbl) -> tblAtKeyMaybe tbl key
     _ -> return Nothing
 
 -- | Assign to instance variable of Object.
 objectAssignInstanceVariable :: Object -> Symbol -> Object -> Vm (Maybe Object)
 objectAssignInstanceVariable object key value =
   case object of
-    Object _ (DataUser _ tbl) -> tblAtKeyPutMaybe tbl key value
+    Object _ (DataNonIndexable _ tbl) -> tblAtKeyPutMaybe tbl key value
     _ -> return Nothing
 
 -- * Object constructors
@@ -391,8 +393,8 @@ In Som the class of nil is Nil and in St-80 it is UndefinedObject.
 reservedObject :: String -> Object
 reservedObject x =
   case x of
-    "true" -> Object (toSymbol "True") (DataBoolean True)
-    "false" -> Object (toSymbol "False") (DataBoolean False)
+    "true" -> Object (toSymbol "True") DataBoolean
+    "false" -> Object (toSymbol "False") DataBoolean
     "nil" -> Object (toSymbol "Nil") DataUndefinedObject
     "system" -> Object (toSymbol "System") DataSystem
     "Smalltalk" -> Object (toSymbol "SmalltalkImage") DataSystem
@@ -468,10 +470,10 @@ characterObject :: Char -> Object
 characterObject x = Object (toSymbol "Character") (DataCharacter x)
 
 unicodeStringObject :: UnicodeString -> Object
-unicodeStringObject x = Object (toSymbol "String") (DataString False x)
+unicodeStringObject x = Object (toSymbol "String") (DataImmutableString False x)
 
 unicodeSymbolObject :: UnicodeString -> Object
-unicodeSymbolObject x = Object (toSymbol "Symbol") (DataString True x)
+unicodeSymbolObject x = Object (toSymbol "Symbol") (DataImmutableString True x)
 
 symbolObject :: String -> Object
 symbolObject = unicodeSymbolObject . toUnicodeString . Som.somEscapedString
@@ -599,12 +601,12 @@ objectIntHash :: (MonadIO m, StError m) => Object -> m SmallInteger
 objectIntHash (Object nm obj) =
   case obj of
     DataUndefinedObject -> mHash (nm,"nil")
-    DataBoolean x -> mHash x
+    DataBoolean -> mHash nm
     DataSmallInteger x -> return x -- c.f. Integer>>hashcode
     DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hashcode
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
-    DataString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode
+    DataImmutableString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode
     DataClass (x,_) _ _ -> mHash (nm,St.className x)
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
@@ -613,4 +615,5 @@ objectIntHash (Object nm obj) =
     DataSystem -> mHash (nm,"system")
     DataArrayLiteral vec -> mapM objectIntHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm,x)
-    DataUser x _ -> mHash (nm,x)
+    DataNonIndexable x _ -> mHash (nm,x)
+    DataCharacterArray x _ -> mHash (nm,x)

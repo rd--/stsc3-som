@@ -15,9 +15,8 @@ import qualified Data.Vector.Mutable as Vector.Mutable {- vector -}
 import Interpreter.Som.Error {- stsc3 -}
 import Interpreter.Som.Ref {- stsc3 -}
 
+-- | Vector
 type Vec t = Vector.Vector t
-
-type VecRef t = Ref (Vec t)
 
 vecAt :: Vec t -> Int -> t
 vecAt vec ix = vec Vector.! ix
@@ -49,6 +48,13 @@ vecBoundsCheck msg vec ix =
 vecShallowCopy :: Vec t -> Vec t
 vecShallowCopy v = Vector.generate (vecLength v) (\i -> vecAt v i)
 
+-- | Reference to Vector
+type VecRef t = Ref (Vec t)
+
+vecRefFromList :: MonadIO m => [t] -> m (VecRef t)
+vecRefFromList = toRef . vecFromList
+
+-- | Vector.modify may update the vector in place or it may copy the vector, hence need for VecRef.
 vecRefWrite :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
 vecRefWrite vecRef ix value = do
   vec <- deRef vecRef

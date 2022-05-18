@@ -35,22 +35,31 @@ data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstruc
 
 -- * Copy
 
+toMutableString :: ObjectData -> Vm ObjectData
+toMutableString od =
+  case od of
+    DataImmutableString _ str -> do
+      pc <- vmProgramCounterIncrement
+      ref <- vecRefFromList (fromUnicodeString str)
+      return (DataCharacterArray pc ref)
+    _ -> error "toMutableString: not immutable string"
+
 objectDataShallowCopy :: ObjectData -> Vm ObjectData
 objectDataShallowCopy od =
   case od of
-  DataArrayLiteral vec -> do
-    pc <- vmProgramCounterIncrement
-    ref <- toRef (vecShallowCopy vec)
-    return (DataIndexable pc ref)
-  DataIndexable _ ref -> do
-    pc <- vmProgramCounterIncrement
-    cpy <- vecRefShallowCopy ref
-    return (DataIndexable pc cpy)
-  DataUser _ tbl -> do
-    pc <- vmProgramCounterIncrement
-    cpy <- objectTableShallowCopy tbl
-    return (DataUser pc cpy)
-  _ -> return od
+    DataArrayLiteral vec -> do
+      pc <- vmProgramCounterIncrement
+      ref <- toRef (vecShallowCopy vec)
+      return (DataIndexable pc ref)
+    DataIndexable _ ref -> do
+      pc <- vmProgramCounterIncrement
+      cpy <- vecRefShallowCopy ref
+      return (DataIndexable pc cpy)
+    DataNonIndexable _ tbl -> do
+      pc <- vmProgramCounterIncrement
+      cpy <- objectTableShallowCopy tbl
+      return (DataNonIndexable pc cpy)
+    _ -> return od
 
 objectShallowCopy :: Object -> Vm Object
 objectShallowCopy (Object nm obj) = do
@@ -447,7 +456,7 @@ classNew cd = do
   instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
   tbl <- variablesTbl instVarNames
   pc <- vmProgramCounterIncrement
-  return (Object (St.className cd) (DataUser pc tbl))
+  return (Object (St.className cd) (DataNonIndexable pc tbl))
 
 {- | Class>>superclass => Class|nil
 

@@ -92,7 +92,7 @@ prObjectEqual rcv arg = do
 prStringEqual :: (Bool, UnicodeString) -> ObjectData -> Object
 prStringEqual (typ1, str1) rhs =
   case rhs of
-    DataString typ2 str2 -> booleanObject ((not typ1 || typ1 == typ2) && str1 == str2)
+    DataImmutableString typ2 str2 -> booleanObject ((not typ1 || typ1 == typ2) && str1 == str2)
     _ -> falseObject
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
@@ -125,61 +125,64 @@ prSystemExit exitCode = liftIO (if exitCode == 0 then exitSuccess else exitWith 
 -- | Primitives with no requirements that, given types have matched, do not fail.
 somPrimitivesO :: SomPrimitiveOf (Maybe Object)
 somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Double class", "PositiveInfinity", DataClass {}, []) -> Just (doubleObject (read "Infinity"))
-    ("Double class", "fromString:", DataClass {}, [Object _ (DataString _ x)]) -> Just (maybe nanObject doubleObject (unicodeStringReadDouble x))
-    ("Double", "asInteger", DataDouble x, []) -> Just (intObject (truncate x)) -- Som?
-    ("Double", "asString", DataDouble x, []) -> Just (strObject (show x))
-    ("Double", "cos", DataDouble x, []) -> Just (doubleObject (cos x))
-    ("Double", "round", DataDouble x, []) -> Just (intObject (round x)) -- Som (roundTowardPositive in IEEE 754-2008)
-    ("Double", "sin", DataDouble x, []) -> Just (doubleObject (sin x))
-    ("Double", "sqrt", DataDouble x, []) -> Just (doubleObject (sqrt x))
-    ("Integer", "<", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive Nothing (<) (<) lhs rhs
-    ("Integer", "&", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (lhs Data.Bits..&. rhs))
-    ("Integer", "<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftLeft lhs rhs))
-    ("Integer", "=", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive (Just falseObject) (==) (==) lhs rhs
-    ("Integer", ">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftRight lhs rhs))
-    ("Integer", "as32BitSignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitSignedValue x))
-    ("Integer", "as32BitUnsignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
-    ("Integer", "asDouble", DataLargeInteger x, []) -> Just (doubleObject (fromIntegral x))
-    ("Integer", "asString", DataLargeInteger x, []) -> Just (strObject (show x))
-    ("Integer", "bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
-    ("Method", "signature", DataMethod _ mth _, []) -> Just (symbolObject (St.selectorIdentifier (St.methodSelector mth)))
-    ("Primitive", "holder", DataPrimitive x _, []) -> Just (symbolObject x)
-    ("Primitive", "signature", DataPrimitive _ x, []) -> Just (symbolObject x)
-    ("String", "=", DataString typ str, [Object _ arg]) -> Just (prStringEqual (typ, str) arg)
-    ("String", "asSymbol", DataString _ x, []) -> Just (unicodeSymbolObject x)
-    ("String", "concatenate:", DataString _ x, [Object _ (DataString _ y)]) -> Just (unicodeStringObject (Text.append x y))
-    ("String", "isDigits", DataString _ str, []) -> Just (prStringAll Data.Char.isDigit str)
-    ("String", "isLetters", DataString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
-    ("String", "isWhiteSpace", DataString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
-    ("String", "length", DataString _ str, []) -> Just (intObject (toLargeInteger (Text.length str)))
-    ("String", "primSubstringFrom:to:", DataString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
-    ("Symbol", "asString", DataString True x, []) -> Just (unicodeStringObject x)
+  case (prMethod, receiverObj, arguments) of
+    ("&", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (lhs Data.Bits..&. rhs))
+    ("<", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive Nothing (<) (<) lhs rhs
+    ("<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftLeft lhs rhs))
+    ("=", DataImmutableString typ str, [Object _ arg]) -> Just (prStringEqual (typ, str) arg)
+    ("=", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive (Just falseObject) (==) (==) lhs rhs
+    (">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftRight lhs rhs))
+    ("PositiveInfinity", DataClass {}, []) -> Just (doubleObject (read "Infinity"))
+    ("as32BitSignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitSignedValue x))
+    ("as32BitUnsignedValue", DataLargeInteger x, []) -> Just (intObject (as32BitUnsignedValue x))
+    ("asDouble", DataLargeInteger x, []) -> Just (doubleObject (fromIntegral x))
+    ("asInteger", DataDouble x, []) -> Just (intObject (truncate x)) -- Som?
+    ("asString", DataDouble x, []) -> Just (strObject (show x))
+    ("asString", DataImmutableString True x, []) -> Just (unicodeStringObject x)
+    ("asString", DataLargeInteger x, []) -> Just (strObject (show x))
+    ("asSymbol", DataImmutableString _ x, []) -> Just (unicodeSymbolObject x)
+    ("bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
+    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (unicodeStringObject (Text.append x y))
+    ("cos", DataDouble x, []) -> Just (doubleObject (cos x))
+    ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
+      case prClass of
+        "Integer class" -> fmap intObject (unicodeStringReadLargeInteger x)
+        "Double class" -> Just (maybe nanObject doubleObject (unicodeStringReadDouble x))
+        _ -> Nothing
+    ("holder", DataPrimitive x _, []) -> Just (symbolObject x)
+    ("isDigits", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isDigit str)
+    ("isLetters", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
+    ("isWhiteSpace", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
+    ("length", DataImmutableString _ str, []) -> Just (intObject (toLargeInteger (Text.length str)))
+    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
+    ("round", DataDouble x, []) -> Just (intObject (round x)) -- Som (roundTowardPositive in IEEE 754-2008)
+    ("signature", DataMethod _ mth _, []) -> Just (symbolObject (St.selectorIdentifier (St.methodSelector mth)))
+    ("signature", DataPrimitive _ x, []) -> Just (symbolObject x)
+    ("sin", DataDouble x, []) -> Just (doubleObject (sin x))
+    ("sqrt", DataDouble x, []) -> Just (doubleObject (sqrt x))
     _ -> Nothing
 
 -- | Primitives with no requirements that may fail.
 somPrimitivesM :: SomPrimitiveOf (Maybe Object)
 somPrimitivesM (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Block", "restart", DataBlock {}, []) -> Nothing -- not implemented
-    ("Block", "value", DataBlock {}, []) -> Nothing -- not implemented
-    ("Double", "%", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive doubleMod lhs rhs
-    ("Double", "*", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (*) lhs rhs
-    ("Double", "+", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (+) lhs rhs
-    ("Double", "-", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (-) lhs rhs
-    ("Double", "//", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (/) lhs rhs -- Som?
-    ("Double", "<", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (<) lhs rhs
-    ("Double", "=", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (==) lhs rhs
-    ("Integer class", "fromString:", DataClass {}, [Object _ (DataString _ x)]) -> fmap intObject (unicodeStringReadLargeInteger x)
-    ("Integer", "%", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
-    ("Integer", "*", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (*) (*) lhs rhs
-    ("Integer", "+", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (+) (+) lhs rhs
-    ("Integer", "-", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (-) (-) lhs rhs
-    ("Integer", "/", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive div (/) lhs rhs -- ? Som 1/2=0
-    ("Integer", "//", lhs, [Object _ rhs]) -> numNumNumPrimitive (/) lhs rhs
-    ("Integer", "rem:", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
-    ("Integer", "sqrt", rcv, []) -> numNumPrimitive sqrt rcv
+  case (prMethod, receiverObj, arguments) of
+    ("%", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive doubleMod lhs rhs
+    ("%", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive mod mod' lhs rhs
+    ("*", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (*) lhs rhs
+    ("*", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (*) (*) lhs rhs
+    ("+", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (+) lhs rhs
+    ("+", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (+) (+) lhs rhs
+    ("-", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (-) lhs rhs
+    ("-", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive (-) (-) lhs rhs
+    ("/", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive div (/) lhs rhs -- ? Som 1/2=0
+    ("//", DataDouble lhs, [Object _ rhs]) -> doubleNumDoublePrimitive (/) lhs rhs -- Som?
+    ("//", lhs, [Object _ rhs]) -> numNumNumPrimitive (/) lhs rhs
+    ("<", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (<) lhs rhs
+    ("=", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (==) lhs rhs
+    ("rem:", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
+    ("restart", DataBlock {}, []) -> Nothing -- not implemented
+    ("sqrt", _, []) -> numNumPrimitive sqrt receiverObj
+    ("value", DataBlock {}, []) -> Nothing -- not implemented
     _ -> somPrimitivesO (prClass, prMethod) receiver arguments
 
 {- | Primitives that require Io but not Vm state.
@@ -191,27 +194,32 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 -}
 somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveM m
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Array", "at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
-    ("Array", "at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
-    ("Array", "length", DataIndexable _ ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
-    ("Class", "name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
-    ("Integer", "atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
-    ("Object", "==", _, [arg]) -> prObjectEqual receiver arg
-    ("Object", "hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
-    ("Object", "instVarAt:", DataUser _ tbl, [Object _ (DataLargeInteger ix)]) -> tblAtDefault tbl (fromLargeInteger ix - 1) (prError "Object>>instVarAt:")
-    ("Object", "instVarAt:put:", DataUser _ tbl, [Object _ (DataLargeInteger ix), newObject]) -> tblAtPutDefault tbl (fromLargeInteger ix - 1) newObject (prError "Object>>instVarAt:put")
-    ("Object", "instVarNamed:", DataUser _ tbl, [Object _ (DataString True key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
-    ("String", "hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
-    ("System", "errorPrintln:", DataSystem, [Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x >> putChar '\n') >> error "System>>error"
-    ("System", "exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
-    ("System", "fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
-    ("System", "loadFile:", DataSystem, [Object _ (DataString False x)]) -> prSystemLoadFile x
-    ("System", "printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return nilObject
-    ("System", "printString:", DataSystem, [Object _ (DataString _ x)]) -> liftIO (Text.IO.putStr x) >> return nilObject
-    _ -> case somPrimitivesM (prClass, prMethod) receiver arguments of
-           Nothing -> prError (printf "%s>>%s (%s)" prClass prMethod (fromSymbol receiverName))
-           Just answer -> return answer
+  case (prMethod, receiverObj, arguments) of
+    ("==", _, [arg]) -> prObjectEqual receiver arg
+    ("at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
+    ("at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
+    ("atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
+    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (Text.IO.putStr x >> putChar '\n') >> error "System>>error"
+    ("exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
+    ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
+    ("hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
+    ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix)]) -> tblAtDefault tbl (fromLargeInteger ix - 1) (prError "Object>>instVarAt:")
+    ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix), newObject]) -> tblAtPutDefault tbl (fromLargeInteger ix - 1) newObject (prError "Object>>instVarAt:put")
+    ("instVarNamed:", DataNonIndexable _ tbl, [Object _ (DataImmutableString True key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
+    ("length", DataIndexable _ ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
+    ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> prSystemLoadFile x
+    ("name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
+    ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return nilObject
+    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (Text.IO.putStr x) >> return nilObject
+    _ ->
+      case somPrimitivesM (prClass, prMethod) receiver arguments of
+        Just answer -> return answer
+        Nothing -> prError (printf "%s>>%s (rcv: '%s', arity: %d, types: '%s')"
+                             prClass
+                             prMethod
+                             (fromSymbol receiverName)
+                             (length arguments)
+                             (unwords (map objectClassName arguments)))
 
 {- | Primitives that require access to Vm state.
 
@@ -221,14 +229,14 @@ System>>time is elapsed time in milliseconds.
 -}
 somPrimitivesV :: SomPrimitiveDispatcher
 somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Array class", "new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
-    ("Class", "methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
-    ("System", "global:", DataSystem, [Object _ (DataString True x)]) -> vmGlobalLookupOrNil (Text.unpack x)
-    ("System", "global:put:", DataSystem, [Object _ (DataString True x), e]) -> vmGlobalAssign (Text.unpack x) e
-    ("System", "hasGlobal:", DataSystem, [Object _ (DataString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
-    ("System", "ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmSystemTicksInt
-    ("System", "time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmSystemTicksInt
+  case (prMethod, receiverObj, arguments) of
+    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> vmGlobalLookupOrNil (Text.unpack x)
+    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> vmGlobalAssign (Text.unpack x) e
+    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
+    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
+    ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
+    ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmSystemTicksInt
+    ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmSystemTicksInt
     _ -> somPrimitivesI (prClass, prMethod) receiver arguments
 
 {- | Class>>fields => Array[Symbol]
@@ -253,23 +261,23 @@ prMethodInvokeOnWith opt obj receiver argumentsArray = do
 -- | Primitives that require functions from Core.
 somPrimitivesC :: SomPrimitiveDispatcher
 somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
-  case (prClass, prMethod, receiverObj, arguments) of
-    ("Block1", "value", DataBlock {}, []) -> evalBlock somCoreOpt receiver []
-    ("Block2", "value:", DataBlock {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
-    ("Block3", "value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
-    ("Class", "fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
-    ("Class", "new", DataClass (cd,_) _ _,[]) -> classNew cd
-    ("Class", "superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
-    ("Method", "holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
-    ("Method", "invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
-    ("Object","class", _, []) -> objectClass receiver
-    ("Object", "inspect", _, []) -> objectInspect receiver
-    ("Object", "perform:", _, [Object "Symbol" (DataString True sel)]) -> objectPerform somCoreOpt receiver sel
-    ("Object", "perform:inSuperclass:", _, [Object "Symbol" (DataString True sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
-    ("Object", "perform:withArguments:", _, [Object "Symbol" (DataString True sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
-    ("Object", "perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataString True sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
-    ("Primitive", "invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
-    ("System", "load:", DataSystem, [Object "Symbol" (DataString True x)]) -> systemLoadClassOrNil (Text.unpack x)
+  case (prMethod, receiverObj, arguments) of
+    ("class", _, []) -> objectClass receiver
+    ("fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
+    ("holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
+    ("inspect", _, []) -> objectInspect receiver
+    ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
+    ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
+    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> systemLoadClassOrNil (Text.unpack x)
+    ("new", DataClass (cd,_) _ _,[]) -> classNew cd
+    ("perform:", _, [Object "Symbol" (DataImmutableString True sel)]) -> objectPerform somCoreOpt receiver sel
+    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
+    ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString True sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
+    ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
+    ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
+    ("value", DataBlock {}, []) -> evalBlock somCoreOpt receiver []
+    ("value:", DataBlock {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
+    ("value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
     _ -> somPrimitivesV (prClass, prMethod) receiver arguments
 
 somPrimitives :: PrimitiveDispatcher
