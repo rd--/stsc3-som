@@ -6,9 +6,22 @@ Association = LookupKey (
 	^ super = anAssociation and: [value = anAssociation value]
 )
 
+hash = (
+	"Hash is reimplemented because = is implemented.
+	The super implementation is used to avoid hashing the value
+	which can be extremely expensive."
+	^super hash
+)
+
 key: aKey value: anObject = (
 	key := aKey.
 	value := anObject
+)
+
+printOn: aStream = (
+	super printOn: aStream.
+	aStream nextPutAll: '->'.
+	value printOn: aStream
 )
 
 value = (
@@ -17,12 +30,6 @@ value = (
 
 value: anObject = (
 	value := anObject
-)
-
-printOn: aStream = (
-	super printOn: aStream.
-	aStream nextPutAll: '->'.
-	value printOn: aStream
 )
 
 ----------------------------

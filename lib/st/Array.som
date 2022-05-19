@@ -10,22 +10,8 @@ at: index put: value = (
 	self primitiveFailed
 )
 
-size = (
-	<primitive: 62>
-	self primitiveFailed
-)
-
 doIndexes: block = (
 	1 to: self size do: [:i | block value: i. ]
-)
-
-prependedWith: val = (
-	| result |
-	result := Array new: self size + 1.
-	self doIndexes: [:i |
-	result at: i + 1 put: (self at: i)].
-	result at: 1 put: val.
-	^ result
 )
 
 extendedWith: val = (
@@ -37,25 +23,66 @@ extendedWith: val = (
 	^ result
 )
 
-join: joiner = (
-	| result first |
-	first := true.
-	self do: [:e |
-	first
-		ifTrue: [
-		result := e.
-		first := false]
-		ifFalse: [
-		result := result + joiner + e] ].
+isLiteral = (
+	^self class == Array and: [
+		self isLiteralIfContainedBy: IdentitySet new ]
+)
+
+isLiteralIfContainedBy: parents = (
+	" Answer whether the receiver has a literal text form recognized by the compiler. Precondition: the receiver is an instance of Array. "
+	(parents includes: self) ifTrue: [ ^false ].
+	parents add: self.
+	1 to: self size do: [ :index |
+		| element |
+		element := self at: index.
+		(element class == Array
+			ifTrue: [ element isLiteralIfContainedBy: parents ]
+			ifFalse: [ element isLiteral ]) ifFalse: [ ^false ] ].
+	parents remove: self.
+	^true
+)
+
+prependedWith: val = (
+	| result |
+	result := Array new: self size + 1.
+	self doIndexes: [:i |
+	result at: i + 1 put: (self at: i)].
+	result at: 1 put: val.
 	^ result
 )
 
-union: aCollection = (
-	| new |
-	new := Set new.
-	new addAll: self.
-	new addAll: aCollection.
-	^ new
+printAsLiteralOn: aStream = (
+	aStream nextPut: $#; nextPut: $(.
+	self do: [:each| each printAsLiteralOn: aStream] separatedBy: [aStream space].
+	aStream nextPut: $)
+)
+
+printAsBraceFormOn: aStream = (
+	aStream nextPut: ${.
+	self do: [:el | el printOn: aStream] separatedBy: [ aStream nextPutAll: ' . '].
+	aStream nextPut: $}
+)
+
+printOn: aStream = (
+	self class == Array ifFalse:
+		[^super printOn: aStream].
+	self shouldBePrintedAsLiteral
+		ifTrue: [self printAsLiteralOn: aStream]
+		ifFalse: [self printAsBraceFormOn: aStream]
+)
+
+shouldBePrintedAsLiteral = (
+	^self class == Array
+	  and: [self shouldBePrintedAsLiteralVisiting: (IdentitySet new: 8)]
+)
+
+shouldBePrintedAsLiteralVisiting: aSet = (
+	^self isLiteral
+)
+
+size = (
+	<primitive: 62>
+	self primitiveFailed
 )
 
 ----------------------------

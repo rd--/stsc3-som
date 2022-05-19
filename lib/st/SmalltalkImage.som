@@ -1,78 +1,104 @@
 SmalltalkImage = Object (
 
-    "Accessing"
-    global: name            = primitive
-    global: name put: value = primitive
-    hasGlobal: name         = primitive
+exit: error = (
+	self quitPrimitive: error
+)
 
-    "Initializing"
-    initialize: arguments = (
-        | application |
+exit = (
+	self exit: 0
+)
 
-        "Make sure we have got at least one argument"
-        (arguments size < 1) ifTrue: [ 'No class specified' println. ^nil ].
+global: name = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-        "Load the class with the specified name, create an instance of it, and
-         run it. If there is more than only the class given on the command line,
-         and the class has a method #run:, the arguments array is passed to it,
-         otherwise, #run is sent."
-        application := (self resolve: (arguments at: 1) asSymbol) new.
+global: name put: value = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-        ^ (application respondsTo: #run:)
-            ifTrue:  [ application run: arguments ]
-            ifFalse: [ application run ]
-    )
+hasGlobal: name = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "File support"
+initialize: arguments = (
+	| application |
 
-    "Load a file identified by a path. Return content as a string"
-    loadFile: fileName = primitive
+	"Make sure we have got at least one argument"
+	(arguments size < 1) ifTrue: [ 'No class specified' println. ^nil ].
 
-    "Loading and resolving"
-    load:    symbol = primitive
-    resolve: symbol = (
-        | class |
+	"Load the class with the specified name, create an instance of it, and
+	 run it. If there is more than only the class given on the command line,
+	 and the class has a method #run:, the arguments array is passed to it,
+	 otherwise, #run is sent."
+	application := (self resolve: (arguments at: 1) asSymbol) new.
 
-        "Check if we've already got the global"
-        (self global: symbol) == nil ifFalse: [ ^self global: symbol ].
+	^ (application respondsTo: #run:)
+	    ifTrue:  [ application run: arguments ]
+	    ifFalse: [ application run ]
+)
 
-        "Try loading the class"
-        class := self load: symbol.
-        (class == nil) ifFalse: [
-            ^class ].
-        self error: 'Tried loading <<' , symbol , '>> as a class, but failed.' "quote..."
-    )
+loadFile: aString = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "Exiting"
-    exit: error  = primitive
-    exit         = ( self exit: 0 )
+load: aSymbol = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "Printing"
-    printString: string = primitive
-    printNewline        = primitive
+primitiveGarbageCollect = (
+	"Primitive. Reclaims all garbage and answers the size of the largest free chunk in old space.."
 
-    errorPrintln = ( self errorPrintln: '' )
-    errorPrintln: string = primitive
-    errorPrint: string  = primitive
+	<primitive: 130>
+	^self primitiveFailed
+)
 
-    printStackTrace = primitive
+printCharacter: aCharacter = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "Time"
-    time  = primitive
-    ticks = primitive      "returns the microseconds since start"
+printContext = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "Force Garbage Collection"
-    fullGC = primitive
-    
-    "To be implemented by SOM implementations that gather such statistics."
-    gcStats = ( ^ #(
-        0 "Total number of GCs"
-        0 "Estimated total GC time in milliseconds") )  
-    totalCompilationTime = ( ^ 0 "Estimated total compilation time in milliseconds" )
+printString: aString = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    ----------------------------------
+printNewline = (
+	self printCharacter: Character linefeed
+)
 
-    "Allocation"
-    new = ( self error: 'The SmalltalkImage object is singular' )
+quitPrimitive: exitCode = (
+	"Primitive. Exit with exitCode to another operating system on the host machine, if one exists. All state changes in the object space since the last snapshot are lost. Ignore exitCode if it's not supported by the VM."
+
+	<primitive: 113>
+	self quitPrimitive
+)
+
+resolve: aSymbol = (
+	| class |
+
+	"Check if we've already got the global"
+	(self global: aSymbol) == nil ifFalse: [ ^self global: aSymbol ].
+
+	"Try loading the class"
+	class := self load: aSymbol.
+	(class == nil) ifFalse: [ ^class ].
+	self error: 'Tried loading <<' , aSymbol , '>> as a class, but failed.' "quote..."
+)
+
+----
+
+new = (
+	self error: 'The Smalltalk object is singular'
+)
 
 )

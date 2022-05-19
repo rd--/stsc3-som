@@ -71,6 +71,10 @@ isLiteral = (
 	^true
 )
 
+printAsLiteralOn: aStream = (
+	aStream nextPut: $$; nextPut: self
+)
+
 printOn: aStream = (
 	aStream nextPut: $$.
 	aStream nextPut: self
@@ -136,6 +140,10 @@ cr = (
 
 esc = (
 	^self value: 160
+)
+
+linefeed = (
+	^self value: 10
 )
 
 newPage = (

@@ -1,5 +1,23 @@
 Object = nil (
 
+== other = (
+	<primitive: 110>
+	self primitiveFailed
+)
+
+=  other = (
+	^self == other
+)
+
+~= anObject = (
+	"Answer whether the receiver and the argument do not represent the same object."
+	^self = anObject == false
+)
+
+asString = (
+	^'instance of ' , self class
+)
+
 at: index = (
 	<primitive: 60>
 	index isInteger ifTrue:
@@ -48,6 +66,21 @@ basicSize = (
 	^0
 )
 
+class = (
+	<primitive: 111>
+	self primitiveFailed
+)
+
+copy = (
+	"Answer another instance just like the receiver. Subclasses typically override postCopy; they typically do not override shallowCopy."
+	^self shallowCopy postCopy
+)
+
+fullPrintString = (
+	"Answer a String whose characters are a description of the receiver."
+	^ String streamContents: [:s | self printOn: s]
+)
+
 identityHash = (
 	<primitive: 75>
 	self primitiveFailed
@@ -74,14 +107,26 @@ perform: aSymbol withArguments: args = (
 	self primitiveFailed
 )
 
-== other = (
-	<primitive: 110>
-	self primitiveFailed
+postCopy = (
+	"self is a shallow copy, subclasses should copy fields as necessary to complete the full copy"
+	^ self
 )
 
-class = (
-	<primitive: 111>
-	self primitiveFailed
+printOn: aStream = (
+	"Append to the argument, aStream, a sequence of characters that  identifies the receiver."
+	| title |
+	title := self class name.
+	aStream
+		nextPutAll: (title first isVowel ifTrue: ['an '] ifFalse: ['a ']);
+		nextPutAll: title
+)
+
+printString = (
+	"Answer a String whose characters are a description of the receiver."
+	| aStream |
+	aStream := WriteStream on: (String new: 16).
+	self printOn: aStream.
+	^aStream contents
 )
 
 species = (
@@ -92,6 +137,15 @@ species = (
 shallowCopy = (
 	<primitive: 148>
 	^self primitiveFailed
+)
+
+size = (
+	"Primitive. Answer the number of indexable variables in the receiver.
+	This value is the same as the largest legal subscript. Essential. See Object
+	documentation whatIsAPrimitive."
+	<primitive: 62>
+	self class isVariable ifFalse: [self errorNotIndexable].
+	^ 0
 )
 
 ~~ anObject = (
@@ -157,6 +211,15 @@ isKindOf: aClass = (
 	^ self class == aClass or: [ self class inheritsFrom: aClass ]
 )
 
+isLiteral = (
+	^false
+)
+
+isMemberOf: aClass = (
+	"Answer whether the receiver is an instance of the class, aClass."
+	^self class == aClass
+)
+
 isNil = (
 	^false
 )
@@ -173,6 +236,14 @@ primitiveFailed = (
 	('Object>>primitiveFailed: ' , self asString) println.
 )
 
+putOn:aStream = (
+	^aStream nextPut:self.
+)
+
+shouldNotImplement = (
+	self error: 'shouldNotImplement'
+)
+
 value = (
 	^self
 )
@@ -180,17 +251,6 @@ value = (
 yourself = (
 	^self
 )
-
-    objectSize = primitive  "size in bytes"
-
-    "Comparing"
-
-    =  other = ( ^self == other )
-    <> argument = ( ^(self = argument) not )
-    ~= other = (^ (self == other) not )
-
-    "Converting"
-    asString = ( ^'instance of ' , (self class) )
 
     "Convenience"
     ifNil: aBlock = (^self)
@@ -206,7 +266,7 @@ yourself = (
     halt = primitive
 
     "Error handling"
-    error: string = ( '' println. ('Object>>error: ' , string , ' at: ', self class name) println. ^ nil )
+    error: string = ( '' println. ('Object>>error: ' , string , ' at: ', self class name) println. Smalltalk printContext . ^ nil )
     fatalError: string = ( '' println. ('Object>>fatalError: ' , string) println. Smalltalk exit: 1 )
 
     "Abstract method support"

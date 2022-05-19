@@ -8,7 +8,15 @@ cos = (
 	^ (self + Float halfPi) sin
 )
 
+isFinite = (
+	^(self - self) = 0.0
+)
+
 isFloat = (
+	^true
+)
+
+isLiteral = (
 	^true
 )
 
@@ -24,6 +32,10 @@ rounded = (
 	self fractionPart abs < 0.5
 		ifTrue: [^self truncated]
 		ifFalse: [^self truncated + self sign rounded]
+)
+
+printAsLiteralOn: aStream = (
+	^self storeOn: aStream
 )
 
 ----

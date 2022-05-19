@@ -58,6 +58,9 @@ type VecRef t = Ref (Vec t)
 vecRefFromList :: MonadIO m => [t] -> m (VecRef t)
 vecRefFromList = toRef . vecFromList
 
+vecRefToList :: MonadIO m => VecRef t -> m [t]
+vecRefToList = fmap vecToList . deRef
+
 -- | 0-indexed
 vecRefAtMaybe :: MonadIO m => VecRef t -> Int -> m (Maybe t)
 vecRefAtMaybe ref ix = do

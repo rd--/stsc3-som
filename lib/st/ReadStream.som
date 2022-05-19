@@ -1,0 +1,51 @@
+ReadStream = PositionableStream (
+
+next = (
+	"Answer with the next object in the Stream represented by the receiver.
+	Fail if the collection of this stream is not an Array or a String. Fail if
+	the stream is positioned at its end, or if the position is out of bounds in
+	the collection. Optional. See Object documentation whatIsAPrimitive."
+
+	<primitive: 65>
+	position >= readLimit
+		ifTrue: [^nil]
+		ifFalse: [^collection at: (position := position + 1)]
+
+)
+
+nextPut: anObject = (
+	self shouldNotImplement
+
+)
+
+on: aCollection from: firstIndex to: lastIndex = (
+	| len |
+	collection := aCollection.
+	readLimit :=  lastIndex > (len := collection size)
+						ifTrue: [len]
+						ifFalse: [lastIndex].
+	position := firstIndex <= 1
+				ifTrue: [0]
+				ifFalse: [firstIndex - 1]
+
+)
+
+----------------------------
+
+on: aCollection from: firstIndex to: lastIndex = (
+	"Answer with a new instance streaming over a copy of aCollection from
+	firstIndex to lastIndex."
+
+	^self basicNew
+		on: aCollection
+		from: firstIndex
+		to: lastIndex
+
+)
+
+comment = (^'
+I am a reader of an indexable collection.  I only define the message next.
+')
+
+
+)

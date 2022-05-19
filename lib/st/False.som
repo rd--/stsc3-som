@@ -1,5 +1,9 @@
 False = Boolean (
 
+and: ignoredBlock = (
+	^false
+)
+
 asString = (
 	^'false'
 )
@@ -28,8 +32,8 @@ or: aBlock = (
 	^aBlock value
 )
 
-and: ignoredBlock = (
-	^false
+printOn: aStream = (
+	aStream nextPutAll: 'false'
 )
 
 )

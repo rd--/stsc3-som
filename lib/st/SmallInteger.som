@@ -104,6 +104,10 @@ adaptToFloat: rcvr andCompare: selector = (
 	^ rcvr perform: selector with: self asFloat
 )
 
+hash = (
+	^self
+)
+
 highBit = (
 	self < 0 ifTrue: [^ self error: 'highBit is not defined for negative integers'].
 	^ self highBitOfPositiveReceiver
@@ -130,6 +134,10 @@ highBitOfPositiveReceiver = (
 
 identityHash = (
 	^self
+)
+
+printOn: aStream = (
+	^self asString putOn: aStream
 )
 
 shallowCopy = (

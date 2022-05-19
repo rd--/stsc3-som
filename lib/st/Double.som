@@ -98,6 +98,10 @@ identityHash = (
 	^self primitiveFailed
 )
 
+printOn: aStream = (
+	^self asString putOn: aStream
+)
+
 shallowCopy= (
 )
 

@@ -1,21 +1,17 @@
 Class = Behavior (
 
-    "Accessing"
-    name = primitive
+asString = (
+	^self name asString
+)
 
-    "Converting"
-    asString = ( ^self name asString )
+name = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    "Meta Information"
-    superclass = primitive
-    fields = primitive
-    methods = primitive
-    selectors = ( ^self methods collect: [:inv | inv signature ] )
-
-    hasMethod: aSymbol = (
-        self methods do: [ :m |
-            m signature = aSymbol ifTrue: [ ^true ] ].
-        ^false
-    )
+superclass = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
 )

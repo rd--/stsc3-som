@@ -1,6 +1,7 @@
 -- | DictRef
 module Interpreter.Som.DictRef where
 
+import Control.Monad {- base -}
 import Control.Monad.IO.Class {- base -}
 
 import qualified Data.Map as Map {- containers -}
@@ -16,6 +17,12 @@ dictRefEmpty = toRef Map.empty
 
 dictRefKeys :: MonadIO m => DictRef k v -> m [k]
 dictRefKeys = fmap Map.keys . deRef
+
+dictRefReferences :: MonadIO m => DictRef k v -> m [Ref v]
+dictRefReferences = fmap Map.elems . deRef
+
+dictRefValues :: MonadIO m => DictRef k v -> m [v]
+dictRefValues = join . fmap (mapM deRef) . dictRefReferences
 
 dictRefLookup :: (MonadIO m, Ord k) => DictRef k v -> k -> m (Maybe v)
 dictRefLookup r w = deRef r >>= \d -> dictLookup d w

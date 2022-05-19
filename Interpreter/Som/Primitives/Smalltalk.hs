@@ -38,7 +38,10 @@ intObject :: SmallInteger -> Object
 intObject x = Object (toSymbol "SmallInteger") (DataSmallInteger x)
 
 strObject :: String -> Object
-strObject = unicodeStringObject . toUnicodeString
+strObject = immutableStringObject
+
+symObject :: String -> Object
+symObject = immutableSymbolObject
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
@@ -63,8 +66,8 @@ prSystemLoadFile aString = do
     maybeText <- liftIO (readFileMaybe fn)
     maybe onFailure (return . strObject) maybeText
 
-prSystemExit :: MonadIO m => SmallInteger -> m t
-prSystemExit exitCode = liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure exitCode))
+prQuit :: MonadIO m => SmallInteger -> m t
+prQuit exitCode = liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure exitCode))
 
 {- | Class>>fields => Array[Symbol]
 
@@ -75,41 +78,50 @@ prClassFields cd isMeta =
   case isMeta of
     False -> do
       fld <- classAllVariableNames St.classInstanceVariableNames cd
-      arrayFromList (map symbolObject fld)
+      arrayFromList (map symObject fld)
     True -> do
       fld <- classAllVariableNames St.classVariableNames cd
-      arrayFromList (map symbolObject fld)
+      arrayFromList (map symObject fld)
 
 prMethodInvokeOnWith :: CoreOpt -> ObjectData -> Object -> Object -> Vm Object
 prMethodInvokeOnWith opt obj receiver argumentsArray = do
   arguments <- arrayElements argumentsArray
   evalMethodOrPrimitive opt obj receiver arguments
 
+prPrintString :: Object -> Vm (Maybe Object)
+prPrintString (Object _ obj) = do
+  let wr str = liftIO (unicodeStringWrite str) >> return (Just nilObject)
+  objectDataAsString obj >>= maybe (return Nothing) wr
+
+prMethodArray :: Object -> Vm (Maybe Object)
+prMethodArray rcv =
+  case classCachedMethodsVec rcv of
+    Nothing -> return Nothing
+    Just vec -> fmap Just (arrayFromVec vec)
+
 stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("=", DataImmutableString typ str, [Object _ arg]) -> return (Just (prStringEqual (typ, str) arg))
-    ("asString", DataDouble x, []) -> return (Just (strObject (show x)))
-    ("asString", DataImmutableString True x, []) -> return (Just (unicodeStringObject x))
-    ("asString", DataSmallInteger x, []) -> return (Just (strObject (show x)))
-    ("asSymbol", DataImmutableString _ x, []) -> return (Just (unicodeSymbolObject x))
+    ("asString", DataDouble x, []) -> fmap Just (mutableStringObject (show x))
+    ("asString", DataImmutableString True x, []) -> fmap Just (mutableStringObject x)
+    ("asString", DataSmallInteger x, []) -> fmap Just (mutableStringObject (show x))
+    ("asSymbol", DataImmutableString _ x, []) -> return (Just (symObject x))
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (0, x - 1))))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (unicodeStringObject (unicodeStringAppend x y)))
-    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> fmap Just (liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error")
+    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (strObject (unicodeStringAppend x y)))
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
       case prClass of
         "Double class" -> return (Just (maybe nanObject doubleObject (unicodeStringReadDouble x)))
         "SmallInteger class" -> return (fmap intObject (unicodeStringReadSmallInteger x))
         _ -> return Nothing
-    ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just trueObject)
     ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap Just (vmGlobalLookupOrNil (fromUnicodeString x))
     ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> fmap Just (vmGlobalAssign (fromUnicodeString x) e)
     ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap (Just . booleanObject) (vmHasGlobal (fromUnicodeString x))
     ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
-    ("holder", DataPrimitive x _, []) -> return (Just (symbolObject x))
+    ("holder", DataPrimitive x _, []) -> return (Just (symObject x))
     ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
-    ("inspect", _, []) -> fmap Just (objectInspect receiver)
+    ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> fmap Just (tblAtDefault tbl (ix - 1) (prError "Object>>instVarAt:"))
     ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> fmap Just (tblAtPutDefault tbl (ix - 1) newObject (prError "Object>>instVarAt:put"))
     ("instVarNamed:", DataNonIndexable _ tbl, [Object _ (DataImmutableString True key)]) -> fmap Just (tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:"))
@@ -120,17 +132,16 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("isWhiteSpace", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isSpace str))
     ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> fmap Just (systemLoadClassOrNil (fromUnicodeString x))
     ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> fmap Just (prSystemLoadFile x)
-    ("methods", DataClass {}, []) -> fmap Just (maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver))
-    ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd))))
+    ("methodArray", DataClass {}, []) -> prMethodArray receiver
+    ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> fmap Just (objectPerformInSuperclass stCoreOpt receiver sel cl)
-    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> return (Just (unicodeStringObject (unicodeStringSubstringFromTo str int1 int2)))
-    ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return (Just nilObject)
-    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x) >> return (Just nilObject)
-    ("signature", DataMethod _ mth _, []) -> return (Just (symbolObject (St.selectorIdentifier (St.methodSelector mth))))
-    ("signature", DataPrimitive _ x, []) -> return (Just (symbolObject x))
+    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> return (Just (strObject (unicodeStringSubstringFromTo str int1 int2)))
+    ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
+    ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
+    ("printString:", DataSystem, [str]) -> prPrintString str
+    ("signature", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
+    ("signature", DataPrimitive _ x, []) -> return (Just (symObject x))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
-    ("ticks", DataSystem, []) -> fmap (Just . intObject) vmSystemTicksInt
-    ("time", DataSystem, []) -> fmap (Just . intObject . (`div` 1000)) vmSystemTicksInt
     ("value", DataBlock {}, []) -> fmap Just (evalBlock stCoreOpt receiver [])
     ("value:", DataBlock {}, [arg]) -> fmap Just (evalBlock stCoreOpt receiver [arg])
     ("value:with:", DataBlock {}, [arg1, arg2]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2])
@@ -203,11 +214,12 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (100, _, [Object "Symbol" (DataImmutableString True sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl)
     (110, _, [arg]) -> fmap Just (prObjectEqual receiver arg)
     (111, _, []) -> fmap Just (objectClass receiver)
-    (113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prSystemExit x)
+    (113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prQuit x)
+    (130, DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just (intObject 0))
     (148, _, []) -> fmap Just (objectShallowCopy receiver)
     (170, DataClass {}, [Object _ (DataSmallInteger ix)]) -> return (Just (characterObject (toEnum ix)))
     (171, DataCharacter char, []) -> return (Just (intObject (fromEnum char)))
     _ -> stPrimitivesC (prClass, prMethod) prCode receiver arguments
 
 stCoreOpt :: CoreOpt
-stCoreOpt = CoreOpt SmalltalkSystem (intObject . fromInteger, strObject) stPrimitives
+stCoreOpt = CoreOpt SmalltalkSystem (intObject . fromInteger, strObject, symObject) stPrimitives

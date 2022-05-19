@@ -29,19 +29,26 @@ import Interpreter.Som.Vec
 -- | (Holder, selector), code, receiver, arguments, answer.
 type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
 
-type LiteralConstructors = (LargeInteger -> Object, String -> Object)
-
 data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstructors, coreOptPrim :: PrimitiveDispatcher }
 
 -- * Copy
 
+stringToCharacterArray :: String -> Vm ObjectData
+stringToCharacterArray str = do
+  pc <- vmProgramCounterIncrement
+  ref <- vecRefFromList (fromUnicodeString str)
+  return (DataCharacterArray pc ref)
+
+mutableStringObject :: String -> Vm Object
+mutableStringObject str = fmap (Object (toSymbol "String")) (stringToCharacterArray str)
+
+mutableSymbolObject :: String -> Vm Object
+mutableSymbolObject str = fmap (Object (toSymbol "Symbol")) (stringToCharacterArray str)
+
 immutableToMutableString :: ObjectData -> Vm ObjectData
 immutableToMutableString od =
   case od of
-    DataImmutableString _ str -> do
-      pc <- vmProgramCounterIncrement
-      ref <- vecRefFromList (fromUnicodeString str)
-      return (DataCharacterArray pc ref)
+    DataImmutableString _ str -> stringToCharacterArray str
     _ -> error "toMutableString: not immutable string"
 
 objectDataShallowCopy :: ObjectData -> Vm ObjectData
@@ -65,6 +72,14 @@ objectShallowCopy :: Object -> Vm Object
 objectShallowCopy (Object nm obj) = do
   cpy <- objectDataShallowCopy obj
   return (Object nm cpy)
+
+objectTableShallowCopy :: ObjectTable -> Vm ObjectTable
+objectTableShallowCopy vec = do
+  let (keys, refs) = unzip (vecToList vec)
+  values <- mapM deRef refs
+  copies <- mapM objectShallowCopy values
+  newRefs <- mapM toRef copies
+  return (vecFromList (zip keys newRefs))
 
 -- * Lookup
 
@@ -110,7 +125,7 @@ objectLookupClassVariable object key =
 contextLookup :: Context -> Symbol -> Vm (Maybe Object)
 contextLookup (Context c p) k =
   case c of
-    MethodContext _ rcv localVariables ->
+    MethodContext _ _ rcv localVariables ->
       if k == "self" || k == "super"
       then return (Just rcv)
       else mLookupSequence [dictRefLookup localVariables
@@ -142,7 +157,7 @@ objectAssignClassVariable object key value =
 contextAssign :: Context -> Symbol -> Object -> Vm (Maybe Object)
 contextAssign (Context c p) k v =
   case c of
-    MethodContext _ rcv localVariables ->
+    MethodContext _ _ rcv localVariables ->
       mAssignSequence [dictRefAssignMaybe localVariables
                       ,objectAssignInstanceVariable rcv
                       ,objectAssignClassVariable rcv
@@ -186,18 +201,21 @@ vmContextAssignAllToNil = mapM_ (\name -> vmContextAssign name nilObject)
 
 -- * Vm
 
+coreSymbolObject :: CoreOpt -> String -> Object
+coreSymbolObject opt str = let (_, _, symObject) = coreOptLit opt in symObject str
+
 -- | When a method lookup fails, the doesNotUnderstand:arguments: message is sent to the receiver.
 vmDoesNotUnderstand :: CoreOpt -> Object -> String -> Object -> Vm Object
 vmDoesNotUnderstand opt receiver k argsArray = do
   let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
   --printTrace ("vmDoesNotUnderstand: " ++ k ++ " <= ") [receiver, argsArray]
-  evalMessageSend opt False receiver sel [symbolObject k, argsArray]
+  evalMessageSend opt False receiver sel [coreSymbolObject opt k, argsArray]
 
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
 vmUnknownGlobal :: CoreOpt -> Context -> String -> Vm Object
 vmUnknownGlobal opt ctx k =
   case contextReceiverMaybe ctx of
-    Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [symbolObject k]
+    Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [coreSymbolObject opt k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a Return escapes we send an escapedBlock: message to the Object that the Block that Returned escaped from.
@@ -293,10 +311,11 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
   --printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
   let requiredArguments = length methodArguments
       providedArguments = length arguments
-      arityError = printf "evalMethod: wrong number of arguments: %s %d" (St.methodSignature methodDefinition) providedArguments
+      selector = St.methodSignature methodDefinition
+      arityError = printf "evalMethod: wrong number of arguments: %s %d" selector providedArguments
   when (requiredArguments /= providedArguments) (vmError arityError)
   pc <- vmProgramCounterIncrement
-  vmContextAdd =<< methodContextNode pc receiver (zip methodArguments arguments) methodTemporaries
+  vmContextAdd =<< methodContextNode pc selector receiver (zip methodArguments arguments) methodTemporaries
   result <- evalStatements opt methodStatements
   _ <- vmContextDelete
   case result of
@@ -354,7 +373,7 @@ findMethodMaybe :: Object -> St.Selector -> Vm (Maybe Object)
 findMethodMaybe o sel =
   if isNil o
   then return Nothing
-  else case classMethodsVec o of
+  else case classCachedMethodsVec o of
          Just mth ->
           case vecFind (\(Object _ (DataMethod _ m _)) -> sel == St.methodSelector m) mth of
             Just m -> return (Just m)
@@ -527,8 +546,8 @@ objectClass rcv@(Object nm obj) =
     DataClass {} -> classMetaclass rcv
     _ -> vmGlobalLookupOrError nm
 
-objectInspect :: Object -> Vm Object
-objectInspect rcv = objectToInspector rcv >>= liftIO . putStrLn >> return rcv
+objectInspectAndPrint :: Object -> Vm Object
+objectInspectAndPrint rcv = objectInspect rcv >>= liftIO . putStrLn >> return rcv
 
 objectPerformWithArgumentsInSuperclass :: CoreOpt -> Object -> UnicodeString -> Object -> Object -> Vm Object
 objectPerformWithArgumentsInSuperclass opt rcv sel argumentsArray cl = do

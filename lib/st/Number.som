@@ -84,6 +84,10 @@ negative = (
 	^self < 0
 )
 
+printOn: aStream = (
+	^self subclassResponsibility
+)
+
 quo: aNumber = (
 	^(self / aNumber) truncated
 )
@@ -137,6 +141,15 @@ squared = (
 
 sqrt = (
 	self subclassResponsibility
+)
+
+storeOn: aStream = (
+	self printOn: aStream
+)
+
+strictlyPositive = (
+	"Answer whether the receiver is mathematically positive."
+	^ self > 0
 )
 
 to: stop = (

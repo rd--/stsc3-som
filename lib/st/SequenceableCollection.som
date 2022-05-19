@@ -6,6 +6,13 @@ SequenceableCollection = Collection (
 	^ self hasEqualElements: otherCollection
 )
 
+, otherCollection = (
+	"Concatenate two Strings or Collections."
+	^ self copyReplaceFrom: self size + 1
+		  to: self size
+		  with: otherCollection asCollection
+)
+
 asArray = (
 	^ Array withAll: self
 )
@@ -15,6 +22,20 @@ atAllPut: anObject = (
 	(size := self size) > 50
 		ifTrue: [self from: 1 to: size put: anObject]
 		ifFalse: [1 to: size do: [:index | self at: index put: anObject]]
+)
+
+beginsWith: sequence = (
+	"Answer true if the receiver starts with the argument collection."
+	| sequenceSize |
+	((sequenceSize := sequence size) = 0 or: [ self size < sequenceSize ]) ifTrue: [ ^false ].
+	1 to: sequenceSize do: [ :index |
+		(sequence at: index) = (self at: index) ifFalse: [ ^false ] ].
+	^true
+)
+
+beginsWithAnyOf: aCollection = (
+	"Return true if the receiver starts with any of the elements in aCollection."
+	^aCollection anySatisfy:[:prefix| self beginsWith: prefix].
 )
 
 collect: aBlock = (
@@ -44,19 +65,56 @@ copyFrom: start to: stop = (
 		startingAt: start
 )
 
+copyReplaceFrom: start to: stop with: replacementCollection = (
+	| newSequenceableCollection newSize endReplacement |
+	endReplacement := start - 1 + replacementCollection size.
+	newSize := self size + endReplacement - stop.
+	newSequenceableCollection := self species new: newSize.
+	start > 1 ifTrue:[
+		newSequenceableCollection
+			replaceFrom: 1
+			to: start - 1
+			with: self
+			startingAt: 1].
+	start <= endReplacement ifTrue:[
+		newSequenceableCollection
+			replaceFrom: start
+			to: endReplacement
+			with: replacementCollection
+			startingAt: 1].
+	endReplacement < newSize ifTrue:[
+		newSequenceableCollection
+			replaceFrom: endReplacement + 1
+			to: newSize
+			with: self
+			startingAt: stop + 1].
+	^newSequenceableCollection
+)
+
 do: aBlock = (
 	1 to: self size do:
 		[:index | aBlock value: (self at: index)]
 )
 
-hasEqualElements: otherCollection = (
-	| size |
-	otherCollection isSequenceable ifFalse: [^ false].
-	(size := self size) = otherCollection size ifFalse: [^ false].
-	1 to: size do:
+do: elementBlock separatedBy: separatorBlock = (
+	1 to: self size do:
 		[:index |
-		(self at: index) = (otherCollection at: index) ifFalse: [^ false]].
-	^ true
+		index = 1 ifFalse: [separatorBlock value].
+		elementBlock value: (self at: index)]
+)
+
+endsWith: sequence = (
+	"Answer true if the receiver ends with the argument collection."
+	| sequenceSize offset |
+	((sequenceSize := sequence size) = 0 or: [ (offset := self size - sequence size) < 0 ]) ifTrue: [ ^false ].
+	1 to: sequenceSize do: [ :index |
+		(sequence at: index) = (self at: index + offset) ifFalse: [ ^false ] ].
+	^true
+)
+
+endsWithAnyOf: aCollection = (
+	"Return true if the receiver ends with any of the elements in aCollection."
+	^aCollection anySatisfy:[:suffix| self endsWith: suffix]
 )
 
 first = (
@@ -86,6 +144,21 @@ from: startIndex to: endIndex put: anObject = (
 	^anObject
 )
 
+hasEqualElements: otherCollection = (
+	| size |
+	otherCollection isSequenceable ifFalse: [^ false].
+	(size := self size) = otherCollection size ifFalse: [^ false].
+	1 to: size do:
+		[:index |
+		(self at: index) = (otherCollection at: index) ifFalse: [^ false]].
+	^ true
+)
+
+includes: anObject = (
+	"Answer whether anObject is one of the receiver's elements."
+	^ (self indexOf: anObject) ~= 0
+)
+
 indexOf: anElement = (
 	^self indexOf: anElement startingAt: 1
 )
@@ -108,6 +181,30 @@ indexOf: anElement ifAbsent: exceptionBlock = (
 	^exceptionBlock value
 )
 
+indexOfSubCollection: aSubCollection = (
+	^self
+		indexOfSubCollection: aSubCollection
+		startingAt: 1
+)
+
+indexOfSubCollection: subCollection startingAt: start = (
+	| first index subCollectionSize |
+	(subCollectionSize := subCollection size) = 0 ifTrue: [ ^0 ].
+	first := subCollection at: 1.
+	(start max: 1) to: self size - subCollectionSize + 1 do: [ :startIndex |
+		(self at: startIndex) = first ifTrue: [
+			index := 2.
+			[ index <= subCollectionSize
+				and: [ (self at: startIndex + index - 1) = (subCollection at: index) ] ]
+				whileTrue: [ index := index + 1 ].
+			index <= subCollectionSize ifFalse: [ ^startIndex ] ] ].
+	^0
+)
+
+isSequenceable = (
+	^ true
+)
+
 last = (
 	^ self at: self size
 )
@@ -126,6 +223,15 @@ lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
 	| index |
 	(index := self lastIndexOf: anElement startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
+)
+
+putOn: aStream = (
+	self do: [ :each | each putOn: aStream ]
+)
+
+replaceFrom: start to: stop with: replacement = (
+	replacement size = (stop - start + 1) ifFalse: [self error: 'Size of replacement doesnt match'].
+	^self replaceFrom: start to: stop with: replacement startingAt: 1
 )
 
 replaceFrom: start to: stop with: replacement startingAt: repStart = (
@@ -150,6 +256,23 @@ select: aBlock = (
 	^ aStream contents
 )
 
+splitBy: aCollection = (
+	^Array streamContents:[:stream|
+		self splitBy: aCollection do:[:each| stream nextPut: each].
+	].
+)
+
+splitBy: aCollection do: aBlock = (
+	| lastIndex nextIndex |
+	lastIndex := 1.
+	[nextIndex := self indexOfSubCollection: aCollection startingAt: lastIndex.
+	nextIndex = 0] whileFalse:[
+		aBlock value: (self copyFrom: lastIndex to: nextIndex-1).
+		lastIndex := nextIndex+ aCollection size.
+	].
+	aBlock value: (self copyFrom: lastIndex to: self size).
+)
+
 third = (
 	^ self at: 3
 )
@@ -168,6 +291,14 @@ new: newSize streamContents: blockWithArg = (
 
 streamContents: blockWithArg = (
 		^self new: 100 streamContents: blockWithArg
+)
+
+streamContents: blockWithArg limitedTo: sizeLimit = (
+	| stream |
+	stream := LimitedWriteStream on: (self new: (100 min: sizeLimit)).
+	stream setLimit: sizeLimit limitBlock: [^ stream contents].
+	blockWithArg value: stream.
+	^ stream contents
 )
 
 )

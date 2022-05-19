@@ -43,7 +43,10 @@ intObject :: LargeInteger -> Object
 intObject x = Object (toSymbol "Integer") (DataLargeInteger x)
 
 strObject :: String -> Object
-strObject = unicodeStringObject . toUnicodeString . Som.somEscapedString
+strObject = immutableStringObject . Som.somEscapedString
+
+symObject :: String -> Object
+symObject = immutableSymbolObject
 
 numNumPrimitive :: Uop Double -> ObjectData -> Maybe Object
 numNumPrimitive f = fmap (doubleAsFractional intObject . f) . objectDataAsDouble
@@ -138,26 +141,26 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("asDouble", DataLargeInteger x, []) -> Just (doubleObject (fromIntegral x))
     ("asInteger", DataDouble x, []) -> Just (intObject (truncate x)) -- Som?
     ("asString", DataDouble x, []) -> Just (strObject (show x))
-    ("asString", DataImmutableString True x, []) -> Just (unicodeStringObject x)
+    ("asString", DataImmutableString True x, []) -> Just (strObject x)
     ("asString", DataLargeInteger x, []) -> Just (strObject (show x))
-    ("asSymbol", DataImmutableString _ x, []) -> Just (unicodeSymbolObject x)
+    ("asSymbol", DataImmutableString _ x, []) -> Just (symObject x)
     ("bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (unicodeStringObject (unicodeStringAppend x y))
+    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (strObject (unicodeStringAppend x y))
     ("cos", DataDouble x, []) -> Just (doubleObject (cos x))
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
       case prClass of
         "Integer class" -> fmap intObject (unicodeStringReadLargeInteger x)
         "Double class" -> Just (maybe nanObject doubleObject (unicodeStringReadDouble x))
         _ -> Nothing
-    ("holder", DataPrimitive x _, []) -> Just (symbolObject x)
+    ("holder", DataPrimitive x _, []) -> Just (symObject x)
     ("isDigits", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isDigit str)
     ("isLetters", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
     ("isWhiteSpace", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
     ("length", DataImmutableString _ str, []) -> Just (intObject (toLargeInteger (unicodeStringLength str)))
-    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
+    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (strObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
     ("round", DataDouble x, []) -> Just (intObject (round x)) -- Som (roundTowardPositive in IEEE 754-2008)
-    ("signature", DataMethod _ mth _, []) -> Just (symbolObject (St.selectorIdentifier (St.methodSelector mth)))
-    ("signature", DataPrimitive _ x, []) -> Just (symbolObject x)
+    ("signature", DataMethod _ mth _, []) -> Just (symObject (St.selectorIdentifier (St.methodSelector mth)))
+    ("signature", DataPrimitive _ x, []) -> Just (symObject x)
     ("sin", DataDouble x, []) -> Just (doubleObject (sin x))
     ("sqrt", DataDouble x, []) -> Just (doubleObject (sqrt x))
     _ -> Nothing
@@ -215,7 +218,7 @@ somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) ar
     ("instVarNamed:", DataNonIndexable _ tbl, [Object _ (DataImmutableString True key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
     ("length", DataIndexable _ ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
     ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> prSystemLoadFile x
-    ("name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
+    ("name", DataClass (cd, isMeta) _ _, []) -> return (symObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return nilObject
     ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x) >> return nilObject
     _ ->
@@ -240,10 +243,10 @@ somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
     ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> vmGlobalAssign (fromUnicodeString x) e
     ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
-    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
+    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classCachedMethodsVec receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
-    ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmSystemTicksInt
-    ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmSystemTicksInt
+    ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmElapsedTimeInMicroseconds
+    ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmElapsedTimeInMicroseconds
     _ -> somPrimitivesI (prClass, prMethod) receiver arguments
 
 {- | Class>>fields => Array[Symbol]
@@ -255,10 +258,10 @@ prClassFields cd isMeta =
   case isMeta of
     False -> do
       fld <- classAllVariableNames St.classInstanceVariableNames cd
-      arrayFromList (map symbolObject fld)
+      arrayFromList (map symObject fld)
     True -> do
       fld <- classAllVariableNames St.classVariableNames cd
-      arrayFromList (map symbolObject fld)
+      arrayFromList (map symObject fld)
 
 prMethodInvokeOnWith :: CoreOpt -> ObjectData -> Object -> Object -> Vm Object
 prMethodInvokeOnWith opt obj receiver argumentsArray = do
@@ -272,7 +275,7 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("class", _, []) -> objectClass receiver
     ("fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
     ("holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
-    ("inspect", _, []) -> objectInspect receiver
+    ("inspect", _, []) -> objectInspectAndPrint receiver
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
     ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
     ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> systemLoadClassOrNil (fromUnicodeString x)
@@ -293,7 +296,7 @@ somPrimitives hs _cd rcv arg = do
   return (Just answer)
 
 somCoreOpt :: CoreOpt
-somCoreOpt = CoreOpt SomSystem (intObject, strObject) somPrimitives
+somCoreOpt = CoreOpt SomSystem (intObject, strObject, symObject . Som.somEscapedString) somPrimitives
 
 {-
 > fromIntegral (maxBound::Int) >= ((2::Integer) ^ 62) -- True

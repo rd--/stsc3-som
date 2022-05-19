@@ -1,0 +1,27 @@
+IdentitySet = Set (
+
+asIdentitySet = (
+	^self
+)
+
+scanFor: anObject = (
+	| index start size |
+	index := start := anObject identityHash \\ (size := array size) + 1.
+	[
+		| element |
+		((element := array at: index) == nil or: [ element enclosedSetElement == anObject ])
+			ifTrue: [ ^index ].
+		(index := index \\ size + 1) = start ] whileFalse.
+	self errorNoFreeSpace
+)
+
+scanForEmptySlotFor: anObject = (
+	| index start size |
+	index := start := anObject identityHash \\ (size := array size) + 1.
+	[
+		(array at: index) ifNil: [ ^index ].
+		(index := index \\ size + 1) = start ] whileFalse.
+	self errorNoFreeSpace
+)
+
+)

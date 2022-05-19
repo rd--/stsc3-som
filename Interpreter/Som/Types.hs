@@ -21,7 +21,6 @@ import qualified Control.Monad.Except as Except {- mtl -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
-import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
 import Interpreter.Som.Error
@@ -38,21 +37,19 @@ type ObjectDictionary = DictRef Symbol Object
 -- | Indexable mutable association list (zero-indexed) of named objects.
 type ObjectTable = Vec (Symbol, Ref Object)
 
-objectTableShallowCopy :: MonadIO m => ObjectTable -> m ObjectTable
-objectTableShallowCopy = undefined
-
 -- | Identifier.
 type Id = Int
 
 {- | Method contexts store:
        1. a context identifier to receive non-local returns
-       2. the receiver
+       2. the method signature for back traces
+       3. the receiver
      Block contexts store:
        1. the Block object to report cases of escaped blocks.
      In addition both store local variables (arguments and temporaries) as a Dict.
 -}
 data ContextNode =
-    MethodContext Id Object ObjectDictionary
+    MethodContext Id Symbol Object ObjectDictionary
   | BlockContext Object ObjectDictionary
   | NilContext
   deriving (Eq)
@@ -77,7 +74,7 @@ data Context = Context { contextNode :: ContextNode, contextParent :: Maybe Cont
 contextIdSequence :: Context -> [Id]
 contextIdSequence ctx =
   case ctx of
-    Context (MethodContext ctxId _ _) next -> ctxId : maybe [] contextIdSequence next
+    Context (MethodContext ctxId _ _ _) next -> ctxId : maybe [] contextIdSequence next
     Context _ (Just next) -> contextIdSequence next
     Context _ Nothing -> []
 
@@ -85,6 +82,9 @@ contextIdSequence ctx =
 type StExpr = Expr.Expr
 
 -- * Object
+
+-- | (intObject, strObject, symObject)
+type LiteralConstructors = (LargeInteger -> Object, String -> Object, String -> Object)
 
 {- | Data associated with an object.
 
@@ -121,6 +121,13 @@ objectDataAsDouble o =
     DataDouble x -> Just x
     _ -> Nothing
 
+objectDataAsString :: ObjectData -> Vm (Maybe String)
+objectDataAsString o =
+  case o of
+    DataImmutableString _ str -> return (Just (fromUnicodeString str))
+    DataCharacterArray _ ref -> fmap Just (vecRefToList ref)
+    _ -> return Nothing
+
 -- | Object represented as class name and object data.
 data Object = Object { objectClassName :: Symbol, objectData :: ObjectData } deriving (Eq)
 
@@ -142,7 +149,7 @@ type Vm r = Except.ExceptT String (State.StateT VmState IO) r
 -- | Generate Vm state from initial global dictionary.
 vmStateInit :: ObjectDictionary -> IO VmState
 vmStateInit globalDictionary = do
-  startTime <- getSystemTimeAsDouble
+  startTime <- getSystemTimeInSeconds
   let programCounter = 0
   workspace <- dictRefEmpty
   return (startTime, programCounter, nilContext, globalDictionary, workspace)
@@ -151,17 +158,16 @@ vmStateInit globalDictionary = do
 vmStartTime :: Vm Double
 vmStartTime = State.get >>= \(startTime,_,_,_,_) -> return startTime
 
--- | Get current system time as a floating point value (in seconds).
-getSystemTimeAsDouble :: MonadIO m => m Double
-getSystemTimeAsDouble = do
+-- | Get system time in seconds (floating point).
+getSystemTimeInSeconds :: MonadIO m => m Double
+getSystemTimeInSeconds = do
   tm <- liftIO Time.getSystemTime
   return (fromIntegral (Time.systemSeconds tm) + (fromIntegral (Time.systemNanoseconds tm) * 1.0e-9))
 
--- | Get elapsed system time in microseconds (us).
-vmSystemTicksInt :: Vm Int
-vmSystemTicksInt = do
+vmElapsedTimeInMicroseconds :: Vm Int
+vmElapsedTimeInMicroseconds = do
   startTime <- vmStartTime
-  currentTime <- getSystemTimeAsDouble
+  currentTime <- getSystemTimeInSeconds
   return (round ((currentTime - startTime) * 1.0e6))
 
 -- | Fetch program counter.
@@ -224,7 +230,7 @@ vmGlobalLookupOrNil key = vmGlobalLookupMaybe key >>= return . fromMaybe nilObje
 
 -- | Lookup global, don't attempt to resolve if not found, return symbol looked for if not found.
 vmGlobalLookupOrSymbol :: Symbol -> Vm Object
-vmGlobalLookupOrSymbol key = vmGlobalLookupMaybe key >>= return . fromMaybe (symbolObject key)
+vmGlobalLookupOrSymbol key = vmGlobalLookupMaybe key >>= return . fromMaybe (immutableSymbolObject key)
 
 -- | Lookup global, don't attempt to resolve if not found, error if not found.
 vmGlobalLookupOrError :: Symbol -> Vm Object
@@ -264,7 +270,6 @@ vmWorkspaceInsert key value = do
   dictRefInsert d key value
   return value
 
--- | System>>inspect
 vmShowDetailed :: Vm String
 vmShowDetailed = do
   (_tm,pc,_ctx,glb,wrk) <- State.get
@@ -309,32 +314,59 @@ objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToString o))) 
 
 -- * Inspect
 
--- | Inspect instance variables.
-tblToInspector :: ObjectTable -> Vm String
-tblToInspector tbl = do
+objectTableInspect :: ObjectTable -> Vm String
+objectTableInspect tbl = do
   (keys,values) <- fmap unzip (tblToList tbl)
-  valuesInspected <- mapM objectToInspector values
+  valuesInspected <- mapM objectInspect values
   return (show (zip keys valuesInspected))
 
--- | Object>>inspect
-objectToInspector :: Object -> Vm String
-objectToInspector (Object nm obj) =
+objectDictionaryInspect :: ObjectDictionary -> Vm String
+objectDictionaryInspect dict = do
+  keys <- dictRefKeys dict
+  values <- dictRefValues dict
+  inspectors <- mapM objectInspect values
+  return (unlines (zipWith (\k i -> k ++ ": " ++ i) keys inspectors))
+
+objectInspect :: Object -> Vm String
+objectInspect (Object nm obj) =
   case obj of
     DataIndexable x ref -> do
       vec <- deRef ref
       let lst = map objectToString (vecToList vec)
       return (printf "instance of %s <pc:%d> with: {%s}" nm x (intercalate ". " lst))
     DataClass (x,_) tbl _ -> do
-      tblStr <- tblToInspector tbl
+      tblStr <- objectTableInspect tbl
       return (St.className x ++ ": " ++ tblStr)
     DataMethod _ x _ -> return (show x)
     DataBlock x _ (Expr.Lambda ld _ _ _) ->
       return (printf "instance of %s <pc:%d, %s>" nm x (Expr.lambdaDefinitionShow ld))
     DataNonIndexable x tbl -> do
-      tblStr <- tblToInspector tbl
+      tblStr <- objectTableInspect tbl
       return (printf "instance of %s <pc:%d>: %s" nm x tblStr)
     DataSystem -> vmShowDetailed
     _ -> return (objectToString (Object nm obj))
+
+contextNodeInspect :: ContextNode -> Vm String
+contextNodeInspect ctx =
+  case ctx of
+    MethodContext ctxId sel rcv dict -> do
+      let hdr = printf "<pc:%d> '%s'" ctxId sel
+      rcv' <- objectInspect rcv
+      dict' <- objectDictionaryInspect dict
+      return (unlines ["MethodContext:", hdr, rcv', dict'])
+    BlockContext blk dict -> do
+      blk' <- objectInspect blk
+      dict' <- objectDictionaryInspect dict
+      return (unlines ["BlockContext:", blk', dict'])
+    NilContext -> return "NilContext\n"
+
+vmContextPrint :: Context -> Vm ()
+vmContextPrint (Context node parent) = do
+  str <- contextNodeInspect node
+  liftIO (putStr (unlines ["Context: ", str]))
+  case parent of
+    Nothing -> return ()
+    Just ctx -> vmContextPrint ctx
 
 -- * Error
 
@@ -346,8 +378,9 @@ objectListError o msg = objectListPrint o >> vmError (printf "%s: arity=%d" msg 
 
 -- * Accessors
 
-classMethodsVec :: Object -> Maybe (Vec Object)
-classMethodsVec (Object _ obj) =
+-- | The cache should be a dictionary rather than a vector.
+classCachedMethodsVec :: Object -> Maybe (Vec Object)
+classCachedMethodsVec (Object _ obj) =
   case obj of
     DataClass (_,False) _ (instanceMethodsCache,_) -> Just instanceMethodsCache
     DataClass (_,True) _ (_,classMethodsCache) -> Just classMethodsCache
@@ -467,16 +500,13 @@ nanObject :: Object
 nanObject = doubleObject (0/0)
 
 characterObject :: Char -> Object
-characterObject x = Object (toSymbol "Character") (DataCharacter x)
+characterObject ch = Object (toSymbol "Character") (DataCharacter ch)
 
-unicodeStringObject :: UnicodeString -> Object
-unicodeStringObject x = Object (toSymbol "String") (DataImmutableString False x)
+immutableStringObject :: String -> Object
+immutableStringObject str = Object (toSymbol "String") (DataImmutableString False (toUnicodeString str))
 
-unicodeSymbolObject :: UnicodeString -> Object
-unicodeSymbolObject x = Object (toSymbol "Symbol") (DataImmutableString True x)
-
-symbolObject :: String -> Object
-symbolObject = unicodeSymbolObject . toUnicodeString . Som.somEscapedString
+immutableSymbolObject :: String -> Object
+immutableSymbolObject str = Object (toSymbol "Symbol") (DataImmutableString True (toUnicodeString str))
 
 booleanObject :: Bool -> Object
 booleanObject x = if x then reservedObject "true" else reservedObject "false"
@@ -490,8 +520,8 @@ trueObject = booleanObject True
 arrayLiteralObject :: [Object] -> Object
 arrayLiteralObject lst = Object (toSymbol "Array") (DataArrayLiteral (vecFromList lst))
 
-literalObject :: (LargeInteger -> Object, String -> Object) -> St.Literal -> Object
-literalObject (integerObject, stringObject) l =
+literalObject :: LiteralConstructors -> St.Literal -> Object
+literalObject opt@(integerObject, stringObject, symbolObject) l =
   case l of
     St.NumberLiteral (St.Int x) -> integerObject x
     St.NumberLiteral (St.Float x) -> doubleObject x
@@ -499,9 +529,9 @@ literalObject (integerObject, stringObject) l =
     St.CharacterLiteral x -> characterObject x -- Note: Som has no Character object
     St.SymbolLiteral x -> symbolObject x
     St.SelectorLiteral x -> symbolObject (St.selectorIdentifier x)
-    St.ArrayLiteral x -> arrayLiteralObject (map (arrayLiteralElemObject (integerObject, stringObject)) x)
+    St.ArrayLiteral x -> arrayLiteralObject (map (arrayLiteralElemObject opt) x)
 
-arrayLiteralElemObject :: (Integer -> Object, String -> Object) -> Either St.Literal String -> Object
+arrayLiteralElemObject :: LiteralConstructors -> Either St.Literal String -> Object
 arrayLiteralElemObject opt e =
   case e of
     Left x -> literalObject opt x
@@ -539,9 +569,9 @@ isNil = (==) nilObject
 localVariablesDict :: MonadIO m => ObjectAssociationList -> [Symbol] -> m ObjectDictionary
 localVariablesDict args tmp = dictRefFromList (args ++ zip tmp (repeat nilObject))
 
-methodContextNode :: MonadIO m => Id -> Object -> ObjectAssociationList -> St.Temporaries -> m ContextNode
-methodContextNode pc rcv arg (St.Temporaries tmp) =
-  fmap (MethodContext pc rcv) (localVariablesDict arg (map toSymbol tmp))
+methodContextNode :: MonadIO m => Id -> Symbol -> Object -> ObjectAssociationList -> St.Temporaries -> m ContextNode
+methodContextNode pc sel rcv arg (St.Temporaries tmp) =
+  fmap (MethodContext pc sel rcv) (localVariablesDict arg (map toSymbol tmp))
 
 -- | The empty context.  It is ordinarily an error to encounter this.
 nilContext :: Context
@@ -552,7 +582,7 @@ contextReceiverMaybe :: Context -> Maybe Object
 contextReceiverMaybe (Context c p) =
   case c of
     BlockContext _ _ -> maybe Nothing contextReceiverMaybe p
-    MethodContext _ rcv _ -> Just rcv
+    MethodContext _ _ rcv _ -> Just rcv
     NilContext -> Nothing
 
 -- | Traverse context to innermost MethodContext and get Id.
@@ -560,7 +590,7 @@ contextIdMaybe :: Context -> Maybe Id
 contextIdMaybe (Context c p) =
   case c of
     BlockContext _ _ -> maybe Nothing contextIdMaybe p
-    MethodContext pc _ _ -> Just pc
+    MethodContext pc _ _ _ -> Just pc
     NilContext -> Nothing
 
 -- | Does Context have a Method with Id?
@@ -568,7 +598,7 @@ contextHasId :: Id -> Context -> Bool
 contextHasId k (Context c p) =
   case c of
     BlockContext _ _ -> maybe False (contextHasId k) p
-    MethodContext pc _ _ -> pc == k || maybe False (contextHasId k) p
+    MethodContext pc _ _ _ -> pc == k || maybe False (contextHasId k) p
     NilContext -> False
 
 -- | Get the blockObject from the current frame.
