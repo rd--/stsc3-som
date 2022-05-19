@@ -27,7 +27,7 @@ import Interpreter.Som.DictRef
 import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str.Text
+import Interpreter.Som.Str
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Vec

@@ -1,30 +1,71 @@
 String = ArrayedCollection (
 
-size = (
-	<primitive: 62>
-	self primitiveFailed
-)
+at: index = (
+	"Answer the Character stored in the field of the receiver indexed by the
+	argument.  Fail if the index argument is not an Integer or is out of bounds.
+	Essential.  See Object documentation whatIsAPrimitive."
 
-at: index  = (
 	<primitive: 63>
-	index isInteger
-		ifTrue: [self errorSubscriptBounds: index]
-		ifFalse: [self errorNonIntegerIndex]
+	^Character value: (super at: index)
+
 )
 
 at: index put: aCharacter = (
+	"Store the Character in the field of the receiver indicated by the index.  Fail if the
+	index is not an Integer or is out of bounds, or if the argument is not a Character.
+	Essential.  See Object documentation whatIsAPrimitive."
+
 	<primitive: 64>
-	aCharacter isCharacter ifFalse:[^self errorImproperStore].
-	index isInteger
-		ifTrue: [self errorSubscriptBounds: index]
-		ifFalse: [self errorNonIntegerIndex]
+	(aCharacter isKindOf: Character)
+		ifTrue: [self errorNonIntegerIndex]
+		ifFalse: [self error: 'Strings only store Characters']
+
+)
+
+basicAt: index = (
+	"Answer the Character stored in the field of the receiver indexed by the
+	argument.  Fail if the index argument is not an Integer or is out of bounds.
+	Essential.  See Object documentation whatIsAPrimitive."
+
+	<primitive: 63>
+	^Character value: (super at: index)
+
+)
+
+basicAt: index put: aCharacter = (
+	"Store the Character in the field of the receiver indicated by the index.  Fail if the
+	index is not an Integer or is out of bounds, or if the argument is not a Character.
+	Essential.  See Object documentation whatIsAPrimitive."
+
+	<primitive: 64>
+	(aCharacter isKindOf: Character)
+		ifTrue: [self errorNonIntegerIndex]
+		ifFalse: [self error: 'Strings only store Characters']
+
+)
+
+primReplaceFrom: start to: stop with: replacement startingAt: repStart = (
+	"This destructively replaces elements from start to stop in the receiver
+	starting at index, repStart, in the collection, replacement.  Answer the
+	receiver.  No range checks are performed - this may be primitively implemented."
+	<primitive: 105>
+	super replaceFrom: start to: stop with: replacement startingAt: repStart
+
+)
+
+size = (
+	"Answer the number of indexable fields in the receiver.  This value is the
+	same as the largest legal subscript.  Essential.  See Object documentation
+	whatIsAPrimitive."
+
+	<primitive: 62>
+	^self basicSize
+
 )
 
 asSymbol = primitive
 
 concatenate: argument = primitive
-
-hashcode = primitive
 
 isWhiteSpace = primitive
 
@@ -109,6 +150,12 @@ split: split = (
 
 print = (
 	Smalltalk printString: self
+)
+
+----
+
+isVariable = (
+	^true
 )
 
 )

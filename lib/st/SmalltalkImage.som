@@ -1,4 +1,4 @@
-SmalltalkImage = (
+SmalltalkImage = Object (
 
     "Accessing"
     global: name            = primitive

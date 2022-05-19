@@ -8,14 +8,10 @@ module Interpreter.Som.Primitives.Smalltalk where
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
 import qualified Data.Char {- base -}
-import Data.List {- base -}
 import System.Exit {- base -}
 import System.Mem {- base -}
 
 import System.Random {- random -}
-
-import qualified Data.Text as Text {- text -}
-import qualified Data.Text.IO as Text.IO {- text -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 
@@ -23,7 +19,7 @@ import Interpreter.Som.Core
 import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str.Text
+import Interpreter.Som.Str
 import Interpreter.Som.Sym
 import Interpreter.Som.Sys
 import Interpreter.Som.Tbl
@@ -46,7 +42,7 @@ strObject = unicodeStringObject . toUnicodeString
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
-prStringAll f str = booleanObject (not (Text.null str) && Text.all f str)
+prStringAll f = booleanObject . unicodeStringAll f
 
 prObjectEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
 prObjectEqual rcv arg = do
@@ -62,7 +58,7 @@ prStringEqual (typ1, str1) rhs =
 
 prSystemLoadFile :: (StError m, MonadIO m) => UnicodeString -> m Object
 prSystemLoadFile aString = do
-    let fn = Text.unpack aString
+    let fn = fromUnicodeString aString
         onFailure = return nilObject
     maybeText <- liftIO (readFileMaybe fn)
     maybe onFailure (return . strObject) maybeText
@@ -98,8 +94,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("asString", DataSmallInteger x, []) -> return (Just (strObject (show x)))
     ("asSymbol", DataImmutableString _ x, []) -> return (Just (unicodeSymbolObject x))
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (0, x - 1))))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (unicodeStringObject (Text.append x y)))
-    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> fmap Just (liftIO (Text.IO.putStr x >> putChar '\n') >> error "System>>error")
+    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (unicodeStringObject (unicodeStringAppend x y)))
+    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> fmap Just (liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error")
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
       case prClass of
@@ -107,9 +103,9 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
         "SmallInteger class" -> return (fmap intObject (unicodeStringReadSmallInteger x))
         _ -> return Nothing
     ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just trueObject)
-    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap Just (vmGlobalLookupOrNil (Text.unpack x))
-    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> fmap Just (vmGlobalAssign (Text.unpack x) e)
-    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap (Just . booleanObject) (vmHasGlobal (Text.unpack x))
+    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap Just (vmGlobalLookupOrNil (fromUnicodeString x))
+    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> fmap Just (vmGlobalAssign (fromUnicodeString x) e)
+    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap (Just . booleanObject) (vmHasGlobal (fromUnicodeString x))
     ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
     ("holder", DataPrimitive x _, []) -> return (Just (symbolObject x))
     ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
@@ -122,14 +118,14 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("isDigits", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isDigit str))
     ("isLetters", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isLetter str))
     ("isWhiteSpace", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isSpace str))
-    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> fmap Just (systemLoadClassOrNil (Text.unpack x))
+    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> fmap Just (systemLoadClassOrNil (fromUnicodeString x))
     ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> fmap Just (prSystemLoadFile x)
     ("methods", DataClass {}, []) -> fmap Just (maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver))
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> fmap Just (objectPerformInSuperclass stCoreOpt receiver sel cl)
     ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> return (Just (unicodeStringObject (unicodeStringSubstringFromTo str int1 int2)))
     ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return (Just nilObject)
-    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (Text.IO.putStr x) >> return (Just nilObject)
+    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x) >> return (Just nilObject)
     ("signature", DataMethod _ mth _, []) -> return (Just (symbolObject (St.selectorIdentifier (St.methodSelector mth))))
     ("signature", DataPrimitive _ x, []) -> return (Just (symbolObject x))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
@@ -189,15 +185,18 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (56, DataDouble x, []) -> return (Just (doubleObject (sin x)))
     (58, DataDouble x, []) -> return (Just (doubleObject (log x)))
     (59, DataDouble x, []) -> return (Just (doubleObject (exp x)))
-    (60, DataArrayLiteral vec, [Object _ (DataSmallInteger ix)]) -> return (vecAtMaybe vec ix)
-    (60, DataIndexable _ ref, [Object _ (DataSmallInteger ix)]) -> vecRefAt ref ix
-    (61, DataIndexable _ ref, [Object _ (DataSmallInteger ix), value]) -> fmap Just (vecRefWrite ref (ix - 1) value)
+    (60, DataArrayLiteral vec, [Object _ (DataSmallInteger ix)]) -> return (vecAtMaybe vec (ix - 1))
+    (60, DataIndexable _ ref, [Object _ (DataSmallInteger ix)]) -> vecRefAtMaybe ref (ix - 1)
+    (61, DataIndexable _ ref, [Object _ (DataSmallInteger ix), value]) -> vecRefAtPutMaybe ref (ix - 1) value
     (62, DataArrayLiteral vec, []) -> return (Just (intObject (vecLength vec)))
     (62, DataIndexable _ ref, []) -> deRef ref >>= \vec -> return (Just (intObject (vecLength vec)))
-    (62, DataImmutableString _ str, []) -> return (Just (intObject (Text.length str)))
+    (62, DataCharacterArray _ ref, []) -> deRef ref >>= \vec -> return (Just (intObject (vecLength vec)))
+    (62, DataImmutableString _ str, []) -> return (Just (intObject (unicodeStringLength str)))
+    (63, DataImmutableString _ str, [Object _ (DataSmallInteger ix)]) -> return (fmap characterObject (unicodeStringAt str ix))
+    (63, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix)]) -> fmap (fmap characterObject) (vecRefAtMaybe ref (ix - 1))
+    (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd)
-    (71, DataClass {},[Object _ (DataSmallInteger size)]) -> fmap Just (arrayFromList (genericReplicate size nilObject)) -- !!
-    --(71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> fmap Just (classNewWithArg cd size)
+    (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> fmap Just (classNewWithArg cd size)
     (75, _, []) -> fmap (Just . intObject) (objectIntHash receiver)
     (83, _, [Object "Symbol" (DataImmutableString True sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel)
     (84, _, [Object "Symbol" (DataImmutableString True sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg)

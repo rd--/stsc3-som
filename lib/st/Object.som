@@ -153,6 +153,10 @@ isInteger = (
 	^ false
 )
 
+isKindOf: aClass = (
+	^ self class == aClass or: [ self class inheritsFrom: aClass ]
+)
+
 isNil = (
 	^false
 )

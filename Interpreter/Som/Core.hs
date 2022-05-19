@@ -20,7 +20,7 @@ import Interpreter.Som.DictRef
 import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str.Text
+import Interpreter.Som.Str
 import Interpreter.Som.Sym
 import Interpreter.Som.Tbl
 import Interpreter.Som.Types
@@ -35,8 +35,8 @@ data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstruc
 
 -- * Copy
 
-toMutableString :: ObjectData -> Vm ObjectData
-toMutableString od =
+immutableToMutableString :: ObjectData -> Vm ObjectData
+immutableToMutableString od =
   case od of
     DataImmutableString _ str -> do
       pc <- vmProgramCounterIncrement
@@ -322,14 +322,20 @@ evalMethodOrPrimitive opt dat rcv arg =
            Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
        Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
 
-arrayFromVec :: Vec Object -> Vm Object
-arrayFromVec vec = do
+indexableFromVec :: Symbol -> Vec Object -> Vm Object
+indexableFromVec cl vec = do
   pc <- vmProgramCounterIncrement
   ref <- liftIO (toRef vec)
-  return (Object (toSymbol "Array") (DataIndexable pc ref))
+  return (Object cl (DataIndexable pc ref))
+
+indexableFromList :: Symbol -> [Object] -> Vm Object
+indexableFromList cl e = indexableFromVec cl (vecFromList e)
+
+arrayFromVec :: Vec Object -> Vm Object
+arrayFromVec = indexableFromVec "Array"
 
 arrayFromList :: [Object] -> Vm Object
-arrayFromList e = arrayFromVec (vecFromList e)
+arrayFromList = indexableFromList "Array"
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: CoreOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object
@@ -371,7 +377,7 @@ closureClass typ numArg =
     SomSystem -> "Block" ++ show (numArg + 1)
     SmalltalkSystem -> "BlockClosure"
 
--- | Som/St.  Som array literals are mutable.
+-- | Som/St.  Som array literals are mutable, St string literals are mutable...
 sysLiteralObject :: SystemType -> Object -> Vm Object
 sysLiteralObject typ obj =
   case typ of
@@ -445,7 +451,7 @@ classAllVariableNames fn cd = do
            _ -> vmError "classAllVariableNames"
     Nothing -> return (fn cd)
 
-{- | Create instance of a class that is not defined primitively.
+{- | Create instance of a non-indexable non-immediate class.
      Allocate reference for instance variables and initialize to nil.
      The instance variables of an object are:
          - the instance variables of it's class definition
@@ -457,6 +463,23 @@ classNew cd = do
   tbl <- variablesTbl instVarNames
   pc <- vmProgramCounterIncrement
   return (Object (St.className cd) (DataNonIndexable pc tbl))
+
+arrayNewWithArg :: Int -> Vm Object
+arrayNewWithArg size = arrayFromList (replicate size nilObject)
+
+stringNewWithArg :: SmallInteger -> Vm Object
+stringNewWithArg size = do
+  pc <- vmProgramCounterIncrement
+  let vec = vecFromList (replicate size '\0')
+  ref <- liftIO (toRef vec)
+  return (Object "String" (DataCharacterArray pc ref))
+
+classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm Object
+classNewWithArg cd size = do
+  case St.className cd of
+    "Array" -> arrayNewWithArg size
+    "String" -> stringNewWithArg size
+    _ -> vmError "classNewWithArg"
 
 {- | Class>>superclass => Class|nil
 

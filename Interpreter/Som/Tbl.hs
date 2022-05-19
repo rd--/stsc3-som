@@ -10,7 +10,7 @@ import qualified Data.Vector as Vector {- vector -}
 import Interpreter.Som.Ref
 import Interpreter.Som.Vec
 
-type Table k v = Vec (k,Ref v)
+type Table k v = Vec (k, Ref v)
 
 tblSize :: Table k v -> Int
 tblSize = Vector.length

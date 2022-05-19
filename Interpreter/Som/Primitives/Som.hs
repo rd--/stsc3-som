@@ -14,9 +14,6 @@ import Text.Printf {- base -}
 
 import System.Random {- random -}
 
-import qualified Data.Text as Text {- text -}
-import qualified Data.Text.IO as Text.IO {- text -}
-
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
@@ -24,7 +21,7 @@ import Interpreter.Som.Core
 import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
-import Interpreter.Som.Str.Text
+import Interpreter.Som.Str
 import Interpreter.Som.Sym
 import Interpreter.Som.Sys
 import Interpreter.Som.Tbl
@@ -38,7 +35,6 @@ type Binop t = t -> t -> t
 type Cmp t = t -> t -> Bool
 
 type SomPrimitiveOf t = (Symbol, Symbol) -> Object -> [Object] -> t
-type SomPrimitiveM m = (Symbol, Symbol) -> Object -> [Object] -> m Object
 type SomPrimitiveDispatcher = SomPrimitiveOf (Vm Object)
 
 -- * Util
@@ -81,7 +77,7 @@ doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDou
 -- * Primtives
 
 prArrayAt :: (StError m, MonadIO m) => VecRef Object -> LargeInteger -> m Object
-prArrayAt ref ix = vecRefAt ref (fromInteger ix) >>= maybe (prError "Array>>at: index out of range") return
+prArrayAt ref ix = vecRefAtMaybe ref (fromInteger ix - 1) >>= maybe (prError "Array>>at: index out of range") return
 
 prObjectEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
 prObjectEqual rcv arg = do
@@ -97,7 +93,7 @@ prStringEqual (typ1, str1) rhs =
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
-prStringAll f str = booleanObject (not (Text.null str) && Text.all f str)
+prStringAll f = booleanObject . unicodeStringAll f
 
 {- | C.f. DoubleTest, c.f. Js
 
@@ -114,13 +110,17 @@ doubleMod p q =
 
 prSystemLoadFile :: (StError m, MonadIO m) => UnicodeString -> m Object
 prSystemLoadFile aString = do
-    let fn = Text.unpack aString
+    let fn = fromUnicodeString aString
         onFailure = return nilObject
     maybeText <- liftIO (readFileMaybe fn)
     maybe onFailure (return . strObject) maybeText
 
-prSystemExit :: MonadIO m => LargeInteger -> m t
-prSystemExit exitCode = liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure (fromInteger exitCode)))
+prSystemExit :: MonadIO m => LargeInteger -> m Object
+prSystemExit exitCode =
+  let actuallyExit = False
+  in if actuallyExit
+     then liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure (fromInteger exitCode)))
+     else liftIO (putStrLn (printf "exit: %d" exitCode)) >> return nilObject
 
 -- | Primitives with no requirements that, given types have matched, do not fail.
 somPrimitivesO :: SomPrimitiveOf (Maybe Object)
@@ -142,7 +142,7 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("asString", DataLargeInteger x, []) -> Just (strObject (show x))
     ("asSymbol", DataImmutableString _ x, []) -> Just (unicodeSymbolObject x)
     ("bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (unicodeStringObject (Text.append x y))
+    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (unicodeStringObject (unicodeStringAppend x y))
     ("cos", DataDouble x, []) -> Just (doubleObject (cos x))
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
       case prClass of
@@ -153,7 +153,7 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("isDigits", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isDigit str)
     ("isLetters", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
     ("isWhiteSpace", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
-    ("length", DataImmutableString _ str, []) -> Just (intObject (toLargeInteger (Text.length str)))
+    ("length", DataImmutableString _ str, []) -> Just (intObject (toLargeInteger (unicodeStringLength str)))
     ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (unicodeStringObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
     ("round", DataDouble x, []) -> Just (intObject (round x)) -- Som (roundTowardPositive in IEEE 754-2008)
     ("signature", DataMethod _ mth _, []) -> Just (symbolObject (St.selectorIdentifier (St.methodSelector mth)))
@@ -185,6 +185,13 @@ somPrimitivesM (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("value", DataBlock {}, []) -> Nothing -- not implemented
     _ -> somPrimitivesO (prClass, prMethod) receiver arguments
 
+prAtPut :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
+prAtPut ref ix value = do
+  answer <- vecRefAtPutMaybe ref (ix - 1) value
+  case answer of
+    Nothing -> prError "at:put:"
+    Just sent -> return sent
+
 {- | Primitives that require Io but not Vm state.
 
 Notes:
@@ -192,14 +199,14 @@ Block>>restart is not implemented, for now the single use in the class library (
 String>>= has the rule (in the Som tests) is 'x' = #x but #x ~= 'x'
 System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 -}
-somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveM m
+somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveOf (m Object)
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("==", _, [arg]) -> prObjectEqual receiver arg
     ("at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
-    ("at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> vecRefWrite ref (fromInteger ix - 1) value
+    ("at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> prAtPut ref (fromInteger ix) value
     ("atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
-    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (Text.IO.putStr x >> putChar '\n') >> error "System>>error"
+    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error"
     ("exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
     ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
     ("hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
@@ -210,7 +217,7 @@ somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) ar
     ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> prSystemLoadFile x
     ("name", DataClass (cd, isMeta) _ _, []) -> return (symbolObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return nilObject
-    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (Text.IO.putStr x) >> return nilObject
+    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x) >> return nilObject
     _ ->
       case somPrimitivesM (prClass, prMethod) receiver arguments of
         Just answer -> return answer
@@ -230,9 +237,9 @@ System>>time is elapsed time in milliseconds.
 somPrimitivesV :: SomPrimitiveDispatcher
 somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
-    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> vmGlobalLookupOrNil (Text.unpack x)
-    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> vmGlobalAssign (Text.unpack x) e
-    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap booleanObject (vmHasGlobal (Text.unpack x))
+    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
+    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> vmGlobalAssign (fromUnicodeString x) e
+    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
     ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classMethodsVec receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmSystemTicksInt
@@ -268,7 +275,7 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("inspect", _, []) -> objectInspect receiver
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
     ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
-    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> systemLoadClassOrNil (Text.unpack x)
+    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> systemLoadClassOrNil (fromUnicodeString x)
     ("new", DataClass (cd,_) _ _,[]) -> classNew cd
     ("perform:", _, [Object "Symbol" (DataImmutableString True sel)]) -> objectPerform somCoreOpt receiver sel
     ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
