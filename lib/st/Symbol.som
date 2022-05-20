@@ -1,6 +1,9 @@
 Symbol = String (
 
-asString = primitive
+asString = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
 asSymbol = (
 	^self

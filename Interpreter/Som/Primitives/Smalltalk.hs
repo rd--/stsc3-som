@@ -107,7 +107,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("asString", DataImmutableString True x, []) -> fmap Just (mutableStringObject x)
     ("asString", DataSmallInteger x, []) -> fmap Just (mutableStringObject (show x))
     ("asSymbol", DataImmutableString _ x, []) -> return (Just (symObject x))
-    ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (0, x - 1))))
+    ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
+    ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
     ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (strObject (unicodeStringAppend x y)))
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->

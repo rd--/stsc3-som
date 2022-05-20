@@ -51,6 +51,11 @@ Double = Float (
 	^ aNumber adaptToFloat: self andSend: #/
 )
 
+atRandom = (
+	<primitive: -1>
+        self primitiveFailed
+)
+
 exponent = (
 	<primitive: 53>
 	^self exponentFromBitPattern

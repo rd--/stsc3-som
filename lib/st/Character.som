@@ -1,12 +1,7 @@
 Character = Magnitude (
 
-asInteger = (
-	<primitive: 171>
-	^self primitiveFailed
-)
-
 = aCharacter = (
-	^self asInteger = aCharacter asInteger
+       ^self asInteger == aCharacter asInteger
 )
 
 < aCharacter = (
@@ -25,8 +20,29 @@ asCharacter = (
 	^self
 )
 
+asInteger = (
+	<primitive: 171>
+	^self primitiveFailed
+)
+
+asLowercase = (
+	65 <= self asciiValue
+		ifTrue: [self asciiValue <= 90
+					ifTrue: [^Character value: self asciiValue + 32]]
+)
+
 asString = (
 	^ String with: self
+)
+
+asSymbol = (
+	^self asString asSymbol
+)
+
+asUppercase = (
+	97 <= self asciiValue
+		ifTrue: [self asciiValue <= 122
+					ifTrue: [^Character value: self asciiValue - 32]]
 )
 
 isCharacter = (
@@ -45,22 +61,6 @@ hash = (
 	^asInteger
 )
 
-asLowercase = (
-	65 <= self asciiValue
-		ifTrue: [self asciiValue <= 90
-					ifTrue: [^Character value: self asciiValue + 32]]
-)
-
-asSymbol = (
-	^Symbol internCharacter: self
-)
-
-asUppercase = (
-	97 <= self asciiValue
-		ifTrue: [self asciiValue <= 8r122
-					ifTrue: [^Character value: self asciiValue - 32]]
-)
-
 shallowCopy = (
 )
 
@@ -69,20 +69,6 @@ deepCopy = (
 
 isLiteral = (
 	^true
-)
-
-printAsLiteralOn: aStream = (
-	aStream nextPut: $$; nextPut: self
-)
-
-printOn: aStream = (
-	aStream nextPut: $$.
-	aStream nextPut: self
-)
-
-storeOn: aStream = (
-	aStream nextPut: $$.
-	aStream nextPut: self
 )
 
 isAlphaNumeric = (
@@ -119,19 +105,32 @@ isVowel = (
 	^'AEIOU' includes: self asUppercase
 )
 
+printAsLiteralOn: aStream = (
+	aStream nextPut: $$; nextPut: self
+)
+
+printOn: aStream = (
+	aStream nextPut: $$.
+	aStream nextPut: self
+)
+
+storeOn: aStream = (
+	aStream nextPut: $$.
+	aStream nextPut: self
+)
+
 tokenish = (
 	^self isLetter or: [self isDigit or: [self = $:]]
 )
 
 ----------------------------
 
-value: anInteger = (
-	<primitive: 170>
-        ^self primitiveFailed
+backSpace = (
+	^self value: 8
 )
 
-backspace = (
-	^self value: 8
+carriageReturn = (
+	^self value: 13
 )
 
 cr = (
@@ -142,12 +141,32 @@ esc = (
 	^self value: 160
 )
 
-linefeed = (
+escape = (
+	^self value: 160
+)
+
+lf = (
+	^self value: 10
+)
+
+lineFeed = (
+	^self value: 10
+)
+
+new = (
+	self error: 'cannot create new characters'
+)
+
+newLine = (
 	^self value: 10
 )
 
 newPage = (
 	^self value: 12
+)
+
+nl = (
+	^self value: 10
 )
 
 space = (
@@ -158,8 +177,9 @@ tab = (
 	^self value: 9
 )
 
-new = (
-	self error: 'cannot create new characters'
+value: anInteger = (
+	<primitive: 170>
+        ^self primitiveFailed
 )
 
 )
