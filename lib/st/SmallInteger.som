@@ -104,6 +104,21 @@ adaptToFloat: rcvr andCompare: selector = (
 	^ rcvr perform: selector with: self asFloat
 )
 
+even = (
+	^(self bitAnd: 1) = 0
+)
+
+gcd: anInteger  = (
+	| n m |
+	anInteger denominator = 1 ifFalse: [^anInteger gcd: self].
+	n := self.
+	m := anInteger.
+	[n = 0]
+		whileFalse:
+			[n := m \\ (m := n)].
+	^ m abs
+)
+
 hash = (
 	^self
 )
@@ -134,6 +149,10 @@ highBitOfPositiveReceiver = (
 
 identityHash = (
 	^self
+)
+
+odd = (
+	^(self bitAnd: 1) = 1
 )
 
 printOn: aStream = (

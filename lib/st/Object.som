@@ -14,6 +14,16 @@ Object = nil (
 	^self = anObject == false
 )
 
+~~ anObject = (
+	<primitive: 169>
+	self == anObject ifTrue: [^false].
+	^true
+)
+
+-> anObject = (
+	^Association basicNew key: self value: anObject
+)
+
 asString = (
 	^'instance of ' , self class
 )
@@ -129,11 +139,6 @@ printString = (
 	^aStream contents
 )
 
-species = (
-	<primitive: 111>
-	^self class
-)
-
 shallowCopy = (
 	<primitive: 148>
 	^self primitiveFailed
@@ -148,14 +153,16 @@ size = (
 	^ 0
 )
 
-~~ anObject = (
-	<primitive: 169>
-	self == anObject ifTrue: [^false].
-	^true
+species = (
+	<primitive: 111>
+	^self class
 )
 
--> anObject = (
-	^Association basicNew key: self value: anObject
+storeString = (
+	| aStream |
+	aStream := WriteStream on: (String new: 16).
+	self storeOn: aStream.
+	^aStream contents
 )
 
 adaptToFloat: rcvr andCompare: selector = (

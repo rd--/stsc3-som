@@ -357,4 +357,11 @@ newFrom: aCollection = (
 	^answer
 )
 
+ofSize: n = (
+	| collection |
+	collection := self new: n.
+	collection setContents: (collection collector).
+	^ collection
+)
+
 )

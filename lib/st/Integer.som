@@ -6,6 +6,10 @@ Integer = Number (
 	^aNumber adaptToInteger: self andCompare: #=
 )
 
+asCharacter = (
+	^Character value: self
+)
+
 asInteger = (
 	^self
 )
@@ -14,11 +18,30 @@ bitInvert = (
 	^ -1 - self
 )
 
+denominator = (
+	"Let an Integer be polymorphic to a Fraction. See #isFraction."
+	^1
+)
+
 floor = (
 )
 
 highBit = (
 	^ self subclassResponsibility
+)
+
+factorial = (
+	self = 0 ifTrue: [^ 1].
+	self > 0 ifTrue: [^ self * (self - 1) factorial].
+	self error: 'Not valid for negative integers'
+)
+
+fractionPart = (
+	^0
+)
+
+integerPart = (
+	^self
 )
 
 isInteger = (
@@ -32,6 +55,10 @@ isLiteral = (
 isPowerOfTwo = (
 	"Return true if the receiver is an integral power of two."
 	^self strictlyPositive and: [ (self bitAnd: self - 1) = 0 ]
+)
+
+lcm: n = (
+	^self // (self gcd: n) * n
 )
 
 printAsLiteralOn: aStream = (

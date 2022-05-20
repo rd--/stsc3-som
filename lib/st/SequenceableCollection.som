@@ -17,6 +17,15 @@ asArray = (
 	^ Array withAll: self
 )
 
+atAll: indexArray = (
+	| newCollection |
+	newCollection := self species ofSize: indexArray size.
+	1 to: indexArray size do:
+		[:index |
+		newCollection at: index put: (self at: (indexArray at: index))].
+	^ newCollection
+)
+
 atAllPut: anObject = (
 	| size |
 	(size := self size) > 50
@@ -179,6 +188,18 @@ indexOf: anElement ifAbsent: exceptionBlock = (
 	| index |
 	(index := self indexOf: anElement startingAt: 1) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
+)
+
+indexOfAnyOf: aCollection = (
+	^self indexOfAnyOf: aCollection startingAt: 1
+)
+
+indexOfAnyOf: aCollection startingAt: start = (
+	"Answer the index of the first occurence of any element included in aCollection after start within the receiver.
+	If the receiver does not contain anElement, answer zero, which is an invalid index."
+	start to: self size do: [ :index |
+		(aCollection includes: (self at: index)) ifTrue: [ ^index ] ].
+	^0
 )
 
 indexOfSubCollection: aSubCollection = (

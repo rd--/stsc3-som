@@ -57,6 +57,11 @@ primitiveGarbageCollect = (
 	^self primitiveFailed
 )
 
+print: anObject = (
+	self printString: anObject printString.
+	self printNewline
+)
+
 printCharacter: aCharacter = (
 	<primitive: -1>
 	self primitiveFailed

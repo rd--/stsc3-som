@@ -51,6 +51,11 @@ Double = Float (
 	^ aNumber adaptToFloat: self andSend: #/
 )
 
+exponent = (
+	<primitive: 53>
+	^self exponentFromBitPattern
+)
+
 truncated = (
 	<primitive: 51>
 	self primitiveFailed

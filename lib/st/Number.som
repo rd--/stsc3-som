@@ -36,8 +36,22 @@ asInteger = (
 	^self truncated
 )
 
+ceiling = (
+	"Answer the integer nearest the receiver toward  infinity."
+	| truncation |
+	truncation := self truncated.
+	self <= 0 ifTrue: [^truncation].
+	self = truncation
+		ifTrue: [^truncation]
+		ifFalse: [^truncation + 1]
+)
+
 cos = (
 	^self asFloat cos
+)
+
+degreesToRadians = (
+	^self asFloat degreesToRadians
 )
 
 downTo: stop = (
@@ -59,6 +73,18 @@ downTo: stop by: step do: aBlock = (
 	self to: stop by: step negated do: aBlock
 )
 
+even = (
+	^self \\ 2 = 0
+)
+
+exp = (
+	^self asFloat exp
+)
+
+factorial = (
+	^ self truncated factorial
+)
+
 floor = (
 	| truncation |
 	truncation := self truncated.
@@ -68,8 +94,30 @@ floor = (
 		ifFalse: [^truncation - 1]
 )
 
+fractionPart = (
+	^self - self integerPart
+)
+
+integerPart = (
+	^self truncated
+)
+
 isNumber = (
 	^true
+)
+
+log = (
+	^self asFloat log
+)
+
+log: aNumber = (
+	aNumber = 2 ifTrue: [^self log2].
+	aNumber isPowerOfTwo ifTrue: [^self log2 / aNumber log2].
+	^self ln / aNumber ln
+)
+
+log2 = (
+	^self asFloat log2
 )
 
 ln = (
@@ -84,12 +132,24 @@ negative = (
 	^self < 0
 )
 
+odd = (
+	^self even == false
+)
+
+positive = (
+	^ self >= 0
+)
+
 printOn: aStream = (
 	^self subclassResponsibility
 )
 
 quo: aNumber = (
 	^(self / aNumber) truncated
+)
+
+radiansToDegrees = (
+	^self asFloat radiansToDegrees
 )
 
 raisedTo: aNumber = (
@@ -153,14 +213,11 @@ strictlyPositive = (
 )
 
 to: stop = (
-	| index answer |
-	index := 1.
-	answer := Array new: stop - self + 1.
-	self to: stop do: [ :item |
-		answer at: index put: item.
-	        index := index + 1
-	].
-	^answer
+	^Interval from: self to: stop
+)
+
+to: stop by: step = (
+	^Interval from: self to: stop by: step
 )
 
 to: aNumber collect: aBlock = (
@@ -189,6 +246,11 @@ to: stop by: step do: aBlock = (
 				whileTrue:
 					[aBlock value: nextValue.
 					nextValue := nextValue + step]]
+)
+
+truncateTo: aNumber = (
+	"Answer the next multiple of aNumber toward zero that is nearest the receiver."
+	^(self quo: aNumber) * aNumber
 )
 
 ----

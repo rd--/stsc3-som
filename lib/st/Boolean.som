@@ -1,11 +1,11 @@
 Boolean = (
 
-|| boolean = (
-	^self or: boolean
+& aBoolean = (
+	^self and: aBoolean
 )
 
-&& boolean = (
-	^self and: boolean
+| aBoolean = (
+	^self or: aBoolean
 )
 
 ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock = (

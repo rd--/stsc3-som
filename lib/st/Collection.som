@@ -16,6 +16,11 @@ addAll: aCollection = (
 	^ aCollection
 )
 
+anyOne = (
+	self do: [:each | ^ each].
+	self errorEmptyCollection
+)
+
 anySatisfy: aBlock = (
 	self do: [:each | (aBlock value: each) ifTrue: [^ true]].
 	^ false
@@ -43,6 +48,10 @@ associationsDo: aBlock = (
 
 average = (
 	^ self sum / self size
+)
+
+ceiling = (
+	^ self collect: [:a | a ceiling]
 )
 
 collect: aBlock = (
@@ -134,6 +143,10 @@ isSequenceable = (
 	^ false
 )
 
+max = (
+	^ self inject: self anyOne into: [:max :each | max max: each]
+)
+
 product = (
     "All of my elements multiplied togeather."
     ^self inject: 1 into: [ :accumulator :item | accumulator * item ]
@@ -202,6 +215,10 @@ union: aCollection = (
 )
 
 ----
+
+ofSize: n = (
+	^ self new: n
+)
 
 withAll: aCollection = (
 	| answer |

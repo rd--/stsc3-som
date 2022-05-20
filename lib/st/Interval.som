@@ -1,0 +1,186 @@
+Interval = SequenceableCollection (
+
+| start stop step |
+
+= anInterval = (
+	"Answer true if my species and anInterval species are equal, and
+	if our starts, steps and sizes are equal."
+	self species == anInterval species
+		ifTrue: [^start = anInterval first
+					and: [step = anInterval increment and: [self size = anInterval size]]]
+		ifFalse: [^false]
+)
+
+add: newObject = (
+	"Adding to an Interval is not allowed."
+	self shouldNotImplement
+)
+
+asArray = (
+	^ self collect: [ :item | item ]
+)
+
+at: anInteger = (
+	"Answer the anInteger'th element."
+	(anInteger >= 1 and: [anInteger <= self size])
+		ifTrue: [^start + (step * (anInteger - 1))]
+		ifFalse: [self errorSubscriptBounds: anInteger]
+)
+
+at: anInteger put: anObject = (
+	"Storing into an Interval is not allowed."
+	self error: 'you can not store into an interval'
+)
+
+collect: aBlock = (
+	| nextValue i result |
+	result := self species new: self size.
+	nextValue := start.
+	i := 1.
+	step < 0
+		ifTrue: [[stop <= nextValue]
+				whileTrue:
+					[result at: i put: (aBlock value: nextValue).
+					nextValue := nextValue + step.
+					i := i + 1]]
+		ifFalse: [[stop >= nextValue]
+				whileTrue:
+					[result at: i put: (aBlock value: nextValue).
+					nextValue := nextValue + step.
+					i := i + 1]].
+	^result
+)
+
+copy = (
+	"Return a copy of me.
+	I override this message because my species is Array and copy, as inherited
+	from SequenceableCollection, uses copyFrom:to:, which creates a new object
+	of my species"
+	^self shallowCopy
+)
+
+do: aBlock = (
+	| aValue |
+	aValue := start.
+	step < 0
+		ifTrue: [[stop <= aValue]
+				whileTrue:
+					[aBlock value: aValue.
+					aValue := aValue + step]]
+		ifFalse: [[stop >= aValue]
+				whileTrue:
+					[aBlock value: aValue.
+					aValue := aValue + step]]
+)
+
+first = (
+	^start
+)
+
+hash = (
+	^(((start hash bitShift: 2)
+		bitOr: stop hash)
+		bitShift: 1)
+		bitOr: self size
+)
+
+increment = (
+	"Answer the receiver's interval increment."
+	^step
+)
+
+last = (
+	^stop - (stop - start \\ step)
+)
+
+printOn: aStream = (
+	aStream nextPut: $(.
+	start printOn: aStream.
+	aStream nextPutAll: ' to: '.
+	stop printOn: aStream.
+	step ~= 1
+		ifTrue:
+			[aStream nextPutAll: ' by: '.
+			step printOn: aStream].
+	aStream nextPut: $)
+)
+
+remove: newObject = (
+	"Removing from an Interval is not allowed."
+	self error: 'elements cannot be removed from an Interval'
+)
+
+reverseDo: aBlock = (
+	"Evaluate aBlock for each element of my interval, in reverse order."
+	| aValue |
+	aValue := stop.
+	step < 0
+		ifTrue: [[start >= aValue]
+				whileTrue:
+					[aBlock value: aValue.
+					aValue := aValue - step]]
+		ifFalse: [[start <= aValue]
+				whileTrue:
+					[aBlock value: aValue.
+					aValue := aValue - step]]
+)
+
+setFrom: startInteger to: stopInteger by: stepInteger = (
+	start := startInteger.
+	stop := stopInteger.
+	step := stepInteger
+)
+
+size = (
+	step < 0
+		ifTrue: [start < stop
+				ifTrue: [^0]
+				ifFalse: [^stop - start // step + 1]]
+		ifFalse: [stop < start
+				ifTrue: [^0]
+				ifFalse: [^stop - start // step + 1]]
+)
+
+species = (
+	^Array
+)
+
+storeOn: aStream = (
+	"This is possible because we know numbers store and print the same"
+	self printOn: aStream
+)
+
+----------------------------
+
+from: startInteger to: stopInteger = (
+	"Answer a new instance of me, starting at startInteger, ending and
+	stopInteger, and with an interval increment of 1."
+	^self new
+		setFrom: startInteger
+		to: stopInteger
+		by: 1
+)
+
+from: startInteger to: stopInteger by: stepInteger = (
+	"Answer a new instance of me, starting at startInteger, ending and
+	stopInteger, and with an interval increment of stepInteger."
+	^self new
+		setFrom: startInteger
+		to: stopInteger
+		by: stepInteger
+)
+
+new = (
+	"Create and answer with a new instance of the receiver (a class) with no indexable
+	fields.  Fail if the class is indexable.  Override SequenceableCollection new.
+	Essential.  See Object documentation whatIsAPrimitive."
+	<primitive: 70>
+	self isVariable ifTrue: [^self new: 0].
+	self primitiveFailed
+)
+
+comment = (^'
+I represent a finite arithmetic progression
+')
+
+)

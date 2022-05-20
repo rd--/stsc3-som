@@ -8,6 +8,14 @@ cos = (
 	^ (self + Float halfPi) sin
 )
 
+degreesToRadians = (
+	^self * Float radiansPerDegree
+)
+
+integerPart = (
+	^self - self fractionPart
+)
+
 isFinite = (
 	^(self - self) = 0.0
 )
@@ -20,8 +28,28 @@ isLiteral = (
 	^true
 )
 
+isPowerOfTwo = (
+	^false
+)
+
+log = (
+	^ self ln / Float ln10
+)
+
+log2 = (
+	^ self significand ln / Float ln2 + self exponent
+)
+
 negated = (
 	^-1.0 * self
+)
+
+printAsLiteralOn: aStream = (
+	^self storeOn: aStream
+)
+
+radiansToDegrees = (
+	^self / Float radiansPerDegree
 )
 
 reciprocal = (
@@ -34,14 +62,34 @@ rounded = (
 		ifFalse: [^self truncated + self sign rounded]
 )
 
-printAsLiteralOn: aStream = (
-	^self storeOn: aStream
+significand = (
+	^ self timesTwoPower: (self exponent negated)
+)
+
+tan = (
+	^ self sin / self cos
 )
 
 ----
 
+e = (
+	^ 2.718281828459045235360287471353
+)
+
+epsilon = (
+	^ 0.000000000001
+)
+
 halfPi = (
-	^  self pi / 2
+	^  Float pi / 2
+)
+
+ln2 = (
+	^ 0.69314718055994530941723212145817657
+)
+
+ln10 = (
+	^10.0 ln
 )
 
 one = (
@@ -49,7 +97,23 @@ one = (
 )
 
 pi = (
-	^  3.141592653589793
+	^  3.14159265358979323846264338327950288
+)
+
+radiansPerDegree = (
+	^ Float pi / 180.0
+)
+
+sqrt2 = (
+	^ 1.41421356237309504880168872420969808
+)
+
+threePi = (
+	^ Float pi * 3.0
+)
+
+twoPi = (
+	^ Float pi * 2.0
 )
 
 zero = (
