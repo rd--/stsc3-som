@@ -6,6 +6,10 @@ asSymbol = (
 	^self
 )
 
+isSymbol = (
+	^ true
+)
+
 print = (
 	'#' print. super print
 )

@@ -277,6 +277,18 @@ third = (
 	^ self at: 3
 )
 
+with: otherCollection collect: twoArgBlock = (
+	| result |
+	self isOfSameSizeCheck: otherCollection.
+	result := self species new: self size.
+	1 to: self size do:
+		[:index | result at: index put:
+		(twoArgBlock
+			value: (self at: index)
+			value: (otherCollection at: index))].
+	^ result
+)
+
 ----
 
 new: newSize streamContents: blockWithArg = (

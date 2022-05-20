@@ -142,9 +142,6 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("signature", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("signature", DataPrimitive _ x, []) -> return (Just (symObject x))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
-    ("value", DataBlock {}, []) -> fmap Just (evalBlock stCoreOpt receiver [])
-    ("value:", DataBlock {}, [arg]) -> fmap Just (evalBlock stCoreOpt receiver [arg])
-    ("value:with:", DataBlock {}, [arg1, arg2]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2])
     _ -> return Nothing
 
 prIntegerDivisionExact :: SmallInteger -> SmallInteger -> Maybe Object
@@ -159,6 +156,13 @@ prBitShift lhs rhs =
   (if rhs >= 0
    then Data.Bits.shiftL lhs rhs
    else Data.Bits.shiftL lhs (negate rhs))
+
+prValueWithArguments :: Object -> Object -> Vm (Maybe Object)
+prValueWithArguments receiver (Object _ argumentsArray) = do
+  maybeList <- objectDataAsArray argumentsArray
+  case maybeList of
+    Just lst -> fmap Just (evalBlock stCoreOpt receiver lst)
+    Nothing -> return Nothing
 
 stPrimitives :: PrimitiveDispatcher
 stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) arguments = do
@@ -209,6 +213,11 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd)
     (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> fmap Just (classNewWithArg cd size)
     (75, _, []) -> fmap (Just . intObject) (objectIntHash receiver)
+    (81, DataBlock {}, []) -> fmap Just (evalBlock stCoreOpt receiver [])
+    (81, DataBlock {}, [arg1]) -> fmap Just (evalBlock stCoreOpt receiver [arg1])
+    (81, DataBlock {}, [arg1, arg2]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2])
+    (81, DataBlock {}, [arg1, arg2, arg3]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2, arg3])
+    (82, DataBlock {}, [argumentsArray]) -> prValueWithArguments receiver argumentsArray
     (83, _, [Object "Symbol" (DataImmutableString True sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel)
     (84, _, [Object "Symbol" (DataImmutableString True sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg)
     (100, _, [Object "Symbol" (DataImmutableString True sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl)

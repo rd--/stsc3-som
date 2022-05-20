@@ -56,6 +56,25 @@ contains: aBlock = (
 	^self anySatisfy: aBlock
 )
 
+detect: aBlock = (
+	^ self
+		detect: aBlock
+		ifFound: [:element | element]
+		ifNone: [self errorNotFound: aBlock]
+)
+
+detect: aBlock ifFound: foundBlock ifNone: exceptionBlock = (
+	self do: [:each | (aBlock value: each) ifTrue: [^ foundBlock value: each]].
+	^ exceptionBlock value
+)
+
+detect: aBlock ifNone: exceptionBlock = (
+	^ self
+		detect: aBlock
+		ifFound: [:element | element]
+		ifNone: exceptionBlock
+)
+
 difference: aCollection = (
 	^ self reject: [:each | aCollection includes: each]
 )
@@ -77,6 +96,10 @@ do: elementBlock separatedBy: separatorBlock = (
 
 emptyCheck = (
 	self isEmpty ifTrue: [self errorEmptyCollection]
+)
+
+errorDifferentSize = (
+	self error: 'otherCollection must be the same size'
 )
 
 errorEmptyCollection = (
@@ -103,8 +126,17 @@ isEmpty = (
 	^self size = 0
 )
 
+isOfSameSizeCheck: otherCollection = (
+	otherCollection size = self size ifFalse: [self errorDifferentSize]
+)
+
 isSequenceable = (
 	^ false
+)
+
+product = (
+    "All of my elements multiplied togeather."
+    ^self inject: 1 into: [ :accumulator :item | accumulator * item ]
 )
 
 reduce: binaryBlock = (

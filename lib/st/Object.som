@@ -228,6 +228,10 @@ isNumber = (
 	^false
 )
 
+isSymbol = (
+	^ false
+)
+
 notNil = (
 	^true
 )

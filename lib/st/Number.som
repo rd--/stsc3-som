@@ -153,12 +153,18 @@ strictlyPositive = (
 )
 
 to: stop = (
-	| answer |
+	| index answer |
+	index := 1.
 	answer := Array new: stop - self + 1.
 	self to: stop do: [ :item |
-		answer at: item put: item.
+		answer at: index put: item.
+	        index := index + 1
 	].
 	^answer
+)
+
+to: aNumber collect: aBlock = (
+    ^(self to: aNumber) collect: aBlock
 )
 
 to: stop do: aBlock = (

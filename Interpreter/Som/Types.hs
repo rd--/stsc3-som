@@ -121,11 +121,18 @@ objectDataAsDouble o =
     DataDouble x -> Just x
     _ -> Nothing
 
-objectDataAsString :: ObjectData -> Vm (Maybe String)
+objectDataAsString :: MonadIO m => ObjectData -> m (Maybe String)
 objectDataAsString o =
   case o of
     DataImmutableString _ str -> return (Just (fromUnicodeString str))
     DataCharacterArray _ ref -> fmap Just (vecRefToList ref)
+    _ -> return Nothing
+
+objectDataAsArray :: MonadIO m => ObjectData -> m (Maybe [Object])
+objectDataAsArray o =
+  case o of
+    DataArrayLiteral vec -> return (Just (vecToList vec))
+    DataIndexable _ ref -> fmap Just (vecRefToList ref)
     _ -> return Nothing
 
 -- | Object represented as class name and object data.
@@ -270,8 +277,8 @@ vmWorkspaceInsert key value = do
   dictRefInsert d key value
   return value
 
-vmShowDetailed :: Vm String
-vmShowDetailed = do
+vmInspect :: Vm String
+vmInspect = do
   (_tm,pc,_ctx,glb,wrk) <- State.get
   globalKeys <- dictRefKeys glb
   workspaceKeys <- dictRefKeys wrk
@@ -307,44 +314,60 @@ objectToString (Object nm obj) =
 instance Show Object where show = objectToString
 
 objectPrint :: MonadIO m => Object -> m Object
-objectPrint o = liftIO (putStrLn (objectToString o)) >> return nilObject
+objectPrint o =
+  let recursionDepth = 5 :: Int
+      f k = if k == 0 then return . objectToString else objectExamine (return "Vm") (f (k - 1))
+  in liftIO (f recursionDepth o >>= putStrLn) >> return nilObject
 
 objectListPrint :: MonadIO m => [Object] -> m Object
 objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToString o))) >> return nilObject
 
 -- * Inspect
 
-objectTableInspect :: ObjectTable -> Vm String
-objectTableInspect tbl = do
+objectTableExamine :: MonadIO m => (Object -> m String) -> ObjectTable -> m String
+objectTableExamine f tbl = do
   (keys,values) <- fmap unzip (tblToList tbl)
-  valuesInspected <- mapM objectInspect values
+  valuesInspected <- mapM f values
   return (show (zip keys valuesInspected))
 
-objectDictionaryInspect :: ObjectDictionary -> Vm String
-objectDictionaryInspect dict = do
+objectDictionaryExamine :: MonadIO m => (Object -> m String) -> ObjectDictionary -> m String
+objectDictionaryExamine f dict = do
   keys <- dictRefKeys dict
   values <- dictRefValues dict
-  inspectors <- mapM objectInspect values
+  inspectors <- mapM f values
   return (unlines (zipWith (\k i -> k ++ ": " ++ i) keys inspectors))
 
-objectInspect :: Object -> Vm String
-objectInspect (Object nm obj) =
+objectExamine :: MonadIO m => m String -> (Object -> m String) -> Object -> m String
+objectExamine vmPp f (Object nm obj) =
   case obj of
     DataIndexable x ref -> do
       vec <- deRef ref
-      let lst = map objectToString (vecToList vec)
+      lst <- mapM f (vecToList vec)
       return (printf "instance of %s <pc:%d> with: {%s}" nm x (intercalate ". " lst))
+    DataCharacterArray x ref -> do
+      vec <- deRef ref
+      let str = vecToList vec
+      return (printf "instance of %s <pc:%d> with: '%s'" nm x str)
     DataClass (x,_) tbl _ -> do
-      tblStr <- objectTableInspect tbl
+      tblStr <- objectTableExamine f tbl
       return (St.className x ++ ": " ++ tblStr)
     DataMethod _ x _ -> return (show x)
     DataBlock x _ (Expr.Lambda ld _ _ _) ->
       return (printf "instance of %s <pc:%d, %s>" nm x (Expr.lambdaDefinitionShow ld))
     DataNonIndexable x tbl -> do
-      tblStr <- objectTableInspect tbl
+      tblStr <- objectTableExamine f tbl
       return (printf "instance of %s <pc:%d>: %s" nm x tblStr)
-    DataSystem -> vmShowDetailed
+    DataSystem -> vmPp
     _ -> return (objectToString (Object nm obj))
+
+objectTableInspect :: ObjectTable -> Vm String
+objectTableInspect = objectTableExamine objectInspect
+
+objectDictionaryInspect :: ObjectDictionary -> Vm String
+objectDictionaryInspect = objectDictionaryExamine objectInspect
+
+objectInspect :: Object -> Vm String
+objectInspect = objectExamine vmInspect objectInspect -- todo: recursion depth
 
 contextNodeInspect :: ContextNode -> Vm String
 contextNodeInspect ctx =

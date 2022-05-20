@@ -58,5 +58,5 @@ Metaclass class class = Metaclass "=> true"
 system loadFile: '/etc/passwd'
 
 "Emacs"
-(setq stsc3-interpreter (list "stsc3-som" "repl"))
+(setq stsc3-interpreter (list "stsc3-som" "som" "repl"))
 (setq stsc3-interpreter (list "gst"))
