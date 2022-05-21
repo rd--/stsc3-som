@@ -8,6 +8,26 @@ Boolean = (
 	^self or: aBoolean
 )
 
+==> aBlock = (
+	self subclassResponsibility
+)
+
+asBit = (
+	"My numerical interpretation, as one-bit number. This extends nicely to n-bit numbers,
+	as long as they treat 0 as false, and anything else as true"
+	^ self subclassResponsibility
+)
+
+asInteger = (
+	"It is sufficient to treat this boolean as bit so as to interpret it as a number"
+	^ self asBit
+)
+
+asNumber = (
+	"It is sufficient to treat this boolean as bit so as to interpret it as a number"
+	^ self asBit
+)
+
 ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock = (
 	self subclassResponsibility
 )
@@ -29,6 +49,11 @@ shallowCopy = (
 
 storeOn: aStream = (
 	self printOn: aStream
+)
+
+xor: aBoolean = (
+	"Exclusive OR. Answer true if the receiver is not equivalent to aBoolean."
+	^(self == aBoolean) not
 )
 
 )

@@ -12,6 +12,11 @@ degreesToRadians = (
 	^self * Float radiansPerDegree
 )
 
+hash = (
+	(self isFinite and: [self fractionPart = 0.0]) ifTrue: [^self truncated hash].
+	^self identityHash
+)
+
 integerPart = (
 	^self - self fractionPart
 )

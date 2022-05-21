@@ -1,0 +1,16 @@
+CharacterSet = (
+
+----
+
+| Ascii CrLf |
+
+ascii = (
+	"Return a set containing all the ASCII characters"
+	^Ascii ifNil: [ Ascii := Set newFrom: ((1 to: 127) collect: [:code | code asCharacter]) ]
+)
+
+crlf = (
+	^CrLf ifNil: [ CrLf := Set newFrom: {Character cr. Character lf} ]
+)
+
+)

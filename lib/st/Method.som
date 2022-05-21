@@ -1,12 +1,22 @@
 Method = (
 
-    "Meta Information"
-    signature = primitive
-    holder = primitive
+asString = (
+	^self holder asString , '>>' , self signature asString
+)
 
-    "Printing"
-    asString = ( ^self holder asString , '>>' , self signature asString )
+holder = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
-    invokeOn: obj with: args = primitive
+invokeOn: obj with: args = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+signature = (
+	<primitive: -1>
+	self primitiveFailed
+)
 
 )

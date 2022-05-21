@@ -27,15 +27,26 @@ on: aCollection from: firstIndex to: lastIndex = (
 	position := firstIndex <= 1
 				ifTrue: [0]
 				ifFalse: [firstIndex - 1]
+)
 
+readInto: aCollection startingAt: startIndex count: n = (
+	"Read n objects into the given collection.
+	Return number of elements that have been read."
+	| max |
+	max := (readLimit - position) min: n.
+	aCollection
+		replaceFrom: startIndex
+		to: startIndex+max-1
+		with: collection
+		startingAt: position+1.
+	position := position + max.
+	^max
 )
 
 ----------------------------
 
 on: aCollection from: firstIndex to: lastIndex = (
-	"Answer with a new instance streaming over a copy of aCollection from
-	firstIndex to lastIndex."
-
+	"Answer with a new instance streaming over a copy of aCollection from firstIndex to lastIndex."
 	^self basicNew
 		on: aCollection
 		from: firstIndex
@@ -46,6 +57,5 @@ on: aCollection from: firstIndex to: lastIndex = (
 comment = (^'
 I am a reader of an indexable collection.  I only define the message next.
 ')
-
 
 )

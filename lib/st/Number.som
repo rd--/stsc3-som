@@ -36,6 +36,10 @@ asInteger = (
 	^self truncated
 )
 
+asNumber = (
+	^ self
+)
+
 ceiling = (
 	"Answer the integer nearest the receiver toward  infinity."
 	| truncation |

@@ -1,0 +1,40 @@
+Transcript = (
+
+----
+
+clear = (
+)
+
+cr = (
+	self newLine
+)
+
+endEntry = (
+	self newLine
+)
+
+newLine = (
+	Smalltalk printCharacter: Character newLine
+)
+
+nextPut: aCharacter = (
+	Smalltalk printCharacter: aCharacter
+)
+
+nextPutAll: aString = (
+	Smalltalk printString: aString
+)
+
+space = (
+	Smalltalk printCharacter: Character space
+)
+
+tab = (
+	Smalltalk printCharacter: Character tab
+)
+
+show: anObject = (
+	Smalltalk printString: anObject asString
+)
+
+)

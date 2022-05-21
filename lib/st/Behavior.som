@@ -1,5 +1,13 @@
 Behavior = Object (
 
+allSelectors = (
+    "Answer all selectors understood by instances of the receiver"
+    ^(Array streamContents: [ :stream |
+        self withAllSuperclassesDo: [ :aClass |
+            aClass selectorsDo: [ :each |
+                stream nextPut: each ] ] ]) asIdentitySet
+)
+
 basicNew = (
 	<primitive: 70>
 	self isVariable ifTrue: [^self basicNew: 0].
@@ -17,8 +25,8 @@ canUnderstand: selector = (
 	is the argument, false otherwise.  The selector can be in the method dictionary
 	of the receiver's class or any of its superclasses."
 	(self includesSelector: selector) ifTrue: [^true].
-	superclass == nil ifTrue: [^false].
-	^superclass canUnderstand: selector
+	self superclass == nil ifTrue: [^false].
+	^ self superclass canUnderstand: selector
 )
 
 flushCache = (
@@ -33,13 +41,13 @@ hasMethod: aSymbol = (
 
 hasMethods = (
 	"Answer whether the receiver has any methods in its method dictionary."
-	^methodArray size > 0
+	^self methodArray size > 0
 )
 
 includesSelector: aSymbol = (
 	"Answer whether the message whose selector is the argument is in the
 	method dictionary of the receiver's class."
-	^selectors includes: aSymbol
+	^self selectors includes: aSymbol
 )
 
 inheritsFrom: aClass = (
@@ -75,6 +83,23 @@ new: sizeRequested = (
 
 selectors = (
 	^self methodArray collect: [ :item | item signature ]
+)
+
+selectorsDo: selectorBlock = (
+	"Evaluate selectorBlock for all the message selectors in my method dictionary."
+	^self selectors do: selectorBlock
+)
+
+superclass = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+withAllSuperclassesDo: aBlock = (
+	"Evaluate the argument, aBlock, for each of the receiver's superclasses."
+	aBlock value: self.
+	self superclass == nil
+		ifFalse: [self superclass withAllSuperclassesDo: aBlock]
 )
 
 )

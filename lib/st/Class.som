@@ -9,9 +9,4 @@ name = (
 	self primitiveFailed
 )
 
-superclass = (
-	<primitive: -1>
-	self primitiveFailed
-)
-
 )

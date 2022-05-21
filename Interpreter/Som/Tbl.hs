@@ -18,11 +18,17 @@ tblSize = Vector.length
 tblAt :: MonadIO m => Table k v -> Int -> m v
 tblAt tbl ix = deRef (snd (tbl Vector.! ix))
 
+tblAtMaybe :: MonadIO m => Table k v -> Int -> m (Maybe v)
+tblAtMaybe tbl ix = if ix < 0 || ix >= tblSize tbl then return Nothing else fmap Just (tblAt tbl ix)
+
 tblAtDefault :: MonadIO m => Table k v -> Int -> m v -> m v
 tblAtDefault tbl ix def = if ix < 0 || ix >= tblSize tbl then def else tblAt tbl ix
 
 tblAtPut :: MonadIO m => Table k v -> Int -> v -> m v
 tblAtPut tbl ix o = rwRef (snd (tbl Vector.! ix)) (const o) >> return o
+
+tblAtPutMaybe :: MonadIO m => Table k v -> Int -> v -> m (Maybe v)
+tblAtPutMaybe tbl ix o = if ix < 0 || ix >= tblSize tbl then return Nothing else fmap Just (tblAtPut tbl ix o)
 
 tblAtPutDefault :: MonadIO m => Table k v -> Int -> v -> m v -> m v
 tblAtPutDefault tbl ix o def =

@@ -27,9 +27,10 @@ replContinue :: CoreOpt -> VmState -> IO ()
 replContinue opt vmState = do
   str <- replReadInput "" stdin
   (result,vmState') <- vmEval opt vmState str
+  let (_,programCounter,_,_,_) = vmState'
   case result of
     Left msg -> putStrLn ("error: " ++ msg) >> replContinue opt vmState
-    Right res -> putStr "result: " >> objectPrint res >> replContinue opt vmState'
+    Right res -> putStr (printf "result<pc=%d>: " programCounter) >> objectPrint res >> replContinue opt vmState'
 
 stStandardClassList :: [St.Identifier]
 stStandardClassList =
@@ -38,7 +39,7 @@ stStandardClassList =
     ,"Boolean", "True", "False"
     ,"Class", "Metaclass"
     ,"Magnitude", "Number", "Integer", "SmallInteger", "Float", "Double", "Character"
-    ,"Method" ,"Primitive"
+    ,"Method"
     ,"Object", "UndefinedObject", "Nil"
     ,"SmalltalkImage"
     ]

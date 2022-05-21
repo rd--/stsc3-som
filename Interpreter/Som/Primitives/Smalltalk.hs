@@ -123,9 +123,6 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("holder", DataPrimitive x _, []) -> return (Just (symObject x))
     ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
-    ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> fmap Just (tblAtDefault tbl (ix - 1) (prError "Object>>instVarAt:"))
-    ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> fmap Just (tblAtPutDefault tbl (ix - 1) newObject (prError "Object>>instVarAt:put"))
-    ("instVarNamed:", DataNonIndexable _ tbl, [Object _ (DataImmutableString True key)]) -> fmap Just (tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:"))
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> fmap Just (vmError "Primitive>>invokeOn:with: not implemented")
     ("isDigits", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isDigit str))
@@ -156,7 +153,7 @@ prBitShift lhs rhs =
   intObject
   (if rhs >= 0
    then Data.Bits.shiftL lhs rhs
-   else Data.Bits.shiftL lhs (negate rhs))
+   else Data.Bits.shiftR lhs (negate rhs))
 
 prValueWithArguments :: Object -> Object -> Vm (Maybe Object)
 prValueWithArguments receiver (Object _ argumentsArray) = do
@@ -213,6 +210,8 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd)
     (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> fmap Just (classNewWithArg cd size)
+    (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1)
+    (74, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> tblAtPutMaybe tbl (ix - 1) newObject
     (75, _, []) -> fmap (Just . intObject) (objectIntHash receiver)
     (81, DataBlock {}, []) -> fmap Just (evalBlock stCoreOpt receiver [])
     (81, DataBlock {}, [arg1]) -> fmap Just (evalBlock stCoreOpt receiver [arg1])

@@ -58,7 +58,11 @@ digitValue = (
 )
 
 hash = (
-	^asInteger
+	^self asInteger
+)
+
+identityHash = (
+	^self asInteger
 )
 
 shallowCopy = (

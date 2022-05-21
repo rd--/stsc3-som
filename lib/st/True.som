@@ -1,7 +1,27 @@
 True = Boolean (
 
+& aBoolean = (
+	"Evaluating conjunction -- could answer aBoolean since receiver is true, but let the VM quickly check the type of the argument instead."
+	aBoolean ifFalse: [ ^false ].
+	^true
+)
+
+| aBoolean = (
+	"Evaluating disjunction (OR) -- answer true since the receiver is true, but let the VM quickly check the type of the argument first."
+	aBoolean ifTrue: [ ^true ].
+	^true
+)
+
+==> aBlock = (
+	^aBlock value
+)
+
 and: aBlock = (
 	^aBlock value
+)
+
+asBit = (
+	^ 1
 )
 
 asString = (
@@ -34,6 +54,11 @@ or: ignoredBlock = (
 
 printOn: aStream = (
 	aStream nextPutAll: 'true'
+)
+
+xor: aBoolean = (
+	"aBoolean is either a boolean, or an object who's #value returns a boolean (usually a block)."
+	^aBoolean value ifTrue: [ false ] ifFalse: [ true ]
 )
 
 )

@@ -6,6 +6,16 @@ Integer = Number (
 	^aNumber adaptToInteger: self andCompare: #=
 )
 
+allMask: mask = (
+	"Treat the argument as a bit mask. Answer whether all of the bits that are 1 in the argument are 1 in the receiver."
+	^mask = (self bitAnd: mask)
+)
+
+anyMask: mask = (
+	"Treat the argument as a bit mask. Answer whether any of the bits that are 1 in the argument are 1 in the receiver."
+	^0 ~= (self bitAnd: mask)
+)
+
 asCharacter = (
 	^Character value: self
 )
@@ -14,8 +24,30 @@ asInteger = (
 	^self
 )
 
+bitAt: anInteger = (
+	"Answer 1 if the bit at position anInteger is set to 1, 0 otherwise.
+	self is considered an infinite sequence of bits, so anInteger can be any strictly positive integer.
+	Bit at position 1 is the least significant bit.
+	Negative numbers are in two-complements.
+	This is a naive implementation that can be refined in subclass for speed"
+	^(self bitShift: 1 - anInteger) bitAnd: 1
+)
+
 bitInvert = (
 	^ -1 - self
+)
+
+bitShift: shiftCount = (
+	"Answer an Integer whose value (in twos-complement representation) is
+	the receiver's value (in twos-complement representation) shifted left by
+	the number of bits indicated by the argument. Negative arguments
+	shift right. Zeros are shifted in from the right in left shifts."
+	| magnitudeShift |
+	magnitudeShift := self bitShiftMagnitude: shiftCount.
+	^ ((self negative and: [shiftCount negative])
+		and: [self anyBitOfMagnitudeFrom: 1 to: shiftCount negated])
+		ifTrue: [magnitudeShift - 1]
+		ifFalse: [magnitudeShift]
 )
 
 denominator = (
@@ -59,6 +91,11 @@ isPowerOfTwo = (
 
 lcm: n = (
 	^self // (self gcd: n) * n
+)
+
+noMask: mask = (
+	"Treat the argument as a bit mask. Answer whether none of the bits that are 1 in the argument are 1 in the receiver."
+	^0 = (self bitAnd: mask)
 )
 
 printAsLiteralOn: aStream = (

@@ -27,7 +27,7 @@ initialize: arguments = (
 	| application |
 
 	"Make sure we have got at least one argument"
-	(arguments size < 1) ifTrue: [ 'No class specified' println. ^nil ].
+	(arguments size < 1) ifTrue: [ Transcript show: 'No class specified'; cr. ^nil ].
 
 	"Load the class with the specified name, create an instance of it, and
 	 run it. If there is more than only the class given on the command line,

@@ -1,57 +1,16 @@
 ReadWriteStream = WriteStream (
+
 close = (
-	"Prsumably sets the status of the stream to be closed.
+	"Presumably sets the status of the stream to be closed.
 	This message does nothing at this level, but is included for FileStream
 	compatibility."
 	^self
-
 )
 
 contents = (
 	"Answer with a copy of my collection from 1 to readLimit."
-
 	readLimit := readLimit max: position.
 	^collection copyFrom: 1 to: readLimit
-
-)
-
-fileIn = (
-	"This is special for reading expressions from text that has been formatted
-	with exclamation delimitors.  The expressions are read and passed to the
-	Compiler.  Answer the result of compilation."
-
-	| val |
-	Cursor read showWhile:
-		[[self atEnd]
-			whileFalse:
-				[self skipSeparators.
-				val := (self peekFor: $!)
-							ifTrue: [(Compiler evaluate: self nextChunk logged: false)
-									scanFrom: self]
-							ifFalse: [Compiler evaluate: self nextChunk logged: true]].
-		self close].
-	^val
-
-)
-
-fileOutChanges = (
-	"Append to the receiver a description of all system changes."
-
-	Cursor write showWhile:
-		[self timeStamp.
-		Smalltalk changes fileOutOn: self.
-		self close]
-
-)
-
-fileOutChangesFor: class = (
-	"Append to the receiver a description of the changes to the argument, class."
-
-	Cursor write showWhile:
-		[self timeStamp.
-		Smalltalk changes fileOutChangesFor: class on: self.
-		self close]
-
 )
 
 next = (
@@ -59,25 +18,11 @@ next = (
 	the collection of this stream is not an Array or a String. Fail if the
 	stream is positioned at its end, or if the position is out of bounds in the
 	collection. Optional. See Object documentation whatIsAPrimitive."
-
 	<primitive: 65>
 	"treat me as a FIFO"
 	position >= readLimit
 		ifTrue: [^nil]
 		ifFalse: [^collection at: (position := position + 1)]
-
 )
-
-timeStamp = (
-	"Append the current time to the receiver as a chunk."
-
-	| aStream |
-	aStream := WriteStream on: (String new: 16).
-	Smalltalk timeStamp: aStream.
-	self nextChunkPut: aStream contents printString.	"double quotes and !s"
-	self cr; cr
-
-)
-
 
 )

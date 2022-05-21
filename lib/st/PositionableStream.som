@@ -2,8 +2,22 @@ PositionableStream = Stream (
 
 | collection position readLimit |
 
+atEnd = (
+	<primitive: 67>
+	^position >= readLimit
+)
+
+collectionSpecies = (
+	"Answer the species of collection into which the receiver can stream"
+	^ collection species
+)
+
 contents = (
-	^collection copyFrom: 1 to: readLimit
+	^ collection copyFrom: 1 to: readLimit
+)
+
+isEmpty = (
+	^ position = 0
 )
 
 next: anInteger = (
@@ -11,6 +25,33 @@ next: anInteger = (
 	newArray := self contents species new: anInteger.
 	1 to: anInteger do: [:index | newArray at: index put: self next].
 	^newArray
+)
+
+next: anInteger putAll: aCollection startingAt: startIndex = (
+	"Store the next anInteger elements from the given collection."
+	startIndex to: startIndex + anInteger - 1 do: [ :index |
+		self nextPut: (aCollection at: index) ].
+	^aCollection
+)
+
+nextLine = (
+	"Answer next line (may be empty) without line end delimiters, or nil if at end.
+	Let the stream positioned after the line delimiter(s).
+	Handle a zoo of line delimiters CR, LF, or CR-LF pair"
+	self atEnd ifTrue: [^nil].
+	^self upToAnyOf: CharacterSet crlf do: [:char | char = Character cr ifTrue: [self peekFor: Character lf]]
+)
+
+on: aCollection = (
+	collection := aCollection.
+	readLimit := aCollection size.
+	position := 0.
+	self reset
+)
+
+originalContents = (
+	"Answer the receiver's actual contents collection, NOT a copy.  1/29/96 sw"
+	^ collection
 )
 
 peek = (
@@ -32,24 +73,6 @@ peekFor: anObject = (
 	^false
 )
 
-through: anObject = (
-	| newStream element |
-	newStream := WriteStream on: (collection species new: 64).
-	[(self atEnd or: [(element := self next) = anObject]) or: [newStream size > 64000]]
-		whileFalse: [newStream nextPut: element].
-	self atEnd
-		ifFalse:	[newStream nextPut: element].
-	^newStream contents
-)
-
-upTo: anObject = (
-	| newStream element |
-	newStream := WriteStream on: (collection species new: 64).
-	[self atEnd or: [(element := self next) = anObject]]
-		whileFalse: [newStream nextPut: element].
-	^newStream contents
-)
-
 position = (
 	^position
 )
@@ -58,6 +81,10 @@ position: anInteger = (
 	anInteger >= 0 & (anInteger <= readLimit)
 		ifTrue: [position := anInteger]
 		ifFalse: [self positionError]
+)
+
+positionError = (
+	self error: 'Attempt to set the position of a PositionableStream out of bounds'
 )
 
 reset = (
@@ -78,24 +105,59 @@ skipTo: anObject = (
 	^false
 )
 
-on: aCollection = (
-	collection := aCollection.
-	readLimit := aCollection size.
-	position := 0.
-	self reset
+through: anObject = (
+	| newStream element |
+	newStream := WriteStream on: (collection species new: 64).
+	[(self atEnd or: [(element := self next) = anObject]) or: [newStream size > 64000]]
+		whileFalse: [newStream nextPut: element].
+	self atEnd
+		ifFalse:	[newStream nextPut: element].
+	^newStream contents
 )
 
-positionError = (
-	self error: 'Attempt to set the position of a PositionableStream out of bounds'
+upTo: anObject = (
+	| newStream element |
+	newStream := WriteStream on: (collection species new: 64).
+	[self atEnd or: [(element := self next) = anObject]]
+		whileFalse: [newStream nextPut: element].
+	^newStream contents
 )
 
-atEnd = (
-	<primitive: 67>
-	^position >= readLimit
-)
-
-isEmpty = (
-	^position = 0
+upToAnyOf: delimiters do: aBlock = (
+	| pos |
+	collection ifNotNil: [
+		(position < readLimit and: [
+			(pos := collection indexOfAnyOf: delimiters startingAt: position + 1) <= readLimit and: [
+				pos > 0 ] ]) ifTrue: [
+					| result |
+					result := collection copyFrom: position + 1 to: (position := pos) - 1 .
+					aBlock value: (collection at: position).
+					^result ] ].
+	^self collectionSpecies streamContents: [ :stream |
+		| buffer bytesRead |
+		buffer := collection
+			ifNil: [ self collectionSpecies new: 2000 ]
+			ifNotNil: [
+				position < readLimit ifTrue: [
+					stream next: readLimit - position putAll: collection startingAt: position + 1.
+					position := readLimit ].
+				collection ].
+		[
+			bytesRead := self readInto: buffer startingAt: 1 count: buffer size.
+			((pos := buffer indexOfAnyOf: delimiters startingAt: 1) = 0 or: [ pos > bytesRead ])
+				ifTrue: [
+					stream next: bytesRead putAll: buffer startingAt: 1.
+					bytesRead > 0 "Try again if we could read something last time." ]
+				ifFalse: [
+					stream next: pos - 1 putAll: buffer startingAt: 1.
+					collection
+						ifNil: [ self skip: pos - bytesRead ]
+						ifNotNil: [
+							position := pos.
+							readLimit := bytesRead ].
+					false "Found the delimiter." ] ] whileTrue.
+		bytesRead = 0 ifFalse: [
+			aBlock value: (buffer at: pos) ] ]
 )
 
 ----

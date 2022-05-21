@@ -405,8 +405,8 @@ sysLiteralObject typ obj =
 
 {- | Evaluate expression.
 
-The evaluator handles non-local returns by making a "Return" object that short-circuits further evaluation.
-See calls to isReturnObject.
+The evaluator handles non-local returns by making a "Return" object.
+The evaluator runs isReturnObject to see if further work needs to be done, or if the evaluation is unwinding.
 -}
 evalExpr :: CoreOpt -> StExpr -> Vm Object
 evalExpr opt expr =

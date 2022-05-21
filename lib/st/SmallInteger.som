@@ -62,38 +62,50 @@ SmallInteger = Integer (
 
 bitAnd: arg = (
 	<primitive: 14>
-        self primitiveFailed
+	self >= 0 ifTrue: [^arg bitAnd: self].
+	^arg < 0
+		ifTrue: [(arg bitInvert bitOr: self bitInvert) bitInvert]
+		ifFalse: [arg bitClear: self bitInvert]
 )
 
 bitOr: arg  = (
 	<primitive: 15>
-        self primitiveFailed
-)
-
-bitXor: arg  = (
-	<primitive: 16>
-        self primitiveFailed
+	self >= 0 ifTrue: [^ arg bitOr: self].
+	^ arg < 0
+		ifTrue: [(self bitInvert bitAnd: arg bitInvert) bitInvert]
+		ifFalse: [(self bitInvert bitClear: arg) bitInvert]
 )
 
 bitShift: arg = (
 	<primitive: 17>
 	self = 0 ifTrue: [^self].
-        self primitiveFailed
+	self > 0 ifTrue: [^ super bitShift: arg].
+	^ arg >= 0
+		ifTrue: [(self negated bitShift: arg) negated]
+		ifFalse: [(self bitInvert bitShift: arg) bitInvert]
+)
+
+bitXor: arg  = (
+	<primitive: 16>
+	self >= 0 ifTrue: [^ arg bitXor: self].
+	^ arg < 0
+		ifTrue: [self bitInvert bitXor: arg bitInvert]
+		ifFalse: [(self bitInvert bitXor: arg) bitInvert]
 )
 
 asFloat = (
 	<primitive: 40>
-	self primitiveFailed
+	self primitiveFailed: #asFloat
 )
 
 asString = (
 	<primitive: -1>
-        self primitiveFailed
+        self primitiveFailed: #asString
 )
 
 atRandom = (
 	<primitive: -1>
-        self primitiveFailed
+        self primitiveFailed: #atRandom
 )
 
 adaptToFloat: rcvr andSend: selector = (
@@ -175,7 +187,7 @@ sqrt = (
 
 fromString: aString = (
 	<primitive: -1>
-        self primitiveFailed
+        self primitiveFailed: #fromString:
 )
 
 )

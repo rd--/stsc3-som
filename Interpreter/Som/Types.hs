@@ -42,7 +42,7 @@ type Id = Int
 
 {- | Method contexts store:
        1. a context identifier to receive non-local returns
-       2. the method signature for back traces
+       2. the method selector (signature) for back traces
        3. the receiver
      Block contexts store:
        1. the Block object to report cases of escaped blocks.

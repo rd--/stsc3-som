@@ -53,17 +53,17 @@ Double = Float (
 
 atRandom = (
 	<primitive: -1>
-        self primitiveFailed
+        self primitiveFailed: #atRandom
 )
 
 exponent = (
 	<primitive: 53>
-	^self exponentFromBitPattern
+	^self primitiveFailed: #exponent
 )
 
 truncated = (
 	<primitive: 51>
-	self primitiveFailed
+	self primitiveFailed: #truncated
 )
 
 fractionPart = (
@@ -73,12 +73,12 @@ fractionPart = (
 
 sqrt = (
 	<primitive: 55>
-	self primitiveFailed
+	self primitiveFailed: #sqrt
 )
 
 sin = (
 	<primitive: 56>
-	self primitiveFailed
+	self primitiveFailed: #sin
 )
 
 ln = (
@@ -124,6 +124,7 @@ infinity = (
 
 fromString: aString = (
 	<primitive: -1>
+        self primitiveFailed: #fromString:
 )
 
 )
