@@ -1,8 +1,7 @@
 import System.Environment {- base -}
 
-import qualified Language.Smalltalk.Som as Som {- stsc3 -}
-
 import qualified Interpreter.Som.Core {- stsc3-som -}
+import qualified Interpreter.Som.Dir {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Som as Primitives.Som {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Smalltalk as Primitives.Smalltalk {- stsc3-som -}
 import qualified Interpreter.Som.Repl {- stsc3-som -}
@@ -23,7 +22,7 @@ replOpt typ =
 
 main :: IO ()
 main = do
-  somDirectory <- Som.somSystemClassPath
+  somDirectory <- Interpreter.Som.Dir.somSystemClassPath
   a <- getArgs
   case a of
     [typ, "repl"] -> Interpreter.Som.Repl.replMain (replOpt typ) somDirectory

@@ -234,6 +234,10 @@ union: aCollection = (
 
 ----
 
+isAbstract = (
+	^self = Collection
+)
+
 ofSize: n = (
 	^ self new: n
 )

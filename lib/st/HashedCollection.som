@@ -108,17 +108,14 @@ scanForEmptySlotFor: anObject = (
 
 | GoodPrimes |
 
-new = (
-	^self basicNew initialize: 5
+arrayType = (
+	^ Array
 )
 
-new: numberOfElements = (
-	^self basicNew initialize: (numberOfElements <= 3
-		ifFalse: [ self sizeFor: numberOfElements ]
-		ifTrue: [
-			numberOfElements < 3
-				ifTrue: [ 3 ]
-				ifFalse: [ 5 ] ])
+goodPrimes = (
+	^GoodPrimes ifNil: [
+		self initializeGoodPrimes.
+		GoodPrimes ]
 )
 
 goodPrimeAtLeast: lowerLimit = (
@@ -152,12 +149,6 @@ goodPrimeAtLeast: lowerLimit = (
 	^self goodPrimes at: highIndex
 )
 
-goodPrimes = (
-	^GoodPrimes ifNil: [
-		self initializeGoodPrimes.
-		GoodPrimes ]
-)
-
 initialize = (
 	self initializeGoodPrimes
 )
@@ -186,16 +177,25 @@ initializeGoodPrimes = (
 		1073741833)
 )
 
-sizeFor: numberOfElements = (
-	^self goodPrimeAtLeast: numberOfElements * 4 + 2 // 3 "Optimized version of (numberOfElements * 4 / 3) ceiling."
-)
-
 isAbstract = (
 	^self = HashedCollection
 )
 
-arrayType = (
-	^ Array
+new = (
+	^self basicNew initialize: 5
+)
+
+new: numberOfElements = (
+	^self basicNew initialize: (numberOfElements <= 3
+		ifFalse: [ self sizeFor: numberOfElements ]
+		ifTrue: [
+			numberOfElements < 3
+				ifTrue: [ 3 ]
+				ifFalse: [ 5 ] ])
+)
+
+sizeFor: numberOfElements = (
+	^self goodPrimeAtLeast: numberOfElements * 4 + 2 // 3 "Optimized version of (numberOfElements * 4 / 3) ceiling."
 )
 
 )

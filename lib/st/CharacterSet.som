@@ -13,4 +13,8 @@ crlf = (
 	^CrLf ifNil: [ CrLf := Set newFrom: {Character cr. Character lf} ]
 )
 
+isAbstract = (
+	^self = CharacterSet
+)
+
 )

@@ -14,9 +14,9 @@ import qualified Control.Monad.Except as Except {- mtl -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
-import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
 import Interpreter.Som.DictRef
+import Interpreter.Som.Dir
 import Interpreter.Som.Error
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
@@ -589,7 +589,7 @@ systemLoadAndAssignClassesAbove x = do
       Just _ -> return existing
       Nothing -> do
         -- printTrace ("systemLoadAndAssignClassesAbove: " ++ x) []
-        maybeCd <- liftIO (Som.somLoadClassFile x) -- todo: this should also read .st and .stc files
+        maybeCd <- liftIO (somLoadClassFile x) -- todo: this should also read .st and .stc files
         case maybeCd of
           Just cd -> do
             co <- classObject cd

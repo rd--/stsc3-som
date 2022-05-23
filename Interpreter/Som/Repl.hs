@@ -8,9 +8,10 @@ import Text.Printf {- base -}
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
-import Interpreter.Som.Core {- stsc3 -}
-import Interpreter.Som.DictRef {- stsc3 -}
-import Interpreter.Som.Types {- stsc3 -}
+import Interpreter.Som.Core {- stsc3-som -}
+import Interpreter.Som.DictRef {- stsc3-som -}
+import Interpreter.Som.Dir {- stsc3-som -}
+import Interpreter.Som.Types {- stsc3-som -}
 
 -- | Read lines from Handle while there is input waiting.
 replReadInput :: String -> Handle -> IO String
@@ -98,7 +99,7 @@ loadAndRunClass opt dir cl arg = do
 -}
 somReplMain :: CoreOpt -> IO ()
 somReplMain opt = do
-  dir <- Som.somSystemClassPath
+  dir <- somSystemClassPath
   arg <- getArgs
   case arg of
     [] -> replMain opt dir

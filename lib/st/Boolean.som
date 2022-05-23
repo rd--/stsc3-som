@@ -56,4 +56,10 @@ xor: aBoolean = (
 	^(self == aBoolean) not
 )
 
+----
+
+isAbstract = (
+	^self = Boolean
+)
+
 )

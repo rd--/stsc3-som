@@ -312,6 +312,10 @@ with: otherCollection collect: twoArgBlock = (
 
 ----
 
+isAbstract = (
+	^self = SequenceableCollection
+)
+
 new: newSize streamContents: blockWithArg = (
 	| stream originalContents |
 	stream := WriteStream on: (self new: newSize).

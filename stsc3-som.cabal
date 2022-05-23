@@ -28,6 +28,7 @@ library
   exposed-modules:  Interpreter.Som.Core
                     Interpreter.Som.Dict
                     Interpreter.Som.DictRef
+                    Interpreter.Som.Dir
                     Interpreter.Som.Error
                     Interpreter.Som.Int
                     Interpreter.Som.Primitives.Smalltalk

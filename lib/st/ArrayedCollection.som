@@ -9,6 +9,10 @@ inject: anObject into: aBlock = (
 
 ----
 
+isAbstract = (
+	^self = ArrayedCollection
+)
+
 new: size withAll: value = (
 	^(self new: size) atAllPut: value
 )
