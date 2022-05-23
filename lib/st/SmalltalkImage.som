@@ -1,5 +1,10 @@
 SmalltalkImage = Object (
 
+error = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 exit: error = (
 	self quitPrimitive: error
 )

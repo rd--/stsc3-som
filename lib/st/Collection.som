@@ -24,6 +24,24 @@ allSatisfy: aBlock = (
 	^ true
 )
 
+any: numberOfElements = (
+	^ self any: numberOfElements as: self species
+)
+
+any: numberOfElements as: aClass = (
+	"Enumerate this colleciton and return the specified number of elements. Signals an error if this collection has not enough elements."
+	| index result |
+	index := 0.
+	result := aClass new: numberOfElements.
+	result fillFrom: self with: [:each |
+		(index := index + 1) > numberOfElements
+			ifTrue: [^ result]
+			ifFalse: [each]].
+	index = numberOfElements
+		ifFalse: [self error: 'Not enough elements in this collection.'].
+	^ result
+)
+
 anyOne = (
 	self do: [:each | ^ each].
 	self errorEmptyCollection
@@ -47,7 +65,10 @@ asCollection = (
 )
 
 asIdentitySet = (
-	^(IdentitySet new: self size) addAll: self; yourself
+	| answer |
+	answer := IdentitySet new: self size.
+	answer addAll: self.
+	^ answer
 )
 
 asSet = (
@@ -82,6 +103,13 @@ detect: aBlock = (
 		detect: aBlock
 		ifFound: [:element | element]
 		ifNone: [self errorNotFound: aBlock]
+)
+
+detect: aBlock ifFound: foundBlock = (
+	^ self
+		detect: aBlock
+		ifFound: foundBlock
+		ifNone: nil
 )
 
 detect: aBlock ifFound: foundBlock ifNone: exceptionBlock = (
@@ -125,6 +153,17 @@ errorDifferentSize = (
 
 errorEmptyCollection = (
 	self error: 'this collection is empty'
+)
+
+errorNotFound: anObject = (
+	{self . anObject} error: 'anObject was not found in this collection'
+)
+
+fillFrom: aCollection with: aBlock = (
+	"Evaluate aBlock with each of aCollections's elements as the argument.
+	Collect the resulting values into self. Answer self."
+	aCollection do: [ :each |
+		self add: (aBlock value: each) ]
 )
 
 includes: anObject = (
@@ -240,6 +279,14 @@ isAbstract = (
 
 ofSize: n = (
 	^ self new: n
+)
+
+with: anObject = (
+	"Answer an instance of me containing anObject."
+	| answer |
+	answer := self new.
+	answer add: anObject.
+	^ answer
 )
 
 withAll: aCollection = (

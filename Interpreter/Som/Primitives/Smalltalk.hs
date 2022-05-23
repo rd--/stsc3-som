@@ -14,6 +14,7 @@ import System.Mem {- base -}
 import System.Random {- random -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
+import qualified Language.Smalltalk.Ansi.Expr as St {- stsc3 -}
 
 import Interpreter.Som.Core
 import Interpreter.Som.Error
@@ -110,6 +111,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
     ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (strObject (unicodeStringAppend x y)))
+    ("error", DataSystem, []) -> vmError "Smalltalk>>error"
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
       case prClass of
@@ -132,6 +134,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> fmap Just (prSystemLoadFile x)
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
+    ("numArgs", DataBlock _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> fmap Just (objectPerformInSuperclass stCoreOpt receiver sel cl)
     ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> return (Just (strObject (unicodeStringSubstringFromTo str int1 int2)))
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)

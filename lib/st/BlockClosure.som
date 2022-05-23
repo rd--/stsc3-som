@@ -1,5 +1,16 @@
 BlockClosure = (
 
+cull: firstArg = (
+	"Activate the receiver, with one or zero arguments."
+	self numArgs >= 1 ifTrue: [ ^self value: firstArg ].
+	^self value
+)
+
+numArgs = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 value = (
 	<primitive: 81>
 	^self valueWithArguments: #()

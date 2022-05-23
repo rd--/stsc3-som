@@ -26,10 +26,23 @@ import Interpreter.Som.Tbl
 import Interpreter.Som.Types
 import Interpreter.Som.Vec
 
+-- * Types
+
 -- | (Holder, selector), code, receiver, arguments, answer.
 type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
 
 data CoreOpt = CoreOpt { coreOptTyp :: SystemType, coreOptLit :: LiteralConstructors, coreOptPrim :: PrimitiveDispatcher }
+
+-- * Error
+
+vmBacktrace :: Vm ()
+vmBacktrace = do
+  ctx <- vmContext
+  liftIO (putStrLn "Vm: Backtrace")
+  vmContextPrint ctx
+
+vmErrorWithBacktrace :: String -> [Object] -> Vm t
+vmErrorWithBacktrace msg obj = vmBacktrace >> objectListError obj msg
 
 -- * Copy
 
@@ -171,13 +184,15 @@ contextAssign (Context c p) k v =
 
 {- | Add blockFrame to blockContext.
      For blocks with no arguments and no temporaries and no return statements,
-     the context could be elided.
+     the context could perhaps be elided.
 -}
 contextAddBlockContext :: Object -> [Object] -> Vm Context
 contextAddBlockContext blockObject arguments = do
   let Object _ (DataBlock _ blockContext lambda) = blockObject
       Expr.Lambda _ blockArguments (St.Temporaries blockTemporaries) _ = lambda
-  when (length blockArguments /= length arguments) (vmError "contextAddBlockContext: arity error")
+  when
+    (length blockArguments /= length arguments)
+    (vmErrorWithBacktrace "contextAddBlockContext: arity error" (blockObject : arguments))
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
   return (contextAdd blockContext (BlockContext blockObject localVariables))
 
@@ -532,13 +547,13 @@ classSuperclassOf (Object _ obj) =
      Metaclass should be an ordinary class, it is looked up in the global dictionary.
 -}
 classMetaclass :: Object -> Vm Object
-classMetaclass (Object _ obj) =
+classMetaclass receiver@(Object _ obj) =
   case obj of
     DataClass (cd,isMeta) cVar mCache ->
       if isMeta
       then vmGlobalResolveOrError "Metaclass"
       else return (Object "Class" (DataClass (cd,True) cVar mCache))
-    _ -> vmError "classMetaclass"
+    _ -> vmErrorWithBacktrace "classMetaclass" [receiver]
 
 objectClass :: Object -> Vm Object
 objectClass rcv@(Object nm obj) =

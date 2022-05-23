@@ -396,7 +396,7 @@ vmContextPrint (Context node parent) = do
 objectError :: Object -> String -> Vm t
 objectError o msg = objectPrint o >> vmError msg
 
-objectListError :: [Object] -> String -> Vm Object
+objectListError :: [Object] -> String -> Vm t
 objectListError o msg = objectListPrint o >> vmError (printf "%s: arity=%d" msg (length o))
 
 -- * Accessors

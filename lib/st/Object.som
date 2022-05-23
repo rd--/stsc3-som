@@ -123,6 +123,7 @@ enclosedSetElement = (
 error: aString = (
         Transcript show: ('Object>>error: ' , aString , ' at: ', self class name); cr.
         Smalltalk printContext.
+	Smalltalk error.
 	^ nil
 )
 
@@ -178,11 +179,11 @@ ifNil: nilBlock = (
 
 ifNotNil: ifNotNilBlock = (
 	"Evaluate the block, unless I'm == nil (q.v.)"
-	^ ifNotNilBlock value
+	^ ifNotNilBlock cull: self
 )
 
 ifNil: ifNilBlock ifNotNil: ifNotNilBlock = (
-	^ifNotNilBlock value
+	^ifNotNilBlock cull: self
 )
 
 initialize = (
@@ -216,6 +217,10 @@ isNil = (
 
 isNumber = (
 	^false
+)
+
+isString = (
+	^ false
 )
 
 isSymbol = (
@@ -299,6 +304,13 @@ printString = (
 	aStream := WriteStream on: (String new: 16).
 	self printOn: aStream.
 	^aStream contents
+)
+
+printStringLimitedTo: limit = (
+	| limitedString |
+	limitedString := self printString.
+	limitedString size < limit ifTrue: [^ limitedString].
+	^ (limitedString copyFrom: 1 to: limit) , '...etc...'
 )
 
 putOn:aStream = (

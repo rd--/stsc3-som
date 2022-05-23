@@ -339,7 +339,7 @@ arrayType = (
 )
 
 new = (
-	^self new: 10
+	^ self new: 10
 )
 
 new: anInteger = (
@@ -354,7 +354,7 @@ newFrom: aCollection = (
 	| answer |
 	answer := self new: aCollection size.
 	answer addAll: aCollection.
-	^answer
+	^ answer
 )
 
 ofSize: n = (
