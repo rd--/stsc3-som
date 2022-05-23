@@ -8,6 +8,18 @@ allSelectors = (
                 stream nextPut: each ] ] ]) asIdentitySet
 )
 
+allSuperclasses = (
+	"Answer an OrderedCollection of the receiver's and the receiver's
+	ancestor's superclasses. The first element is the receiver's immediate
+	superclass, followed by its superclass; the last element is Object."
+	| temp |
+	^ self superclass == nil
+		ifTrue: [ OrderedCollection new]
+		ifFalse: [temp := self superclass allSuperclasses.
+			temp addFirst: self superclass.
+			temp]
+)
+
 basicNew = (
 	<primitive: 70>
 	self isVariable ifTrue: [^self basicNew: 0].
@@ -93,6 +105,16 @@ selectorsDo: selectorBlock = (
 superclass = (
 	<primitive: -1>
 	self primitiveFailed
+)
+
+withAllSuperclasses = (
+	"Answer an OrderedCollection of the receiver and the receiver's
+	superclasses. The first element is the receiver,
+	followed by its superclass; the last element is Object."
+	| temp |
+	temp := self allSuperclasses.
+	temp addFirst: self.
+	^ temp
 )
 
 withAllSuperclassesDo: aBlock = (

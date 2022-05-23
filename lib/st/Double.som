@@ -117,11 +117,6 @@ shallowCopy= (
 
 ----
 
-infinity = (
-	<primitive: -1>
-        ^1.0 / 0.0
-)
-
 fromString: aString = (
 	<primitive: -1>
         self primitiveFailed: #fromString:

@@ -123,7 +123,7 @@ enclosedSetElement = (
 error: aString = (
         Transcript show: ('Object>>error: ' , aString , ' at: ', self class name); cr.
         Smalltalk printContext.
-	Smalltalk error.
+	Smalltalk halt.
 	^ nil
 )
 

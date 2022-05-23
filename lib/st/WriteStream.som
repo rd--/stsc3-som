@@ -21,6 +21,16 @@ crtab: anInteger = (
 	anInteger timesRepeat: [self nextPut: Character tab]
 )
 
+growTo: anInteger = (
+	"anInteger is the required minimal new size of the collection"
+	| oldSize grownCollection newSize |
+	oldSize := collection size.
+	newSize := anInteger + (oldSize // 4 max: 20).
+	grownCollection := collection class new: newSize.
+	collection := grownCollection replaceFrom: 1 to: oldSize with: collection startingAt: 1.
+	writeLimit := collection size.
+)
+
 next: anInteger putAll: aCollection startingAt: startIndex = (
 	"Store the next anInteger elements from the given collection."
 	| newEnd |
@@ -69,9 +79,12 @@ on: aCollection from: firstIndex to: lastIndex = (
 )
 
 pastEndPut: anObject = (
-	collection grow.
+	"Grow the collection by doubling the size, but keeping the growth between 20 and 1000000.
+	Then put <anObject> at the current write position."
+	collection := collection grownBy: ((collection size max: 20) min: 1000000).
 	writeLimit := collection size.
-	collection at: (position := position + 1) put: anObject
+	collection at: (position := position + 1) put: anObject.
+	^ anObject
 )
 
 position: anInteger = (
