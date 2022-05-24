@@ -756,7 +756,7 @@ black = (
 )
 
 blue = (
-	^Blue
+	^ Color r: 0 g: 0 b: 1
 )
 
 blueberry = (
@@ -865,7 +865,7 @@ gray: brightness = (
 )
 
 green = (
-	^Green
+	^Color r: 0 g: 1 b: 0
 )
 
 h: hue s: saturation v: brightness = (
@@ -1243,7 +1243,7 @@ random = (
 )
 
 red = (
-	^Red
+	^ Color r: 1 g: 0 b: 0
 )
 
 salmon = (
@@ -1427,7 +1427,7 @@ wheel: thisMany saturation: s brightness: v = (
 )
 
 white = (
-	^White
+	^ Color r: 1 g: 1 b: 1
 )
 
 yellow = (

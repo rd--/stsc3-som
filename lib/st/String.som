@@ -113,6 +113,11 @@ storeOn: aStream = (
 
 ----
 
+empty = (
+	"A canonicalized empty String instance."
+	^ ''
+)
+
 isVariable = (
 	^true
 )

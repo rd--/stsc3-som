@@ -1,0 +1,11 @@
+Compiler = Object (
+
+----
+
+evaluate: aString = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+)
+

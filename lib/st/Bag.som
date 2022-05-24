@@ -13,6 +13,10 @@ add: newObject withOccurrences: anInteger = (
 	^newObject
 )
 
+asBag = (
+	^ self
+)
+
 at: index = (
 	self errorNotKeyed
 )

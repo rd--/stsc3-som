@@ -1,5 +1,11 @@
 Array = ArrayedCollection (
 
++* aCollection = (
+	"Premultiply aCollection by self.  aCollection should be an Array or Matrix.
+	 The name of this method is APL's +.x squished into Smalltalk syntax."
+	^aCollection preMultiplyByArray: self
+)
+
 at: index = (
 	<primitive: 60>
 	self primitiveFailed
@@ -29,6 +35,10 @@ extendedWith: val = (
 	^ result
 )
 
+isArray = (
+	^true
+)
+
 isLiteral = (
 	^self class == Array and: [
 		self isLiteralIfContainedBy: IdentitySet new ]
@@ -46,6 +56,17 @@ isLiteralIfContainedBy: parents = (
 			ifFalse: [ element isLiteral ]) ifFalse: [ ^false ] ].
 	parents remove: self.
 	^true
+)
+
+literalEqual: other = (
+	^ self class == other class and: [self = other]
+)
+
+preMultiplyByArray: a = (
+	"Answer a+*self where a is an Array.  Arrays are always understood as column vectors,
+	 so an n element Array is an n*1 Array.  This multiplication is legal iff self size = 1."
+	self size = 1 ifFalse: [self error: 'dimensions do not conform'].
+	^a * self first
 )
 
 prependedWith: val = (
@@ -92,6 +113,11 @@ size = (
 )
 
 ----------------------------
+
+empty = (
+	"A canonicalized empty Array instance."
+	^ #()
+)
 
 isVariable = (
 	^true

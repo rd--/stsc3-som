@@ -1,0 +1,13 @@
+Random = Object (
+
+----
+
+next = (
+	^ 1.0 atRandom
+)
+
+nextInt: anInteger = (
+	^ anInteger atRandom
+)
+
+)

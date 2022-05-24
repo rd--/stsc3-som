@@ -13,6 +13,32 @@ next = (
 
 )
 
+next: anInteger = (
+	"Answer the next anInteger elements of my collection.  overriden for efficiency"
+	| ans endPosition |
+	endPosition := position + anInteger  min:  readLimit.
+	ans := collection copyFrom: position+1 to: endPosition.
+	position := endPosition.
+	^ans
+)
+
+next: n into: aCollection startingAt: startIndex = (
+	"Read n objects into the given collection.
+	Return aCollection or a partial copy if less than
+	n elements have been read."
+	| max |
+	max := (readLimit - position) min: n.
+	aCollection
+		replaceFrom: startIndex
+		to: startIndex+max-1
+		with: collection
+		startingAt: position+1.
+	position := position + max.
+	max = n
+		ifTrue:[^aCollection]
+		ifFalse:[^aCollection copyFrom: 1 to: startIndex+max-1]
+)
+
 nextPut: anObject = (
 	self shouldNotImplement
 
@@ -41,6 +67,18 @@ readInto: aCollection startingAt: startIndex count: n = (
 		startingAt: position+1.
 	position := position + max.
 	^max
+)
+
+upTo: anObject = (
+	"fast version using indexOf:"
+	| start end |
+	start := position+1.
+	end := collection indexOf: anObject startingAt: start.
+	"not present--return rest of the collection"
+	(end = 0 or: [end > readLimit]) ifTrue: [ ^self upToEnd ].
+	"skip to the end and return the data passed over"
+	position := end.
+	^collection copyFrom: start to: (end-1)
 )
 
 ----------------------------

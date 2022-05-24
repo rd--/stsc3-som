@@ -1,5 +1,10 @@
 Stream = Object (
 
+any: numberOfElements = (
+	"See Collection protocol."
+	^ self next: numberOfElements
+)
+
 atEnd = (
 	self subclassResponsibility
 )
@@ -10,6 +15,20 @@ contents = (
 
 do: aBlock = (
 	[ self atEnd ] whileFalse: [ aBlock value: self next ]
+)
+
+flatten = (
+	^ Generator on: [:g |
+		[self atEnd] whileFalse: [
+			self next in: [:object |
+				((object isCollection and: [object isString not]) or: [object isStream])
+					ifFalse: [g yield: object]
+					ifTrue: [object flatten do: [:each | g yield: each]]]]]
+)
+
+isStream = (
+	"Return true if the receiver responds to the stream protocol"
+	^true
 )
 
 next = (
@@ -49,6 +68,11 @@ readInto: aCollection startingAt: startIndex count: n = (
 		obj := self next ifNil: [ ^i ].
 		aCollection at: startIndex + i put: obj].
 	^n
+)
+
+take: maxNumberOfElements = (
+	"See Collection protocol."
+	^ self any: maxNumberOfElements
 )
 
 ----------------------------

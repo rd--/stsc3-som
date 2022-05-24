@@ -13,6 +13,17 @@ SequenceableCollection = Collection (
 		  with: otherCollection asCollection
 )
 
+after: target ifAbsent: exceptionBlock = (
+	"Answer the element after target.  Answer the result of evaluation
+	the exceptionBlock if target is not in the receiver, or if there are
+	no elements after it."
+	| index |
+	index := self indexOf: target.
+	^ (index = 0 or: [index = self size])
+		ifTrue: [exceptionBlock value]
+		ifFalse: [self at: index + 1]
+)
+
 any: numberOfElements = (
 	^ self first: numberOfElements
 )
@@ -43,6 +54,17 @@ atWrap: index = (
 	^ self at: index - 1 \\ self size + 1
 )
 
+before: target ifAbsent: exceptionBlock = (
+	"Answer the receiver's element immediately before target. Answer
+	the result of evaluating the exceptionBlock if target is not an element
+	of the receiver, or if there are no elements before it."
+	| index |
+	index := self indexOf: target.
+	^ (index = 0 or: [index = 1])
+		ifTrue: [exceptionBlock value]
+		ifFalse: [self at: index - 1]
+)
+
 beginsWith: sequence = (
 	"Answer true if the receiver starts with the argument collection."
 	| sequenceSize |
@@ -64,6 +86,15 @@ collect: aBlock = (
 		[:index |
 		newCollection at: index put: (aBlock value: (self at: index))].
 	^ newCollection
+)
+
+concatenation = (
+	"Flattens the collection by one level into an Array. Avoids using #gather: and #streamContents: for performance reasons."
+	| result index |
+	result := Array new: (self inject: 0 into: [:sum :each | sum + each size]).
+	index := 0.
+	self do: [:each | each do: [:item | result at: (index := index+1) put: item]].
+	^ result
 )
 
 copy = (
@@ -110,6 +141,20 @@ copyReplaceFrom: start to: stop with: replacementCollection = (
 	^newSequenceableCollection
 )
 
+copyWith: newElement  = (
+	"Answer a copy of the receiver that is 1 bigger than the receiver and has
+	newElement at the last element."
+	| newIC |
+	newIC := self species new: self size + 1.
+	newIC
+		replaceFrom: 1
+		to: self size
+		with: self
+		startingAt: 1.
+	newIC at: newIC size put: newElement.
+	^newIC
+)
+
 do: aBlock = (
 	1 to: self size do:
 		[:index | aBlock value: (self at: index)]
@@ -150,6 +195,23 @@ first: n = (
 	^ self copyFrom: 1 to: n
 )
 
+flatten = (
+	"Similar to #concatenation but removes all nesting except for strings.
+Example: {3 .4 .{2 .4 .{'hi'} .'ho'}} flatten = {3 .4 .2 .4 .'hi' .'ho'}"
+	^ Array streamContents: [:stream |
+		self do: [:each |
+			((each isCollection and: [each isString not]) or: [each isStream])
+				ifFalse: [stream nextPut: each]
+				ifTrue: [stream nextPutAll: each flatten]]]
+)
+
+flattened = (
+	"An alias for #flatten
+	This message's name is in line with messages like #sorted or #reversed
+	while #flatten's is in line with #reverse (as per ANSI, see comment there)"
+	^ self flatten
+)
+
 fourth = (
 	^ self at: 4
 )
@@ -175,6 +237,29 @@ from: startIndex to: endIndex put: anObject = (
 			written := written + thisWrite
 		].
 	^anObject
+)
+
+groupsDo: aBlock  = (
+	"Evaluate aBlock with my elements taken n at a time, where n is the number of arguments of aBlock. Ignore any leftovers at the end."
+	| index argumentArray numArgs endIndex |
+	numArgs := aBlock numArgs.
+	numArgs
+		caseOf: {
+			[ 0 ] -> [ ^self error: 'At least one block argument expected.' ].
+			[ 1 ] -> [ ^self do: aBlock ].
+			[ 2 ] -> [ ^self pairsDo: aBlock ] }
+		otherwise: [].
+	argumentArray := Array new: numArgs.
+	index := 1.
+	endIndex := self size - numArgs + 1.
+	[ index <= endIndex ] whileTrue: [
+		argumentArray
+			replaceFrom: 1
+			to: numArgs
+			with: self
+			startingAt: index.
+		aBlock valueWithArguments: argumentArray.
+		index := index + numArgs ].
 )
 
 grownBy: length = (
@@ -257,6 +342,10 @@ isSequenceable = (
 	^ true
 )
 
+join = (
+	^ self joinSeparatedBy: ''
+)
+
 joinOn: stream = (
 	^ self joinOn: stream separatedBy: ''
 )
@@ -291,6 +380,12 @@ lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
 	| index |
 	(index := self lastIndexOf: anElement startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
+)
+
+pairsDo: aBlock  = (
+	"Evaluate aBlock with my elements taken two at a time.  If there's an odd number of items, ignore the last one.  Allows use of a flattened array for things that naturally group into pairs.  See also pairsCollect:"
+	1 to: self size // 2 do:
+		[:index | aBlock value: (self at: 2 * index - 1) value: (self at: 2 * index)]
 )
 
 putOn: aStream = (
@@ -328,6 +423,25 @@ select: aBlock = (
 	^ aStream contents
 )
 
+shuffle = (
+	^self shuffleBy: Random
+)
+
+shuffleBy: aRandom = (
+	"Durstenfeld's version of the Fisher-Yates shuffle"
+	self size to: 2 by: -1 do: [ :i |
+		self swap: i with: (aRandom nextInt: i) ]
+)
+
+shuffledBy: aRandom = (
+	"Durstenfeld's version of the Fisher-Yates shuffle"
+	^self copy shuffleBy: aRandom
+)
+
+shuffled = (
+	^self shuffledBy: Random
+)
+
 splitBy: aCollection = (
 	^Array streamContents:[:stream|
 		self splitBy: aCollection do:[:each| stream nextPut: each].
@@ -345,6 +459,14 @@ splitBy: aCollection do: aBlock = (
 	aBlock value: (self copyFrom: lastIndex to: self size).
 )
 
+swap: oneIndex with: anotherIndex = (
+	"Move the element at oneIndex to anotherIndex, and vice-versa."
+	| element |
+	element := self at: oneIndex.
+	self at: oneIndex put: (self at: anotherIndex).
+	self at: anotherIndex put: element
+)
+
 third = (
 	^ self at: 3
 )
@@ -359,6 +481,36 @@ with: otherCollection collect: twoArgBlock = (
 			value: (self at: index)
 			value: (otherCollection at: index))].
 	^ result
+)
+
+with: otherCollection do: twoArgBlock = (
+	"Evaluate twoArgBlock with corresponding elements from this collection and otherCollection."
+	self isOfSameSizeCheck: otherCollection.
+	1 to: self size do:
+		[:index |
+		twoArgBlock value: (self at: index)
+				value: (otherCollection at: index)]
+)
+
+withIndexCollect: elementAndIndexBlock = (
+	"Just like with:collect: except that the iteration index supplies the second argument to the block."
+	| result |
+	result := self species new: self size.
+	1 to: self size do:
+		[:index | result at: index put:
+		(elementAndIndexBlock
+			value: (self at: index)
+			value: index)].
+	^ result
+)
+
+withIndexDo: elementAndIndexBlock = (
+	"Just like with:do: except that the iteration index supplies the second argument to the block."
+	1 to: self size do:
+		[:index |
+		elementAndIndexBlock
+			value: (self at: index)
+			value: index]
 )
 
 ----

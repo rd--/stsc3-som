@@ -1,5 +1,21 @@
 Collection = (
 
+* arg = (
+	^ arg adaptToCollection: self andSend: #*
+)
+
++ arg = (
+	^ arg adaptToCollection: self andSend: #+
+)
+
+- arg = (
+	^ arg adaptToCollection: self andSend: #-
+)
+
+/ arg = (
+	^ arg adaptToCollection: self andSend: #/
+)
+
 adaptToCollection: rcvr andSend: selector = (
 	rcvr isSequenceable & self isSequenceable ifFalse:
 		[self error: 'Only sequenceable collections may be combined arithmetically'].
@@ -60,6 +76,11 @@ asArray = (
 	^ array
 )
 
+asBag = (
+	"Answer a Bag whose elements are the elements of the receiver."
+	^ Bag withAll: self
+)
+
 asCollection = (
 	^ self
 )
@@ -77,6 +98,25 @@ asSet = (
 
 associationsDo: aBlock = (
 	self do: aBlock
+)
+
+atRandom = (
+	"Answer a random element of the receiver.  Uses the process-local random number generator. Causes an error if self has no elements."
+	^self atRandom: Random
+)
+
+atRandom: aGenerator = (
+	"Answer a random element of the receiver. Uses aGenerator which
+	should be kept by the user in a variable and used every time. Use
+	this instead of #atRandom for better uniformity of random numbers because
+	only you use the generator. Causes an error if self has no elements."
+	| randomIndex index |
+	self emptyCheck.
+	randomIndex := aGenerator nextInt: self size.
+	index := 1.
+	self do: [ :each |
+		index = randomIndex ifTrue: [ ^each ].
+		index := index + 1 ]
 )
 
 average = (
@@ -218,6 +258,11 @@ inject: thisValue into: binaryBlock = (
 
 intersection: aCollection = (
 	^ self select: [:each | aCollection includes: each]
+)
+
+isCollection = (
+	"Return true if the receiver is some sort of Collection and responds to basic collection messages such as #size and #do:"
+	^true
 )
 
 isEmpty = (
