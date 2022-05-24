@@ -1,0 +1,98 @@
+TestSuite = Object (
+
+| tests resources name |
+
+addDependentToHierachy: anObject = (
+	self addDependent: anObject.
+	self tests do: [ :each | each addDependentToHierachy: anObject]
+)
+
+addTest: aTest = (
+	self tests add: aTest
+)
+
+addTests: aCollection = (
+	aCollection do: [:eachTest | self addTest: eachTest]
+)
+
+debug = (
+	self tests do:
+		[ : each | self changed: each.
+		each debug ]
+
+)
+
+defaultResources = (
+	^self tests
+		inject: Set new
+		into: [:coll :testCase |
+			coll
+				addAll: testCase resources;
+				yourself]
+)
+
+name = (
+
+	^name
+)
+
+name: aString = (
+
+	name := aString
+)
+
+removeDependentFromHierachy: anObject = (
+	self removeDependent: anObject.
+	self tests do: [ :each | each removeDependentFromHierachy: anObject]
+)
+
+resources = (
+	^ resources ifNil: [resources := self defaultResources]
+)
+
+resources: anObject = (
+	resources := anObject
+)
+
+resultClass = (
+
+	^ TestResult.
+
+)
+
+run = (
+	| result |
+ 	result := self resultClass new.
+	self resources do: [ :res |
+		res isAvailable ifFalse: [^res signalInitializationError]].
+	[self run: result] ensure: [self resources do: [:each | each reset]].
+	^result
+)
+
+run: aResult = (
+	self tests do: [:each |
+		self changed: each.
+		each run: aResult].
+)
+
+tests = (
+	^ tests ifNil: [tests := OrderedCollection new]
+)
+
+
+----------------------------
+
+named: aString = (
+
+	^self new
+		name: aString;
+		yourself
+)
+
+
+comment = (^'
+This is a Composite of Tests, either TestCases or other TestSuites. The common protocol is #run: aTestResult and the dependencies protocol
+')
+
+
+)

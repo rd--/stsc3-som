@@ -10,6 +10,12 @@ at: index put: value = (
 	self primitiveFailed
 )
 
+atWrap: index = (
+	"Optimized to go through the primitive if possible"
+	<primitive: 60>
+	^ self at: index - 1 \\ self size + 1
+)
+
 doIndexes: block = (
 	1 to: self size do: [:i | block value: i. ]
 )

@@ -1,5 +1,9 @@
 CharacterSet = (
 
+species = (
+	^CharacterSet
+)
+
 ----
 
 | Ascii CrLf |

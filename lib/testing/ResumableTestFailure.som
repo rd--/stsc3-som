@@ -1,0 +1,12 @@
+ResumableTestFailure = TestFailure (
+
+isResumable = (
+	"Of course a ResumableTestFailure is resumable ;-)"
+	^true
+)
+
+sunitExitWith: aValue = (
+	self resume: aValue
+)
+
+)

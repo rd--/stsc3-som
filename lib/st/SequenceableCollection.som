@@ -13,6 +13,10 @@ SequenceableCollection = Collection (
 		  with: otherCollection asCollection
 )
 
+any: numberOfElements = (
+	^ self first: numberOfElements
+)
+
 asArray = (
 	^ Array withAll: self
 )
@@ -31,6 +35,12 @@ atAllPut: anObject = (
 	(size := self size) > 50
 		ifTrue: [self from: 1 to: size put: anObject]
 		ifFalse: [1 to: size do: [:index | self at: index put: anObject]]
+)
+
+atWrap: index = (
+	"Answer the index'th element of the receiver.  If index is out of bounds,
+	let it wrap around from the end to the beginning until it is in bounds."
+	^ self at: index - 1 \\ self size + 1
 )
 
 beginsWith: sequence = (
@@ -126,8 +136,22 @@ endsWithAnyOf: aCollection = (
 	^aCollection anySatisfy:[:suffix| self endsWith: suffix]
 )
 
+fifth = (
+	^ self at: 5
+)
+
 first = (
 	^ self at: 1
+)
+
+first: n = (
+	"Answer the first n elements of the receiver.
+	Raise an error if there are not enough elements."
+	^ self copyFrom: 1 to: n
+)
+
+fourth = (
+	^ self at: 4
 )
 
 from: start to: stop do: aBlock = (
@@ -233,6 +257,22 @@ isSequenceable = (
 	^ true
 )
 
+joinOn: stream = (
+	^ self joinOn: stream separatedBy: ''
+)
+
+joinOn: stream separatedBy: aSeparator = (
+	self
+		do: [:ea | stream nextPutAll: ea asString]
+		separatedBy: [stream nextPutAll: aSeparator asString].
+)
+
+joinSeparatedBy: aSeparator = (
+	"Returns a string, which is a concatenation of each element's string representation separated by another string."
+	^ String streamContents: [:stream |
+		self joinOn: stream separatedBy: aSeparator]
+)
+
 last = (
 	^ self at: self size
 )
@@ -255,6 +295,10 @@ lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
 
 putOn: aStream = (
 	self do: [ :each | each putOn: aStream ]
+)
+
+readStream = (
+	^ ReadStream on: self
 )
 
 replaceFrom: start to: stop with: replacement = (

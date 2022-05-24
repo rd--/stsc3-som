@@ -1,5 +1,31 @@
 Dictionary = HashedCollection (
 
+= anObject = (
+	self == anObject ifTrue: [ ^true ].
+	self species == anObject species ifFalse: [ ^false ].
+	self size = anObject size ifFalse: [ ^false ].
+	self associationsDo: [ :association |
+		(anObject at: association key ifAbsent: [ ^false ]) = association value
+			ifFalse: [ ^false ] ].
+	^true
+)
+
+add: anAssociation = (
+	| index |
+	index := self scanFor: anAssociation key.
+	(array at: index)
+		ifNil: [ self atNewIndex: index put: anAssociation ]
+		ifNotNil: [ :element |	element value: anAssociation value ].
+	^anAssociation
+)
+
+addAll: aCollection = (
+	aCollection == self ifFalse: [
+		aCollection associationsDo: [:assoc| self add: assoc].
+	].
+	^aCollection
+)
+
 associationAt: key = (
 	^ self associationAt: key ifAbsent: [self errorKeyNotFound: key]
 )
@@ -22,6 +48,14 @@ associationsDo: aBlock = (
 	1 to: array size do: [ :index |
 		(array at: index) ifNotNil: [ :element |
 			aBlock value: element ] ]
+)
+
+associationsSelect: aBlock = (
+	| newCollection |
+	newCollection := self copyEmpty.
+	self associationsDo: [ :each |
+		(aBlock value: each) ifTrue: [ newCollection add: each ] ].
+	^newCollection
 )
 
 at: key = (
@@ -68,82 +102,6 @@ at: key put: anObject = (
 	^anObject
 )
 
-keyAtIdentityValue: value = (
-	^self keyAtIdentityValue: value ifAbsent: [self errorValueNotFound]
-)
-
-keyAtIdentityValue: value ifAbsent: exceptionBlock = (
-	self associationsDo:
-		[:association | value == association value ifTrue: [^association key]].
-	^exceptionBlock value
-)
-
-keyAtValue: value = (
-	^self keyAtValue: value ifAbsent: [self errorValueNotFound]
-)
-
-keyAtValue: value ifAbsent: exceptionBlock = (
-	self associationsDo:
-		[:association | value = association value ifTrue: [^association key]].
-	^exceptionBlock value
-)
-
-keys = (
-	^Array new: self size streamContents: [:s| self keysDo: [:key| s nextPut: key]]
-)
-
-values = (
-	^Array new: self size streamContents: [ :stream |
-		self valuesDo: [ :value | stream nextPut: value] ]
-)
-
-addAll: aCollection = (
-	aCollection == self ifFalse: [
-		aCollection associationsDo: [:assoc| self add: assoc].
-	].
-	^aCollection
-)
-
-add: anAssociation = (
-	| index |
-	index := self scanFor: anAssociation key.
-	(array at: index)
-		ifNil: [ self atNewIndex: index put: anAssociation ]
-		ifNotNil: [ :element |	element value: anAssociation value ].
-	^anAssociation
-)
-
-= anObject = (
-	self == anObject ifTrue: [ ^true ].
-	self species == anObject species ifFalse: [ ^false ].
-	self size = anObject size ifFalse: [ ^false ].
-	self associationsDo: [ :association |
-		(anObject at: association key ifAbsent: [ ^false ]) = association value
-			ifFalse: [ ^false ] ].
-	^true
-)
-
-postCopy = (
-	super postCopy.
-	array := array collect: [ :association |
-		association ifNotNil: [ association copy ] ]
-)
-
-associationsDo: aBlock = (
-	tally = 0 ifTrue: [ ^self].
-	1 to: array size do: [ :index |
-		(array at: index) ifNotNil: [ :element |
-			aBlock value: element ] ]
-)
-
-associationsSelect: aBlock = (
-	| newCollection |
-	newCollection := self copyEmpty.
-	self associationsDo: [ :each |
-		(aBlock value: each) ifTrue: [ newCollection add: each ] ].
-	^newCollection
-)
-
 collect: aBlock = (
 	| newCollection |
 	newCollection := self species new: self size.
@@ -154,109 +112,6 @@ collect: aBlock = (
 
 do: aBlock = (
 	self valuesDo: aBlock
-)
-
-keysAndValuesDo: aBlock = (
-	^self associationsDo:[:assoc|
-		aBlock value: assoc key value: assoc value].
-)
-
-keysDo: aBlock = (
-	self associationsDo: [:association | aBlock value: association key]
-)
-
-select: aBlock = (
-	| newCollection |
-	newCollection := self copyEmpty.
-	self associationsDo: [ :each |
-		(aBlock value: each value) ifTrue: [
-			newCollection add: each copy ] ].
-	^newCollection
-)
-
-valuesDo: aBlock = (
-	self associationsDo: [:association | aBlock value: association value]
-)
-
-flattenOnStream: aStream = (
-	^aStream writeDictionary: self.
-)
-
-printElementsOn: aStream = (
-	aStream nextPut: $(.
-	self size > 100
-		ifTrue: [aStream nextPutAll: 'size '.
-			self size printOn: aStream]
-		ifFalse: [self keysInOrder
-				do: [:key | aStream print: key;
-						 nextPutAll: '->';
-						 print: (self at: key);
-						 space]].
-	aStream nextPut: $)
-)
-
-storeOn: aStream = (
-	| noneYet |
-	aStream nextPutAll: '(('.
-	aStream nextPutAll: self class name.
-	aStream nextPutAll: ' new)'.
-	noneYet := true.
-	self associationsDo:
-			[:each |
-			noneYet
-				ifTrue: [noneYet := false]
-				ifFalse: [aStream nextPut: $;].
-			aStream nextPutAll: ' add: '.
-			aStream store: each].
-	noneYet ifFalse: [aStream nextPutAll: '; yourself'].
-	aStream nextPut: $)
-)
-
-keysAndValuesRemove: keyValueBlock = (
-	| removals |
-	removals := OrderedCollection new.
-	self associationsDo:
-		[:assoc | (keyValueBlock value: assoc key value: assoc value)
-			ifTrue: [removals add: assoc key]].
- 	removals do:
-		[:aKey | self removeKey: aKey]
-)
-
-removeKey: key = (
-	^ self removeKey: key ifAbsent: [self errorKeyNotFound: key]
-)
-
-removeKey: key ifAbsent: aBlock = (
-	| index association |
-	index := self scanFor: key.
-	association := (array at: index) ifNil: [ ^aBlock value ].
-	array at: index put: nil.
-	tally := tally - 1.
-	self fixCollisionsFrom: index.
-	^association value
-)
-
-remove: anObject ifAbsent: exceptionBlock = (
-	self shouldNotImplement
-)
-
-includesAssociation: anAssociation = (
-  ^ (self
-      associationAt: anAssociation key
-      ifAbsent: [ ^ false ]) value = anAssociation value
-)
-
-includesIdentity: anObject = (
-	self do: [:each | anObject == each ifTrue: [^ true]].
-	^ false
-)
-
-includesKey: key = (
-	(array at: (self scanFor: key)) ifNil: [ ^false ] ifNotNil: [ ^true ]
-)
-
-isDictionary = (
-	^true
 )
 
 errorValueNotFound = (
@@ -283,12 +138,115 @@ fixCollisionsFrom: start = (
 			array at: index put: nil ] ]
 )
 
+flattenOnStream: aStream = (
+	^aStream writeDictionary: self.
+)
+
+includesAssociation: anAssociation = (
+  ^ (self
+      associationAt: anAssociation key
+      ifAbsent: [ ^ false ]) value = anAssociation value
+)
+
+includesIdentity: anObject = (
+	self do: [:each | anObject == each ifTrue: [^ true]].
+	^ false
+)
+
+includesKey: key = (
+	(array at: (self scanFor: key)) ifNil: [ ^false ] ifNotNil: [ ^true ]
+)
+
+isDictionary = (
+	^true
+)
+
+keyAtIdentityValue: value = (
+	^self keyAtIdentityValue: value ifAbsent: [self errorValueNotFound]
+)
+
+keyAtIdentityValue: value ifAbsent: exceptionBlock = (
+	self associationsDo:
+		[:association | value == association value ifTrue: [^association key]].
+	^exceptionBlock value
+)
+
+keyAtValue: value = (
+	^self keyAtValue: value ifAbsent: [self errorValueNotFound]
+)
+
+keyAtValue: value ifAbsent: exceptionBlock = (
+	self associationsDo:
+		[:association | value = association value ifTrue: [^association key]].
+	^exceptionBlock value
+)
+
+keys = (
+	^Array new: self size streamContents: [:s| self keysDo: [:key| s nextPut: key]]
+)
+
+keysAndValuesDo: aBlock = (
+	^self associationsDo:[:assoc|
+		aBlock value: assoc key value: assoc value].
+)
+
+keysAndValuesRemove: keyValueBlock = (
+	| removals |
+	removals := OrderedCollection new.
+	self associationsDo:
+		[:assoc | (keyValueBlock value: assoc key value: assoc value)
+			ifTrue: [removals add: assoc key]].
+ 	removals do:
+		[:aKey | self removeKey: aKey]
+)
+
+keysDo: aBlock = (
+	self associationsDo: [:association | aBlock value: association key]
+)
+
 noCheckNoGrowFillFrom: anArray = (
 	1 to: anArray size do: [ :index |
 		(anArray at: index) ifNotNil: [ :association |
 			array
 				at: (self scanForEmptySlotFor: association key)
 				put: association ] ]
+)
+
+postCopy = (
+	super postCopy.
+	array := array collect: [ :association |
+		association ifNotNil: [ association copy ] ]
+)
+
+printElementsOn: aStream = (
+	aStream nextPut: $(.
+	self size > 100
+		ifTrue: [aStream nextPutAll: 'size '.
+			self size printOn: aStream]
+		ifFalse: [self keysInOrder
+				do: [:key | aStream print: key;
+						 nextPutAll: '->';
+						 print: (self at: key);
+						 space]].
+	aStream nextPut: $)
+)
+
+remove: anObject ifAbsent: exceptionBlock = (
+	self shouldNotImplement
+)
+
+removeKey: key = (
+	^ self removeKey: key ifAbsent: [self errorKeyNotFound: key]
+)
+
+removeKey: key ifAbsent: aBlock = (
+	| index association |
+	index := self scanFor: key.
+	association := (array at: index) ifNil: [ ^aBlock value ].
+	array at: index put: nil.
+	tally := tally - 1.
+	self fixCollisionsFrom: index.
+	^association value
 )
 
 scanFor: anObject = (
@@ -300,6 +258,41 @@ scanFor: anObject = (
 			ifTrue: [ ^index ].
 		(index := index \\ size + 1) = start ] whileFalse.
 	self errorNoFreeSpace
+)
+
+select: aBlock = (
+	| newCollection |
+	newCollection := self copyEmpty.
+	self associationsDo: [ :each |
+		(aBlock value: each value) ifTrue: [
+			newCollection add: each copy ] ].
+	^newCollection
+)
+
+storeOn: aStream = (
+	| noneYet |
+	aStream nextPutAll: '(('.
+	aStream nextPutAll: self class name.
+	aStream nextPutAll: ' new)'.
+	noneYet := true.
+	self associationsDo:
+			[:each |
+			noneYet
+				ifTrue: [noneYet := false]
+				ifFalse: [aStream nextPut: $;].
+			aStream nextPutAll: ' add: '.
+			aStream store: each].
+	noneYet ifFalse: [aStream nextPutAll: '; yourself'].
+	aStream nextPut: $)
+)
+
+values = (
+	^Array new: self size streamContents: [ :stream |
+		self valuesDo: [ :value | stream nextPut: value] ]
+)
+
+valuesDo: aBlock = (
+	self associationsDo: [:association | aBlock value: association value]
 )
 
 ----------------------------
