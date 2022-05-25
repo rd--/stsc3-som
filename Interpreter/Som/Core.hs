@@ -58,12 +58,6 @@ mutableStringObject str = fmap (Object (toSymbol "String")) (stringToCharacterAr
 mutableSymbolObject :: String -> Vm Object
 mutableSymbolObject str = fmap (Object (toSymbol "Symbol")) (stringToCharacterArray str)
 
-immutableToMutableString :: ObjectData -> Vm ObjectData
-immutableToMutableString od =
-  case od of
-    DataImmutableString _ str -> stringToCharacterArray str
-    _ -> error "toMutableString: not immutable string"
-
 objectDataShallowCopy :: ObjectData -> Vm ObjectData
 objectDataShallowCopy od =
   case od of
@@ -71,6 +65,11 @@ objectDataShallowCopy od =
       pc <- vmProgramCounterIncrement
       ref <- toRef (vecShallowCopy vec)
       return (DataIndexable pc ref)
+    DataCharacterArray _ ref -> do
+      pc <- vmProgramCounterIncrement
+      cpy <- vecRefShallowCopy ref
+      return (DataCharacterArray pc cpy)
+    DataImmutableString False str -> stringToCharacterArray str
     DataIndexable _ ref -> do
       pc <- vmProgramCounterIncrement
       cpy <- vecRefShallowCopy ref
@@ -414,9 +413,10 @@ closureClass typ numArg =
 -- | Som/St.  Som array literals are mutable, St string literals are mutable...
 sysLiteralObject :: SystemType -> Object -> Vm Object
 sysLiteralObject typ obj =
-  case typ of
-    SomSystem -> objectShallowCopy obj
-    SmalltalkSystem -> return obj
+  case (typ, obj) of
+    (SomSystem, Object _ (DataArrayLiteral _)) -> objectShallowCopy obj
+    (SmalltalkSystem, Object _ (DataImmutableString False str))  -> mutableStringObject str
+    _ -> return obj
 
 {- | Evaluate expression.
 

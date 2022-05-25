@@ -397,16 +397,56 @@ readStream = (
 )
 
 replaceFrom: start to: stop with: replacement = (
-	replacement size = (stop - start + 1) ifFalse: [self error: 'Size of replacement doesnt match'].
+	"This destructively replaces elements from start to stop in the receiver.
+	Answer the receiver itself. Use copyReplaceFrom:to:with: for
+	insertion/deletion which may alter the size of the result."
+	replacement size = (stop - start + 1)
+		ifFalse: [self error: 'Size of replacement doesnt match'].
 	^self replaceFrom: start to: stop with: replacement startingAt: 1
 )
 
 replaceFrom: start to: stop with: replacement startingAt: repStart = (
+	"This destructively replaces elements from start to stop in the receiver
+	starting at index, repStart, in the sequenceable collection,
+	replacementCollection. Answer the receiver. No range checks are
+	performed."
+
 	| index repOff |
 	repOff := repStart - start.
 	index := start - 1.
 	[(index := index + 1) <= stop]
 		whileTrue: [self at: index put: (replacement at: repOff + index)]
+)
+
+reverse = (
+	"The ANSI standard (5.7.8.26) requires this method to return a copy of the receiver. If you want to reverse the collection in place, then use #reverseInPlace."
+	^self reversed
+)
+
+reverseInPlace = (
+	"Reverse this collection in place."
+	| start end |
+	start := 1.
+	end := self size.
+	[ start < end ] whileTrue: [
+		| temp |
+		temp := self at: start.
+		self
+			at: start put: (self at: end);
+			at: end put: temp.
+		start := start + 1.
+		end := end - 1 ]
+)
+
+reversed = (
+	"Answer a copy of the receiver with element order reversed."
+	"Example: 'frog' reversed"
+	| n result src |
+	n := self size.
+	result := self species ofSize: n.
+	src := n + 1.
+	1 to: n do: [:i | result at: i put: (self at: (src := src - 1))].
+	^ result
 )
 
 second = (
@@ -511,6 +551,10 @@ withIndexDo: elementAndIndexBlock = (
 		elementAndIndexBlock
 			value: (self at: index)
 			value: index]
+)
+
+writeStream = (
+	^ WriteStream on: self
 )
 
 ----

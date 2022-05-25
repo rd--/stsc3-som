@@ -36,6 +36,10 @@ isSymbol = (
 	^ true
 )
 
+isTestSelector = (
+	^ self beginsWith: 'test'
+)
+
 keywords = (
 	"Answer an array of the keywords that compose the receiver."
 	| result aStream i l char |
@@ -68,6 +72,10 @@ numArgs = (
 	^n
 )
 
+replaceFrom: start to: stop with: replacement startingAt: repStart = (
+	self errorNoModification
+)
+
 selectorPart = (
 	"return just my part after the class name if the receiver is a compound selector
 	 (otherwise the whole thing)"
@@ -75,6 +83,13 @@ selectorPart = (
 )
 
 shallowCopy = (
+)
+
+----
+
+newFrom: aCollection = (
+	"Answer an instance of me containing the same elements as aCollection."
+	^ (aCollection as: String) asSymbol
 )
 
 )

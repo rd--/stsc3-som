@@ -1,5 +1,29 @@
 String = ArrayedCollection (
 
+< aString = (
+	"Answer true if and only if the receiver collates before aString.  The collation
+	sequence is ascii with case differences."
+	^(self compare: aString) = 1
+)
+
+<= aString = (
+	"Answer true if and only if the receiver collates before aString or is the
+	same as aString.  The collation sequence is ascii with case differences."
+	^(self compare: aString) <= 2
+)
+
+> aString = (
+	"Answer true if and only if the receiver collates after aString.  The collation
+	sequence is ascii with case differences."
+	^(self compare: aString) = 3
+)
+
+>= aString = (
+	"Answer true if and only if the receiver collates after aString or is the
+	same as aString.  The collation sequence is ascii with case differences."
+	^(self compare: aString) >= 2
+)
+
 , anObject = (
 	^ self copyReplaceFrom: self size + 1
 		  to: self size
@@ -65,20 +89,48 @@ basicAt: index put: aCharacter = (
 		ifFalse: [self error: 'Strings only store Characters']
 )
 
+compare: s = (
+	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter ]
+)
+
+caseInsensitiveCompare: s = (
+	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter asUppercase ]
+)
+
+compare: s withNormalisingBlock: aBlock = (
+	| i len endResult u1 u2 mylen |
+	mylen := self size.
+	len := s size.
+	mylen < len
+		ifTrue:
+			[len := mylen.
+			endResult := 1]
+		ifFalse: [endResult := mylen = len
+						ifTrue: [2]
+						ifFalse: [3]].
+	i := 0.
+	[(i := i + 1) <= len]
+		whileTrue:
+			[u1 := self at: i.
+			u2 := s at: i.
+			u1 = u2
+				ifFalse:
+					[u1 := aBlock value: u1.
+					u2 := aBlock value: u2.
+					u1 = u2 ifFalse:
+						[^u1 < u2
+							ifTrue: [1]
+							ifFalse: [3]]]].
+	^endResult
+)
+
+
 isLiteral = (
 	^true
 )
 
 isString = (
 	^ true
-)
-
-primReplaceFrom: start to: stop with: replacement startingAt: repStart = (
-	"This destructively replaces elements from start to stop in the receiver
-	starting at index, repStart, in the collection, replacement.  Answer the
-	receiver.  No range checks are performed - this may be primitively implemented."
-	<primitive: 105>
-	super replaceFrom: start to: stop with: replacement startingAt: repStart
 )
 
 print = (
@@ -91,6 +143,12 @@ printAsLiteralOn: aStream = (
 
 printOn: aStream = (
 	self storeOn: aStream
+)
+
+replaceFrom: start to: stop with: replacement startingAt: repStart = (
+	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 105>
+	super replaceFrom: start to: stop with: replacement startingAt: repStart
 )
 
 size = (

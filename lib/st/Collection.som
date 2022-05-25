@@ -216,6 +216,10 @@ floor = (
 	^ self collect: [:a | a floor]
 )
 
+histogramOf: aBlock = (
+	^ self collect: aBlock as: Bag
+)
+
 ifEmpty: aBlock = (
 	"Evaluate aBlock if I'm empty, return myself otherwise."
 	self isEmpty ifTrue: [^ aBlock value].
@@ -227,9 +231,28 @@ ifEmpty: emptyBlock ifNotEmpty: notEmptyBlock = (
 	^ notEmptyBlock cull: self
 )
 
+ifEmpty: emptyBlock ifNotEmptyDo: notEmptyBlock = (
+	"Evaluate emptyBlock if I'm empty, notEmptyBlock otherwise"
+	"Evaluate the notEmptyBlock with the receiver as its argument"
+	self isEmpty ifTrue: [ ^emptyBlock value ].
+	^notEmptyBlock value: self
+)
+
 ifNotEmpty: aBlock = (
 	"Evaluate aBlock if I'm not empty, return myself otherwise. If aBlock has an argument, evaluate it with myself as its argument. See also #ifNotEmptyDo:."
 	self isEmpty ifFalse: [^ aBlock cull: self].
+)
+
+ifNotEmptyDo: aBlock = (
+	"Evaluate the given block with the receiver as its argument."
+	self isEmpty ifFalse: [^ aBlock value: self].
+)
+
+ifNotEmptyDo: notEmptyBlock ifEmpty: emptyBlock = (
+	"Evaluate emptyBlock if I'm empty, notEmptyBlock otherwise
+	Evaluate the notEmptyBlock with the receiver as its argument"
+	self isEmpty ifFalse: [ ^notEmptyBlock value: self ].
+	^emptyBlock value
 )
 
 includes: anObject = (

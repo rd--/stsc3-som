@@ -40,6 +40,11 @@ adaptToInteger: rcvr andSend: selector = (
 	^ self adaptToNumber: rcvr andSend: selector
 )
 
+as: aSimilarClass = (
+	"Create an object of class aSimilarClass that has similar contents to the receiver."
+	^ aSimilarClass newFrom: self
+)
+
 asArray = (
     ^Array with: self
 )
@@ -352,7 +357,7 @@ putOn:aStream = (
 
 shallowCopy = (
 	<primitive: 148>
-	^self primitiveFailed
+	self primitiveFailed
 )
 
 size = (
@@ -405,5 +410,7 @@ value = (
 yourself = (
 	^self
 )
+
+----
 
 )

@@ -116,6 +116,10 @@ isNumber = (
 	^true
 )
 
+isZero = (
+	^self = 0
+)
+
 log = (
 	^self asFloat log
 )

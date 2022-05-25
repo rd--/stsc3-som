@@ -1,4 +1,4 @@
-CharacterSet = (
+CharacterSet = Set (
 
 species = (
 	^CharacterSet
@@ -10,11 +10,11 @@ species = (
 
 ascii = (
 	"Return a set containing all the ASCII characters"
-	^Ascii ifNil: [ Ascii := Set newFrom: ((1 to: 127) collect: [:code | code asCharacter]) ]
+	^Ascii ifNil: [ Ascii := self newFrom: ((1 to: 127) collect: [:code | code asCharacter]) ]
 )
 
 crlf = (
-	^CrLf ifNil: [ CrLf := Set newFrom: {Character cr. Character lf} ]
+	^CrLf ifNil: [ CrLf := self newFrom: {Character cr. Character lf} ]
 )
 
 isAbstract = (

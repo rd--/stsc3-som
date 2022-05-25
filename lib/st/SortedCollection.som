@@ -1,0 +1,145 @@
+SortedCollection = OrderedCollection (
+
+| sortBlock |
+
+= aSortedCollection = (
+	"Answer true if my and aSortedCollection's species are the same,
+	and if our blocks are the same, and if our elements are the same."
+	self species = aSortedCollection species ifFalse: [^ false].
+	sortBlock = aSortedCollection sortBlock
+		ifTrue: [^ super = aSortedCollection]
+		ifFalse: [^ false]
+)
+
+add: newObject = (
+	^ super insert: newObject before: (self indexForInserting: newObject)
+)
+
+addAll: aCollection = (
+	aCollection size > (self size // 3)
+		ifTrue:
+			[aCollection do: [:each | self addLast: each].
+			self reSort]
+		ifFalse: [aCollection do: [:each | self add: each]].
+	^ aCollection
+)
+
+addFirst: newObject = (
+	self shouldNotImplement
+)
+
+at: anInteger put: anObject = (
+	self shouldNotImplement
+)
+
+copyEmpty = (
+	"Answer a copy of the receiver without any of the receiver's elements."
+	^self species sortBlock: sortBlock
+)
+
+indexForInserting: newObject = (
+	| index low high |
+	low := firstIndex.
+	high := lastIndex.
+	sortBlock
+		ifNil: [
+			[ low > high ] whileFalse: [
+				index := (high + low) // 2.
+				(array at: index) <= newObject
+					ifTrue: [ low := index + 1 ]
+					ifFalse: [ high := index - 1 ] ] ]
+		ifNotNil: [
+			[ low > high ] whileFalse: [
+				index := (high + low) // 2.
+				(sortBlock value: (array at: index) value: newObject)
+					ifTrue: [ low := index + 1 ]
+					ifFalse: [ high := index - 1 ] ] ].
+	^low
+)
+
+insert: anObject before: spot = (
+	self shouldNotImplement
+)
+
+median = (
+	"Return the middle element, or as close as we can get."
+	^ self at: self size + 1 // 2
+)
+
+reSort = (
+	firstIndex < lastIndex ifTrue: [
+		array quickSortFrom: firstIndex to: lastIndex by: sortBlock ]
+)
+
+reverseInPlace = (
+	"Change this colleciton into its reversed.
+	Do not make a copy like reversed do, but change self in place."
+	| newFirstIndex |
+	newFirstIndex := 1 + array size - lastIndex.
+	lastIndex := 1 + array size - firstIndex.
+	firstIndex := newFirstIndex.
+	array := array reversed.
+	sortBlock := sortBlock
+		ifNil: [ [ :a :b | b <= a ] ]
+		ifNotNil: [ [ :a :b | sortBlock value: b value: a ] ]
+)
+
+reversed = (
+	"Answer a collection that Sort elements in reverse order"
+	^self shallowCopy reverseInPlace
+)
+
+should: a precede: b = (
+	^sortBlock ifNil: [a <= b] ifNotNil: [sortBlock value: a value: b]
+)
+
+sort: aSortBlock = (
+	"Sort this collection using aSortBlock. The block should take two arguments
+	and return true if the first element should preceed the second one.
+	If aSortBlock is nil then <= is used for comparison."
+	super sort: aSortBlock.
+	sortBlock := aSortBlock
+)
+
+sortBlock = (
+	"Answer the blockContext which is the criterion for sorting elements of
+	the receiver."
+	^sortBlock
+)
+
+sortBlock: aBlock = (
+	"Make the argument, aBlock, be the criterion for ordering elements of the
+	receiver."
+	sortBlock := aBlock.
+	"sortBlocks with side effects may not work right"
+	self size > 1 ifTrue: [self reSort]
+)
+
+sortTopologically = (
+	"Plenty of room for increased efficiency in this one."
+	| remaining result pick |
+	remaining := self asOrderedCollection.
+	result := OrderedCollection new.
+	[remaining isEmpty] whileFalse: [
+		pick := remaining select: [:item |
+			remaining allSatisfy: [:anotherItem |
+				item == anotherItem or: [self should: item precede: anotherItem]]].
+		pick isEmpty ifTrue: [self error: 'bad topological ordering'].
+		result addAll: pick.
+		remaining removeAll: pick].
+	^self copySameFrom: result
+)
+
+----------------------------
+
+sortBlock: aBlock = (
+	"Answer an instance of me such that its elements are sorted according to
+	the criterion specified in aBlock."
+	^(super new: 10) sortBlock: aBlock
+)
+
+comment = (^'
+I represent a collection of objects ordered by some property of the objects themselves. The ordering is specified in a two argument BlockClosure. The default sorting function is a <= comparison on elements.
+')
+
+)
