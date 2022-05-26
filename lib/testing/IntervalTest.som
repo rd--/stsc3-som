@@ -1,0 +1,252 @@
+IntervalTest = ClassTestCase (
+
+testAdd = (
+	self assert: (1 to: 10)
+			+ 5
+			= (6 to: 15)
+)
+
+testAnyOne = (
+	self assert: ((2 to: 5) includes: (2 to: 5) anyOne).
+	"self should: [(2 to: 1) anyOne] raise: Error description: 'This interval is empty'"
+)
+
+testAsInterval = (
+	"This is the same as newFrom:"
+	self assert: (1 to: 3) equals: (#(1 2 3) as: Interval).
+	self assert: (33 to: -23 by: -28) equals: (#(33 5 -23) as: Interval).
+	self assert: (2 to: 6 by: 2) equals: (#(2 4 6) as: Interval).
+"
+	self should: [#(33 5 -22) as: Interval]
+		raise: Error
+		description: 'This is not an arithmetic progression'
+"
+)
+
+testAsIntervalWithFractionalProgression = (
+	self assert: (1 to: 2 by: 1/2) equals: ({1. 3/2. 2} as: Interval).
+	self assert: (1 to: 2 by: 0.2) equals: ({1. 1.2. 1.4. 1.6. 1.8. 2} as: Interval).
+"
+	self should: [#(0.1 0.2 0.3 0.4) as: Interval]
+		raise: Error
+		description: 'There is no guaranty that Interval of Float can be constructed from individual Float'.
+"
+	"Even though, by chance there might be a Float Interval with same elements"
+	#(0.1 0.2 0.3 0.4) hasEqualElements: (0.1 to: 0.4 by: 0.1)
+)
+
+testAt = (
+	self assert: ((1 to: 10)
+			at: 1)
+			= 1.
+	self assert: ((1 to: 10)
+			at: 3)
+			= 3.
+	self assert: ((1 to: 10 by: 2)
+			at: 1)
+			= 1.
+	self assert: ((1 to: 10 by: 2)
+			at: 3)
+			= 5
+)
+
+testDo = (
+	| s i |
+	s := OrderedCollection new.
+	i := (10 to: 20).
+	i do: [ :each | s addLast: each].
+	self assert: (s hasEqualElements: i)
+)
+
+testEquals = (
+	self assert: (3 to: 5) = (3.0 to: 5.0).
+	self deny: (3 to: 5) = (3 to: 5 by: 2) description: 'Sharing bounds is not enough to make Interval equals'.
+)
+
+testEquals3 = (
+	self assert: (3 to: 5 by: 2) first = (3 to: 6 by: 2) first.
+	self assert: (3 to: 5 by: 2) last = (3 to: 6 by: 2) last.
+	self assert: (3 to: 5 by: 2) = (3 to: 6 by: 2).
+)
+
+testEqualsWhenEmpty = (
+	self assert: (3 to: 2) = (3 to: 2) copy.
+	self deny: (3 to: 2) = (2 to: 1)
+		description: 'Empty intervals are considered different if their bound differs. Text selection rely on this feature'.
+)
+
+testEqualsWithArray = (
+	"Intervals are not considered equal to Array, even if they share the same sequence of elements."
+	self deny: (3 to: 5) = #(3 4 5).
+	self deny: #(3 4 5) = (3 to: 5).
+)
+
+testExtent = (
+	self assert: (1 to: 10) extent = 9.
+	self assert: (1 to: 10 by: 2) extent = 9.
+	self assert: (1 to:-1) extent = -2
+)
+
+testHashEqualIfIntervalEqual = (
+	| interval1 interval2 |
+	interval1 := 0 to: 1.
+	interval2 := 0 to: 5/3. "Taken from an actual issue in an image"
+	self assert: interval1 equals: interval2.
+	self assert: interval1 hash equals: interval2 hash.
+)
+
+testInclusion = (
+	"Non regression test for another bug of fuzzy inclusion"
+	self deny: ((1.0 to: 3.0 by: 1.0 successor) includes: 3.0) description: 'The last element of this Interval is closed to 2'
+)
+
+"
+testIntervalOfFloatEqual = (
+	| interval1 interval2 interval3 interval4 |
+	interval1 := (0 to: 1 by: 1/10).
+	interval2 := (0.0 to: 1 by: 1/10).
+	self deny: (interval1 = interval2) ==> (interval1 hasEqualElements: interval2)
+		description: 'Interval of Float may have different elements from another Interval, even if they pretend to be equal.'.
+	interval3 := (0.3 to: 0.6 by: 1/10).
+	interval4 := (0.3 to: 0.6 by: 0.1).
+	self deny: (interval3 hasEqualElements: interval4) ==> (interval3 = interval4)
+		description: 'Interval of Float may pretend they differ from another Interval even if they have same elements.'.
+)
+"
+
+"
+testIntervalStoreOn = (
+	| interval1 interval2 |
+	interval1 := 0 to: 1 by: 0.5s1 squared.
+	interval2 := Compiler evaluate: interval1 storeString.
+	self assert: interval1 size = interval2 size
+)
+"
+
+testInvalid = (
+	"empty, impossible ranges"
+	self assert: (1 to: 0) isEmpty.
+	self assert: (1 to: -1) isEmpty.
+	self assert: (-1 to: -2) isEmpty.
+	self assert: (1 to: 5 by: -1) isEmpty.
+	"always contains only start value."
+	self assert: (1 to: 1) asArray = #(1).
+	self assert: (1 to: 5 by: 10) asArray = #(1).
+	self assert: (1 to: 0 by: -2) asArray = #(1).
+)
+
+testIsInterval = (
+	self assert: (1 to: 10) isInterval.
+	self assert: (1 to: 10 by: 2) isInterval
+)
+
+testLast = (
+self assert: (1 to:10) last = 10.
+self assert: (1 to:10 by:2) last = 9
+)
+
+testMinus = (
+	self assert: (1 to: 10)
+			- 5
+			= (-4 to: 5)
+)
+
+testNewFrom = (
+	 self assert: (1 to: 1) equals: (Interval newFrom: (1 to: 1)).
+	 self assert: (1 to: 1) equals:  (Interval newFrom: #(1)).
+	 self assert: ( 1 to: 0) equals: (Interval newFrom: #()).
+)
+
+testOtherNewFrom = (
+	self assert: (Interval newFrom: #(1 2 3 )) = (1 to: 3).
+	self assert: (Interval newFrom: #(33  5 -23 )) = (33 to: -23 by: -28).
+	"self should: [(Interval newFrom: #(33  5 -22 ))] raise: Error."
+	self assert: (#(33  5 -23) as: Interval) = (33 to: -23 by: -28).
+	"self should: [( #(33  5 -22 ) as: Interval)] raise: Error."
+	self assert: ( (-4 to: -12 by: -1) as: Interval) = (-4 to: -12 by: -1).
+	self assert: ( Interval newFrom: (1 to: 1)) = (1 to: 1).
+	self assert: ( Interval newFrom: (1 to: 0)) = (1 to: 0).
+	self assert: (#(1) as: Interval) = (1 to: 1).
+	self assert: (#() as: Interval) = (1 to: 0).
+)
+
+testPermutationsDo = (
+	| i oc |
+	i := (1.234 to: 4.234).
+	oc := OrderedCollection new.
+	i permutationsDo: [:e | oc add: e].
+	self assert: (oc size = i size factorial).
+	^ oc
+)
+
+testRangeIncludes = (
+	self
+		assert: ((1 to: 10)
+				rangeIncludes: 3).
+	self
+		assert: ((1 to: 10 by: 2)
+				rangeIncludes: 3).
+	self
+		deny: ((1 to: 10)
+				rangeIncludes: 0).
+	self
+		deny: ((1 to: 10)
+				rangeIncludes: 11).
+	self
+		deny: ((1 to: 10 by: 2)
+				rangeIncludes: 0).
+	self
+		deny: ((1 to: 10 by: 2)
+				rangeIncludes: 11)
+)
+
+testReverseDo = (
+	| s i |
+	s := OrderedCollection new.
+	i := 10 to: 20.
+	i
+		reverseDo: [:each | s addFirst: each].
+	self
+		assert: (s hasEqualElements: i)
+)
+
+testReverseUnevenDo = (
+	| s i |
+	s := OrderedCollection new.
+	i := 10 to: 20 by: 3.
+	i
+		reverseDo: [:each | s addFirst: each].
+	self
+		assert: (s hasEqualElements: i)
+)
+
+testReversed = (
+	self assert: (3 to: 10) reversed = (10 to: 3 by: -1).
+	self assert: (3 to: 11 by: 4) reversed = (11 to: 3 by: -4).
+	self assert: (3 to: 12 by: 4) reversed = (11 to: 3 by: -4).
+)
+
+testReversedEmpty = (
+	self assert: (4 to: 3) reversed = (3 to: 4 by: -1).
+	self assert: (4 to: 3 by: 5) reversed = (3 to: 4 by: -5).
+)
+
+testSum = (
+	1 to: 10 do: [:i |
+		| int |
+		int := -3 to: i-1*5-3 by: 5.
+		self assert: int asArray sum = int sum.
+		self assert: int reversed sum = int sum]
+)
+
+testUnevenDo = (
+	| s i |
+	s := OrderedCollection new.
+	i := 10 to: 20 by: 3.
+	i
+		do: [:each | s addLast: each].
+	self
+		assert: (s hasEqualElements: i)
+)
+
+)

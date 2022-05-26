@@ -117,6 +117,10 @@ integerPart = (
 	^self truncated
 )
 
+isNaN = (
+	^ false
+)
+
 isNumber = (
 	^true
 )

@@ -55,6 +55,7 @@ stringToCharacterArray isLiteral str = do
 mutableStringObject :: Bool -> String -> Vm Object
 mutableStringObject isLiteral str = fmap (Object (toSymbol "String")) (stringToCharacterArray isLiteral str)
 
+-- | "Answer a copy of the receiver which shares the receiver's instance variables."
 objectDataShallowCopy :: ObjectData -> Vm ObjectData
 objectDataShallowCopy od =
   case od of
@@ -77,7 +78,9 @@ objectDataShallowCopy od =
       return (DataNonIndexable pc cpy)
     _ -> return od
 
-{- | Primitive to make a shallow (or spine) copy of an object.
+{- | Primitive to make a shallow copy of an object.
+
+St-80: "Answer a copy of the receiver which shares the receiver's instance variables."
 
 Symbols are unique.
 The class library ensures symbols aren't copied, however when copying arrays we need to do the check here.

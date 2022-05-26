@@ -2,13 +2,22 @@ Interval = SequenceableCollection (
 
 | start stop step |
 
-= anInterval = (
-	"Answer true if my species and anInterval species are equal, and
-	if our starts, steps and sizes are equal."
-	self species == anInterval species
-		ifTrue: [^start = anInterval first
-					and: [step = anInterval increment and: [self size = anInterval size]]]
-		ifFalse: [^false]
+= anObject = (
+	^ self == anObject
+		or: [anObject isInterval
+			ifFalse: [super = anObject]
+			ifTrue:
+				[start = anObject first
+				 and: [step = anObject increment
+				 and: [self last = anObject last]]]]
+)
+
++ number = (
+	^ start + number to: stop + number by: step
+)
+
+- number = (
+	^ start - number to: stop - number by: step
 )
 
 add: newObject = (
@@ -60,17 +69,27 @@ copy = (
 )
 
 do: aBlock = (
-	| aValue |
-	aValue := start.
-	step < 0
-		ifTrue: [[stop <= aValue]
-				whileTrue:
-					[aBlock value: aValue.
-					aValue := aValue + step]]
-		ifFalse: [[stop >= aValue]
-				whileTrue:
-					[aBlock value: aValue.
-					aValue := aValue + step]]
+	"Evaluate aBlock for each value of the interval.
+	Implementation note: instead of repeatedly incrementing the value
+	    aValue := aValue + step.
+	until stop is reached,
+	We prefer to recompute value from start
+	    aValue := start + (index * step).
+	This is better for floating points accuracy, while not degrading Integer and Fraction speed too much.
+	Moreover, this is consistent with methods #at: and #size"
+	| aValue index size |
+	index := 0.
+	size := self size.
+	[index < size]
+		whileTrue: [aValue := start + (index * step).
+			index := index + 1.
+			aBlock value: aValue]
+)
+
+extent = (
+	"Answer the max - min of the receiver interval."
+	"(10 to: 50) extent"
+	^stop - start
 )
 
 first = (
@@ -78,10 +97,9 @@ first = (
 )
 
 hash = (
-	^(((start hash bitShift: 2)
-		bitOr: stop hash)
-		bitShift: 1)
-		bitOr: self size
+	"Hash is reimplemented because = is implemented."
+        ^((start hash hashMultiply bitXor: self last hash) hashMultiply
+                bitXor: self size)
 )
 
 increment = (
@@ -89,8 +107,19 @@ increment = (
 	^step
 )
 
+isInterval = (
+	^ true
+)
+
 last = (
 	^stop - (stop - start \\ step)
+)
+
+permutationsDo: aBlock = (
+	"Repeatly value aBlock with a single copy of the receiver. Reorder the copy
+	so that aBlock is presented all (self size factorial) possible permutations."
+	"(1 to: 4) permutationsDo: [:each | Transcript cr; show: each printString]"
+	self asArray permutationsDo: aBlock
 )
 
 printOn: aStream = (
@@ -105,24 +134,33 @@ printOn: aStream = (
 	aStream nextPut: $)
 )
 
+rangeIncludes: aNumber = (
+	"Return true if the number lies in the interval between start and stop."
+	step >= 0
+		ifTrue: [^ aNumber between: start and: stop]
+		ifFalse: [^ aNumber between: stop and: start]
+)
+
 remove: newObject = (
 	"Removing from an Interval is not allowed."
 	self error: 'elements cannot be removed from an Interval'
 )
 
+reversed = (
+	self isEmpty ifTrue: [^stop to: start by: step negated].
+	^self last to: start by: step negated
+)
+
 reverseDo: aBlock = (
-	"Evaluate aBlock for each element of my interval, in reverse order."
-	| aValue |
-	aValue := stop.
-	step < 0
-		ifTrue: [[start >= aValue]
-				whileTrue:
-					[aBlock value: aValue.
-					aValue := aValue - step]]
-		ifFalse: [[start <= aValue]
-				whileTrue:
-					[aBlock value: aValue.
-					aValue := aValue - step]]
+	"Evaluate aBlock for each element of my interval, in reverse order.
+	Implementation notes: see do: for an explanation on loop detail"
+	| aValue index |
+	index := self size.
+	[index > 0]
+		whileTrue: [
+			index := index - 1.
+			aValue := start + (index * step).
+			aBlock value: aValue]
 )
 
 setFrom: startInteger to: stopInteger by: stepInteger = (

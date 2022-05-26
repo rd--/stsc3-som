@@ -439,10 +439,34 @@ overlappingPairsWithIndexDo: aBlock = (
 		do: [:i | aBlock value: (self at: i) value: (self at: i + 1) value: i ]
 )
 
-pairsDo: aBlock  = (
+pairsDo: aBlock = (
 	"Evaluate aBlock with my elements taken two at a time.  If there's an odd number of items, ignore the last one.  Allows use of a flattened array for things that naturally group into pairs.  See also pairsCollect:"
 	1 to: self size // 2 do:
 		[:index | aBlock value: (self at: 2 * index - 1) value: (self at: 2 * index)]
+)
+
+permutations = (
+	| answer |
+	answer := OrderedCollection new.
+        self permutationsDo: [ :each | answer add: each copy ].
+	^answer
+)
+
+permutationsDo: aBlock = (
+	"Repeatly value aBlock with a single copy of the receiver. Reorder the copy
+	so that aBlock is presented all (self size factorial) possible permutations."
+	"(1 to: 4) permutationsDo: [:each | Transcript cr; show: each printString]"
+	self shallowCopy permutationsStartingAt: 1 do: aBlock
+)
+
+permutationsStartingAt: anInteger do: aBlock = (
+	"#(1 2 3 4) permutationsDo: [:each | Transcript cr; show: each printString]"
+	anInteger > self size ifTrue: [^self].
+	anInteger = self size ifTrue: [^aBlock value: self].
+	anInteger to: self size do:
+		[:i | self swap: anInteger with: i.
+		self permutationsStartingAt: anInteger + 1 do: aBlock.
+		self swap: anInteger with: i]
 )
 
 putOn: aStream = (

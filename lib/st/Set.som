@@ -1,5 +1,12 @@
 Set = HashedCollection (
 
+= anObject = (
+	self == anObject ifTrue: [ ^true ].
+	self species == anObject species ifFalse: [ ^false ].
+	self size = anObject size ifFalse: [ ^false ].
+	^self allSatisfy: [ :each | anObject includes: each ]
+)
+
 add: newObject = (
 	| index |
 	index := self scanFor: newObject.
@@ -9,6 +16,40 @@ add: newObject = (
 
 addIfNotPresent: anObject = (
 	^self add: anObject
+)
+
+asSet = (
+	^self
+)
+
+collect: aBlock = (
+	| newSet |
+	newSet := Set new: self size.
+	self do: [ :each | newSet add: (aBlock value: each) ].
+	^newSet
+)
+
+copyWithout: oldElement = (
+	| answer |
+	answer := self copy	remove: oldElement ifAbsent: [].
+	^answer
+)
+
+do: aBlock = (
+	tally = 0 ifTrue: [ ^self ].
+	1 to: array size do: [ :index |
+		(array at: index) ifNotNil: [ :element |
+			aBlock value: element enclosedSetElement] ]
+)
+
+fixCollisionsFrom: start = (
+	| element index |
+	index := start.
+	[ (element := array at: (index := index \\ array size + 1)) == nil ] whileFalse: [
+		| newIndex |
+		(newIndex := self scanFor: element enclosedSetElement) = index ifFalse: [
+			array at: newIndex put: element.
+			array at: index put: nil ] ]
 )
 
 ifAbsentAdd: anObject = (
@@ -22,76 +63,8 @@ ifAbsentAdd: anObject = (
 	^false
 )
 
-= anObject = (
-	self == anObject ifTrue: [ ^true ].
-	self species == anObject species ifFalse: [ ^false ].
-	self size = anObject size ifFalse: [ ^false ].
-	^self allSatisfy: [ :each | anObject includes: each ]
-)
-
-asSet = (
-	^self
-)
-
-copyWithout: oldElement = (
-	| answer |
-	answer := self copy	remove: oldElement ifAbsent: [].
-	^answer
-)
-
-postCopy = (
-	super postCopy.
-	array := array copy
-)
-
-collect: aBlock = (
-	| newSet |
-	newSet := Set new: self size.
-	self do: [ :each | newSet add: (aBlock value: each) ].
-	^newSet
-)
-
-do: aBlock = (
-	tally = 0 ifTrue: [ ^self ].
-	1 to: array size do: [ :index |
-		(array at: index) ifNotNil: [ :element |
-			aBlock value: element enclosedSetElement] ]
-)
-
-occurrencesOf: anObject = (
-	(self includes: anObject) ifTrue: [ ^1 ].
-	^0
-)
-
-select: aBlock = (
-	| newCollection |
-	newCollection := self copyEmpty.
-	self do: [:each | (aBlock value: each) ifTrue: [newCollection add: each]].
-	^newCollection
-)
-
-remove: oldObject ifAbsent: aBlock = (
-	| index |
-	index := self scanFor: oldObject.
-	(array at: index) ifNil: [ ^ aBlock value ].
-	array at: index put: nil.
-	tally := tally - 1.
-	self fixCollisionsFrom: index.
-	^ oldObject
-)
-
 includes: anObject = (
 	(array at: (self scanFor: anObject)) ifNil: [ ^false ] ifNotNil: [ ^true ]
-)
-
-fixCollisionsFrom: start = (
-	| element index |
-	index := start.
-	[ (element := array at: (index := index \\ array size + 1)) == nil ] whileFalse: [
-		| newIndex |
-		(newIndex := self scanFor: element enclosedSetElement) = index ifFalse: [
-			array at: newIndex put: element.
-			array at: index put: nil ] ]
 )
 
 noCheckNoGrowFillFrom: anArray = (
@@ -100,6 +73,16 @@ noCheckNoGrowFillFrom: anArray = (
 			array
 				at: (self scanForEmptySlotFor: object enclosedSetElement)
 				put: object ] ]
+)
+
+postCopy = (
+	super postCopy.
+	array := array copy
+)
+
+occurrencesOf: anObject = (
+	(self includes: anObject) ifTrue: [ ^1 ].
+	^0
 )
 
 remove: oldObject ifAbsent: aBlock = (
@@ -121,6 +104,13 @@ scanFor: anObject = (
 		(index := index \\ size + 1) = start
 	] whileFalse.
 	self errorNoFreeSpace
+)
+
+select: aBlock = (
+	| newCollection |
+	newCollection := self copyEmpty.
+	self do: [:each | (aBlock value: each) ifTrue: [newCollection add: each]].
+	^newCollection
 )
 
 ----------------------------

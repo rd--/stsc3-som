@@ -33,6 +33,11 @@ isLiteral = (
 	^true
 )
 
+isNaN = (
+	"simple, byte-order independent test for Not-a-Number"
+	^ self ~= self
+)
+
 isPowerOfTwo = (
 	^false
 )
@@ -51,6 +56,10 @@ log2 = (
 
 negated = (
 	^-1.0 * self
+)
+
+predecessor = (
+	^ self - Float epsilon
 )
 
 printAsLiteralOn: aStream = (
@@ -75,8 +84,22 @@ significand = (
 	^ self timesTwoPower: (self exponent negated)
 )
 
+successor = (
+	^ self + Float epsilon
+)
+
 tan = (
 	^ self sin / self cos
+)
+
+timesTwoPower: anInteger = (
+	"Answer with the receiver multiplied by 2.0 raised to the power of the argument"
+	self isFinite ifFalse: [^self].
+	self isZero ifTrue: [^self].
+	anInteger > -30 ifTrue: [
+		anInteger < 0 ifTrue: [^ self / (1 bitShift: 0 - anInteger) asFloat].
+		anInteger < 30 ifTrue: [^ self * (1 bitShift: anInteger) asFloat]].
+	^ self * (2.0 raisedToInteger: anInteger)
 )
 
 ----

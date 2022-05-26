@@ -95,6 +95,64 @@ isPowerOfTwo = (
 	^self strictlyPositive and: [ (self bitAnd: self - 1) = 0 ]
 )
 
+isProbablyPrime = (
+	"See isProbablyPrimeWithK:andQ: for the algoritm description."
+	| k q |
+	self <= 1 ifTrue: [ ^false ].
+	self even ifTrue: [ ^self = 2 ].
+	"Factor self into (2 raisedTo: k) * q + 1, where q odd"
+	q := self bitShift: -1.
+	k := q lowBit.
+	q := q bitShift: 1 - k.
+	"Repeat the probabilistic until false (the probability of false negative is null) or until probability is very low."
+	25 timesRepeat: [ (self isProbablyPrimeWithK: k andQ: q) ifFalse: [ ^false ] ].
+	"The probability of false positive after 25 iterations is less than (1/4 raisedTo: 25) < 1.0e-15"
+	^true
+)
+
+isProbablyPrimeWithK: k andQ: q  = (
+	"Algorithm P, probabilistic primality test, from
+	Knuth, Donald E. 'The Art of Computer Programming', Vol 2,
+	Third Edition, section 4.5.4, page 395, P1-P5 refer to Knuth description..
+	Note that this is a Miller Rabin test which may answer false positives (known as pseudoprimes) for at most 1/4 of the possible bases x."
+	| x j y minusOne |
+	"P1"
+	x := (self - 2) atRandom + 1.
+	"P2"
+	j := 0.
+	y := x raisedTo: q modulo: self.
+	minusOne := self - 1.
+	["P3"
+	y = 1 ifTrue: [^j = 0].
+	y = minusOne ifTrue: [^true].
+	"P4"
+	(j := j + 1) < k]
+		whileTrue:
+			[y := y squared \\ self].
+	"P5"
+	^false
+)
+
+isPrime = (
+	"Answer true if the receiver is a prime number. See isProbablyPrime for a probabilistic
+	implementation that is much faster for large integers, and that is correct to an extremely
+	high statistical level of confidence (effectively deterministic)."
+	| probe step limit |
+	self <= 3 ifTrue: [ ^self >= 2 ].
+	self \\ 2 = 0 ifTrue: [ ^false ].
+	self \\ 3 = 0 ifTrue: [ ^false ].
+	self <= 1073741823 ifFalse: [ "1 << 30 - 1. For numbers larger than this (on 64-bit platforms) #isProbablyPrime is usually quicker."
+		^self isProbablyPrime ].
+	probe := 5.
+	step := 2. "Step will oscillate between 2 and 4 because at this point self \\ 6 is either 1 or 5."
+	limit := self sqrtFloor. "On 64-bit platforms this could be written as self asFloat sqrt truncated (+ 1), which is faster because it creates no intermediate objects. Knowing that self has at most 30 bits because of the check above, this value will never be larger than 32767."
+	[ probe <= limit ] whileTrue: [
+		self \\ probe = 0 ifTrue: [ ^false ].
+		probe := probe + step.
+		step := 6 - step ].
+	^true
+)
+
 lcm: n = (
 	^self // (self gcd: n) * n
 )
@@ -109,6 +167,15 @@ printAsLiteralOn: aStream = (
 )
 
 rounded = (
+)
+
+sqrtFloor = (
+	"Return the integer part of the square root of self
+	Assume self >= 0
+	The following post-conditions apply:
+	1) self sqrtFloor squared <= self
+	2) (self sqrtFloor + 1) squared > self"
+	self subclassResponsibility
 )
 
 take: kk = (
@@ -140,6 +207,62 @@ truncated = (
 new = (
 	self == Integer ifTrue: [^ self error: 'Integer is an abstract class.  Make a concrete subclass.'].
 	^ super new
+)
+
+
+primesUpTo: max = (
+	"Return a list of prime integers up to the given integer."
+	"Integer primesUpTo: 100"
+	^Array streamContents:[:s| self primesUpTo: max do:[:prime| s nextPut: prime]]
+)
+
+primesUpTo: max do: aBlock = (
+	"Compute aBlock with all prime integers up to the given integer."
+	"Integer primesUpTo: 100"
+	| index sieve increment limit limitSqrtFloor |
+	limit := max asInteger.
+	limit := limit - 1. "upTo:"
+	limit <= 1 ifTrue: [ ^self ].
+	aBlock value: 2.
+	limit <= 2 ifTrue: [ ^self ].
+	aBlock value: 3.
+	sieve := Array new: limit withAll: 1. "1 = prime, 0 = not prime"
+	sieve at: 1 put: 0.
+	"Filter multiples of 2."
+	index := 4.
+	[ index <= limit ] whileTrue: [
+		sieve at: index put: 0.
+		index := index + 2 ].
+	"Filter multiples of 3."
+	index := 9.
+	[ index <= limit ] whileTrue: [
+		sieve at: index put: 0.
+		index := index + 3 ].
+	"Filter the rest of the primes."
+	limitSqrtFloor := limit sqrtFloor.
+	index := 5.
+	increment := 2.
+	[ index <= limitSqrtFloor ] whileTrue: [
+		(sieve at: index) = 1 ifTrue: [
+			| originalIndex originalIncrement |
+			aBlock value: index.
+			originalIndex := index.
+			originalIncrement := increment.
+			increment := index + index.
+			index := index * index.
+			[ index <= limit ] whileTrue: [
+				sieve at: index put: 0.
+				index := index + increment ].
+			index := originalIndex.
+			increment := originalIncrement ].
+		index := index + increment.
+		increment := 6 - increment ].
+	"No more new primes here."
+	[ index <= limit ] whileTrue: [
+		(sieve at: index) = 1 ifTrue: [
+			aBlock value: index ].
+		index := index + increment.
+		increment := 6 - increment ]
 )
 
 )

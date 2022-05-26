@@ -128,6 +128,17 @@ capacity = (
 	^ array size
 )
 
+collect: aBlock = (
+	"Evaluate aBlock with each of my elements as the argument.
+	Collect the resulting values into an OrderedCollection."
+	| newCollection |
+	newCollection := OrderedCollection new: self size.
+	firstIndex to: lastIndex do:
+		[:index |
+		newCollection addLast: (aBlock value: (array at: index))].
+	^ newCollection
+)
+
 collect: aBlock from: fromIndex to: toIndex = (
 	"Evaluate aBlock with each of my elements as the argument between fromIndex and toIndex.
 	Collect the resulting values into an OrderedCollection."
@@ -277,6 +288,16 @@ insert: anObject before: spot = (
 	^anObject
 )
 
+sorted: aSortBlockOrNil = (
+	"Return a new sequenceable collection which contains the same elements as self but its elements are sorted by aSortBlockOrNil. The block should take two arguments and return true if the first element should preceed the second one. If aSortBlock is nil then <= is used for comparison."
+	^self copy sort: aSortBlockOrNil
+)
+
+isSortedBetween: startIndex and: endIndex = (
+	"Return true if the receiver is sorted by #<= between startIndex and endIndex."
+	^array isSortedBetween: startIndex + firstIndex - 1 and: endIndex + firstIndex - 1
+)
+
 last = (
 	self emptyCheck.
 	^array at: lastIndex
@@ -323,6 +344,24 @@ occurrencesOf: anObject = (
 	firstIndex to: lastIndex do: [ :index |
 		(array at: index) = anObject ifTrue: [ tally := tally + 1 ] ].
 	^tally
+)
+
+postCopy = (
+	array := array copy
+)
+
+postCopyFrom: startIndex to: endIndex = (
+	"finish copying the array in a certain range."
+	endIndex < startIndex ifFalse: [
+		"Because actual size of the array may be greater than used size,
+		postCopyFrom:to: may fail to fail and answer an incorrect result
+		if this sanity check were not applied"
+		(startIndex between: 1 and: self size) ifFalse: [^self error: 'startIndex is out of bounds'].
+		(endIndex between: 1 and: self size) ifFalse: [^self error: 'endIndex is out of bounds']].
+	"Add a protection that lacks in Array>>postcopy"
+	array := array copyFrom: startIndex + firstIndex - 1 to: (endIndex max: startIndex - 1) + firstIndex - 1.
+	firstIndex := 1.
+	lastIndex := array size
 )
 
 remove: oldObject ifAbsent: absentBlock = (
@@ -466,6 +505,25 @@ select: aBlock = (
 
 size = (
 	^lastIndex - firstIndex + 1
+)
+
+sort = (
+	"Sort this array into ascending order using the '<=' operator."
+	self sort: nil
+)
+
+sort: aSortBlock = (
+	"Sort this collection using aSortBlock. The block should take two arguments and return true if the first element should preceed the second one. If aSortBlock is nil then <= is used for comparison."
+	self size <= 1 ifTrue: [ ^self ].
+	array
+		mergeSortFrom: firstIndex
+		to: lastIndex
+		by: aSortBlock
+)
+
+sorted: aSortBlockOrNil = (
+	"Return a new sequenceable collection which contains the same elements as self but its elements are sorted by aSortBlockOrNil. The block should take two arguments and return true if the first element should preceed the second one. If aSortBlock is nil then <= is used for comparison."
+	^self copy sort: aSortBlockOrNil
 )
 
 with: otherCollection collect: twoArgBlock = (
