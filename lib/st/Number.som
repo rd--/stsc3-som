@@ -104,6 +104,11 @@ floor = (
 		ifFalse: [^truncation - 1]
 )
 
+floorLog: radix = (
+	"Answer the floor of the log base radix of the receiver."
+	^(self log: radix) floor
+)
+
 fractionPart = (
 	^self - self integerPart
 )

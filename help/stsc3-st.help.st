@@ -1,3 +1,4 @@
+ArrayTest suite run printOn: Transcript
 
 ArrayTest run: #testAtWrap
 ArrayTest run: #testEmpty
@@ -7,7 +8,7 @@ ArrayTest run: #testLiteralEqual
 ArrayTest run: #testNewWithSize
 ArrayTest run: #testPremultiply
 
-CollectionTest suite run
+CollectionTest suite run printOn: Transcript
 
 CollectionTest run: #testAny "Block escapes"
 CollectionTest run: #testAnyAs "Block escapes"
@@ -26,11 +27,11 @@ CollectionTest run: #testPrintOnDelimiterLast
 CollectionTest run: #testReduce
 CollectionTest run: #testTake
 
-FalseTest suite run
+FalseTest suite run printOn: Transcript
 FalseTest run: #testAND
 FalseTest run: #testAnd
 FalseTest run: #testAsBit
-FalseTest run: #testIfFalse
+FalseTest run: #testIfFalse>
 FalseTest run: #testIfFalseIfTrue
 FalseTest run: #testIfTrue
 FalseTest run: #testIfTrueIfFalse
@@ -39,6 +40,8 @@ FalseTest run: #testOR
 FalseTest run: #testOr
 FalseTest run: #testPrintOn
 FalseTest run: #testXor
+
+SequenceableCollectionTest suite run printOn: Transcript
 
 SequenceableCollectionTest run: #testAfterIfAbsent
 SequenceableCollectionTest run: #testAtAllPut

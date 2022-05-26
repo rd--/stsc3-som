@@ -1,5 +1,15 @@
 SmalltalkImage = Object (
 
+at: aKey = (
+	^self global: aKey
+)
+
+at: aKey ifAbsent: aBlock = (
+	"Answer the global associated with aKey or, if key isn't found,
+	answer the result of evaluating aBlock."
+	^(self hasGlobal: aKey) ifTrue: [ ^self at: aKey ] ifFalse: [ aBlock value ]
+)
+
 exit: error = (
 	self quitPrimitive: error
 )
@@ -26,6 +36,10 @@ halt = (
 hasGlobal: name = (
 	<primitive: -1>
 	self primitiveFailed
+)
+
+includesKey: aKey = (
+	^ self hasGlobal: aKey
 )
 
 initialize: arguments = (

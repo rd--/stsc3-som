@@ -1,10 +1,4 @@
 ClassTestCase = TestCase (
-categoriesForClass: aClass = (
-
- ^ aClass organization allMethodSelectors collect: 
-			[:each |  aClass organization categoryOfElement: each].
-
-)
 
 classToBeTested = (
 	
@@ -43,13 +37,8 @@ selectorsToBeTested = (
 targetClass = (
   |className|
 
-  className := self class name asText copyFrom: 0 to: self class name size - 4.
-  ^ self class environment valueOf: (className asString asSymbol).
-
-)
-
-testClassComment = (
-	self shouldnt: [self targetClass organization hasNoComment].
+  className := self class name asString copyFrom: 1 to: self class name size - 4.
+  ^ Smalltalk at: className asString asSymbol
 
 )
 
@@ -68,18 +57,6 @@ testNew = (
 	self targetClass new.
 
 )
-
-testUnCategorizedMethods = (
-	| categories slips uncategorisedMethods |
-	categories := self categoriesForClass: self targetClass.
-	slips := categories select: [:each | each = #'as yet unclassified'].
-	
-	uncategorisedMethods := self targetClass organization listAtCategoryNamed: #'as yet unclassified'.
-	
-	self assert: slips isEmpty description: ('{1} has uncategorised methods: {2}' format: {self targetClass. (uncategorisedMethods collect: #printString) asCommaString}).
-
-)
-
 
 ----------------------------
 

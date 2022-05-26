@@ -1,12 +1,13 @@
 Symbol = String (
 
 asString = (
-	<primitive: -1>
-	self primitiveFailed
+	| newString |
+	newString := self species new: self size.
+	newString replaceFrom: 1 to: newString size with: self startingAt: 1.
+	^newString
 )
 
 asSymbol = (
-	^self
 )
 
 classPart = (
@@ -83,6 +84,11 @@ selectorPart = (
 )
 
 shallowCopy = (
+)
+
+species = (
+	"Answer the preferred class for reconstructing the receiver."
+	^String
 )
 
 ----

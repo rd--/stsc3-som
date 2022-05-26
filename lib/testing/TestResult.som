@@ -164,20 +164,13 @@ passedCount = (
 printOn: aStream = (
 	aStream
 		nextPutAll: self runCount printString;
-		nextPutAll: ' run in ';
-		nextPutAll: (Duration milliSeconds: self duration) printString;
 		nextPutAll: ', ';
-		nextPutAll: self expectedPassCount printString;
+		nextPutAll: passed size printString;
 		nextPutAll: ' passes, ';
-		nextPutAll: self expectedDefectCount printString;
-		nextPutAll:' expected failures, ';
-		nextPutAll: self unexpectedFailureCount printString;
+		nextPutAll: failures size printString;
 		nextPutAll: ' failures, ';
-		nextPutAll: self unexpectedErrorCount printString;
-		nextPutAll:' errors, ';
-		nextPutAll: self unexpectedPassCount printString;
-		nextPutAll:' unexpected passes'.
-
+		nextPutAll: errors size printString;
+		nextPutAll:' errors'.
 )
 
 resetErrors = (

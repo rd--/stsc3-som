@@ -7,7 +7,6 @@ module Interpreter.Som.Primitives.Smalltalk where
 
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
-import qualified Data.Char {- base -}
 import System.Exit {- base -}
 import System.Mem {- base -}
 
@@ -89,28 +88,32 @@ prMethodInvokeOnWith opt obj receiver argumentsArray = do
   arguments <- arrayElements argumentsArray
   evalMethodOrPrimitive opt obj receiver arguments
 
-prPrintString :: Object -> Vm (Maybe Object)
-prPrintString (Object _ obj) = do
-  let wr str = liftIO (unicodeStringWrite str) >> return (Just nilObject)
-  objectDataAsString obj >>= maybe (return Nothing) wr
-
 prMethodArray :: Object -> Vm (Maybe Object)
 prMethodArray rcv =
   case classCachedMethodsVec rcv of
     Nothing -> return Nothing
     Just vec -> fmap Just (arrayFromVec vec)
 
+fmapMaybeM :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
+fmapMaybeM f = maybe (return Nothing) (fmap Just . f)
+
+mapMM :: Monad m => (a -> m b) -> m (Maybe a) -> m (Maybe b)
+mapMM f x = x >>= fmapMaybeM f
+
+prPrintString :: Object -> Vm (Maybe Object)
+prPrintString (Object _ obj) = do
+  let wr str = liftIO (unicodeStringWrite str) >> return nilObject
+  mapMM wr (objectDataAsString obj)
+
 stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("=", DataImmutableString typ str, [Object _ arg]) -> return (Just (prStringEqual (typ, str) arg))
     ("asString", DataDouble x, []) -> fmap Just (mutableStringObject (show x))
-    ("asString", DataImmutableString True x, []) -> fmap Just (mutableStringObject x)
     ("asString", DataSmallInteger x, []) -> fmap Just (mutableStringObject (show x))
-    ("asSymbol", DataImmutableString _ x, []) -> return (Just (symObject x))
+    ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> return (Just (strObject (unicodeStringAppend x y)))
     ("halt", DataSystem, []) -> vmError "Smalltalk>>halt"
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
@@ -118,25 +121,22 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
         "Double class" -> return (Just (maybe nanObject doubleObject (unicodeStringReadDouble x)))
         "SmallInteger class" -> return (fmap intObject (unicodeStringReadSmallInteger x))
         _ -> return Nothing
-    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap Just (vmGlobalLookupOrNil (fromUnicodeString x))
-    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> fmap Just (vmGlobalAssign (fromUnicodeString x) e)
-    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap (Just . booleanObject) (vmHasGlobal (fromUnicodeString x))
+    ("global:", DataSystem, [Object "Symbol" str]) -> mapMM vmGlobalLookupOrNil (objectDataAsString str)
+    ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssign sym e) (objectDataAsString str)
+    ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
     ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
     ("holder", DataPrimitive x _, []) -> return (Just (symObject x))
     ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> fmap Just (vmError "Primitive>>invokeOn:with: not implemented")
-    ("isDigits", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isDigit str))
-    ("isLetters", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isLetter str))
-    ("isWhiteSpace", DataImmutableString _ str, []) -> return (Just (prStringAll Data.Char.isSpace str))
-    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> fmap Just (systemLoadClassOrNil (fromUnicodeString x))
-    ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> fmap Just (prSystemLoadFile x)
+    ("load:", DataSystem, [Object "Symbol" str]) -> mapMM systemLoadClassOrNil (objectDataAsString str)
+    ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlock _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
-    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> fmap Just (objectPerformInSuperclass stCoreOpt receiver sel cl)
-    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> return (Just (strObject (unicodeStringSubstringFromTo str int1 int2)))
+    ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stCoreOpt receiver sym cl) (objectDataAsString str)
+    ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
