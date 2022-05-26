@@ -92,11 +92,23 @@ asIdentitySet = (
 	^ answer
 )
 
+asOrderedCollection = (
+	"Answer an OrderedCollection whose elements are the elements of the
+	receiver. The order in which elements are added depends on the order
+	in which the receiver enumerates its elements. In the case of unordered
+	collections, the ordering is not necessarily the same for multiple
+	requests for the conversion."
+	^ self as: OrderedCollection
+)
+
 asSet = (
 	^ Set withAll: self
 )
 
 associationsDo: aBlock = (
+	"Evaluate aBlock for each of the receiver's elements (key/value
+	associations).  If any non-association is within, the error is not caught now,
+	but later, when a key or value message is sent to it."
 	self do: aBlock
 )
 
@@ -323,6 +335,14 @@ minMax = (
 	^ Array with: min with: max
 )
 
+occurrencesOf: anObject = (
+	"Answer how many of the receiver's elements are equal to anObject."
+	| tally |
+	tally := 0.
+	self do: [:each | anObject = each ifTrue: [tally := tally + 1]].
+	^tally
+)
+
 product = (
     "All of my elements multiplied togeather."
     ^self inject: 1 into: [ :accumulator :item | accumulator * item ]
@@ -400,6 +420,10 @@ sum = (
 take: maxNumberOfElements = (
 	"Returns maxNumberOfElements as a new collection or less if the collection is not large enough."
 	^ self any: (maxNumberOfElements min: self size)
+)
+
+truncated = (
+	^ self collect: [:a | a truncated]
 )
 
 union: aCollection = (

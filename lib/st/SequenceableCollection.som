@@ -212,6 +212,34 @@ flattened = (
 	^ self flatten
 )
 
+forceTo: length paddingStartWith: elem = (
+	"Force the length of the collection to length, padding
+	the beginning of the result if necessary with elem.
+	Note that this makes a copy."
+	| newCollection padLen |
+	newCollection := self species ofSize: length.
+	padLen := length - self size max: 0.
+	newCollection
+		from: 1
+		to: padLen
+		put: elem.
+	newCollection
+		replaceFrom: padLen + 1
+		to: ((padLen + self size) min: length)
+		with: self
+		startingAt:  1.
+	^ newCollection
+)
+
+forceTo: length paddingWith: elem = (
+	"Force the length of the collection to length, padding
+	if necessary with elem.  Note that this makes a copy."
+	| newCollection |
+	newCollection := self species new: length withAll: elem.
+	newCollection replaceFrom: 1 to: (self size min: length) with: self startingAt: 1.
+	^ newCollection
+)
+
 fourth = (
 	^ self at: 4
 )
@@ -366,6 +394,14 @@ last = (
 	^ self at: self size
 )
 
+last: n = (
+	"Answer the last n elements of the receiver.
+	Raise an error if there are not enough elements."
+	| size |
+	size := self size.
+	^ self copyFrom: size - n + 1 to: size
+)
+
 lastIndexOf: anElement = (
 	^self lastIndexOf: anElement startingAt: self size
 )
@@ -380,6 +416,27 @@ lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
 	| index |
 	(index := self lastIndexOf: anElement startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
+)
+
+overlappingPairsCollect: aBlock = (
+	"Answer the result of evaluating aBlock with all of the overlapping pairs of my elements."
+	| retval |
+	retval := self species ofSize: self size - 1.
+	1 to: self size - 1
+		do: [:i | retval at: i put: (aBlock value: (self at: i) value: (self at: i + 1)) ].
+	^retval
+)
+
+overlappingPairsDo: aBlock = (
+	"Emit overlapping pairs of my elements into aBlock"
+	1 to: self size - 1
+		do: [:i | aBlock value: (self at: i) value: (self at: i + 1)]
+)
+
+overlappingPairsWithIndexDo: aBlock = (
+	"Emit overlapping pairs of my elements into aBlock, along with an index."
+	1 to: self size - 1
+		do: [:i | aBlock value: (self at: i) value: (self at: i + 1) value: i ]
 )
 
 pairsDo: aBlock  = (
@@ -551,6 +608,13 @@ withIndexDo: elementAndIndexBlock = (
 		elementAndIndexBlock
 			value: (self at: index)
 			value: index]
+)
+
+withoutDuplicates = (
+	"Answer a copy of the receiver that preserves order but eliminates any duplicates."
+	| seen |
+	seen := Set new: self size.
+	^self select: [:each| seen ifAbsentAdd: each]
 )
 
 writeStream = (

@@ -1,0 +1,224 @@
+CollectionTest = TestCase (
+
+| empty nonEmpty |
+
+setUp = (
+	empty := Set new.
+	nonEmpty := OrderedCollection with: #x
+)
+
+"
+testAny = (
+	{
+		{ 2. Array withAll: #(1 2 3 4) }.
+		{ 4. Array withAll: #(1 2 3 4) }.
+		{ 0. Array withAll: #(1 2 3 4) }.
+		{ 2. OrderedCollection withAll: #(1 2 3 4) }.
+		{ 2. Dictionary withAll: { #apple -> #red. #plum -> #purple. #peach -> #orange } }.
+		{ 2. Set withAll: #(1 2 3 4) }.
+		{ 2. Bag withAll: #(1 1 2 2) }.
+	} do: [:spec | | result |
+		result := spec second any: spec first.
+		self
+			assert: (spec second includesAllOf: result);
+			assert: spec first equals: result size;
+			assert: spec second class equals: result class].
+)
+"
+
+"testAnyAs = (
+	{
+		{ 2. 2. OrderedCollection. Array withAll: #(1 2 3 4) }.
+		{ 4. 1. Set. Array withAll: #(1 1 1 1) }.
+		{ 4. 4. Bag. Array withAll: #(1 1 1 1) }.
+		{ 2. 2. Dictionary. Array withAll: { #apple -> #red. #plum -> #purple. #peach -> #orange } }.
+	} do: [:spec | | result |
+		result := spec fourth any: spec first as: spec third.
+		(result associationsDo: [:each | self assert: (spec fourth includes: each)]).
+		self
+			assert: spec second equals: result size;
+			assert: spec third equals: result class].
+)
+"
+
+"
+testAnyStreams = (
+	{
+		{ 2. 2. Array withAll: #(1 2 3 4) }.
+		{ 4. 4. Array withAll: #(1 2 3 4) }.
+		{ 0. 0. Array withAll: #(1 2 3 4) }.
+		{ 10. 4. Array withAll: #(1 2 3 4) }.
+		{ 2. 2. OrderedCollection withAll: #(1 2 3 4) }.
+	} do: [:spec | | result |
+		result := spec third readStream any: spec first.
+		self
+			assert: (spec third includesAllOf: result);
+			assert: spec second equals: result size;
+			assert: spec third class equals: result class].
+)
+"
+
+testCollectAs = (
+	| classes collection newCollection |
+	classes := {Array . OrderedCollection . Set . Bag}.
+	classes do: [:originClass |
+		classes do: [:targetClass |
+			collection := originClass with: 1 with: 2 with: 3.
+			newCollection := collection collect: [:v | v + 1] as: targetClass.
+			self
+				assert: collection size equals: newCollection size;
+				assert: (newCollection includesAllOf: { 2 . 3. 4})]]
+)
+
+testDetect = (
+	self assert: #x equals: (nonEmpty detect: [:ea | ea isSymbol]).
+	"self should: [nonEmpty detect: [:ea | ea isNumber]] raise: Error."
+)
+
+testDetectIfFound = (
+	self assert: 42 equals: (nonEmpty detect: [:ea | ea isSymbol] ifFound: [:symbol | 42]).
+	self assert: nil equals:  (nonEmpty detect: [:ea | ea isNumber] ifFound: [:number | #x]).
+)
+
+testDetectIfFoundIfNone = (
+	self assert: 42 equals: (nonEmpty
+								detect: [:ea | ea isSymbol]
+								ifFound: [:symbol | 42]
+								ifNone: [#x]).
+	self assert: #x equals:  (nonEmpty
+								detect: [:ea | ea isNumber]
+								ifFound: [:symbol | 42]
+								ifNone: [#x]).
+)
+
+testDetectIfNone = (
+	self assert: #x equals: (nonEmpty detect: [:ea | ea isSymbol] ifNone: [42]).
+	self assert: 42 equals:  (nonEmpty detect: [:ea | ea isNumber] ifNone: [42]).
+)
+
+"
+testEmptyOfLiteralCollections = (
+	| literalCollections |
+	literalCollections := Collection withAllSubclasses select:
+		[:cls | cls initializedInstance ifNil: [false] ifNotNil: [:inst | inst isLiteral]].
+	literalCollections do: [:coll |
+		self
+			assert: 0
+			equals: coll empty size
+			description: 'Literal collection should have meaningful empty instance';
+			assert: coll empty species
+			identical: coll empty species
+			description: 'Empty instance of literal collection should be canonical']
+)
+"
+
+testHistogramOf = (
+	" could be collect:as: Bag, but histogram is what it's used for "
+	| baseCollection collection |
+	baseCollection := {#x -> 2 . #y -> 3 . #y -> 4. #z -> 2 }.
+	{ Array . OrderedCollection . Set } do:
+		[:collectionClass |
+		collection := baseCollection as: collectionClass.
+		self
+			assert: collection asBag
+			equals: (collection histogramOf: [:ea | ea])
+			description: 'For ', collectionClass, ', #asBag and identity-histograms should match'.
+		self
+			assert: (Bag withAll: #( x y y z))
+			equals: (collection histogramOf: [:ea | ea key])
+			description:  'For ', collectionClass, ', histogramming contents should work '.
+		self
+			assert: (Bag withAll: #( 2 3 4 2 ))
+			equals: (collection histogramOf: [:ea | ea value])
+			description:  'For ', collectionClass, ', histogramming contents should work'].
+	baseCollection := {#x -> 2 . "#y -> 3 ." #y -> 4. #z -> 2 }. "No duplicate keyes"
+	collection := baseCollection as: Dictionary.
+	self
+		assert:  (Bag withAll: #( 2 2 4 ))
+		equals: (collection histogramOf: [:ea | ea])
+		description: 'For Dictionary, histogramming should work on values.'.
+	self
+		assert:  (collection values histogramOf: [:ea | ea])
+		equals: (collection histogramOf: [:ea | ea])
+		description: 'For Dictionary, histogramming should be the same as histogramming the values.'.
+	self
+		assert: collection asBag
+		equals: (collection histogramOf: [:ea | ea])
+		description: 'For Dictionary, #asBag should match histogramming.'.
+	self
+		assert: (Bag withAll: #(x y z))
+		equals: (collection keys histogramOf: [:ea |ea])
+		description:  'For Dictionary, histogramming keys is ok to be less convenient.'.
+)
+
+testIfEmpty = (
+	nonEmpty ifEmpty: [self assert: false].
+	self assert: (empty ifEmpty: [self]) == self.
+	self assert: (nonEmpty ifEmpty: [self]) == nonEmpty.
+)
+
+testIfEmptyifNotEmpty = (
+	self assert: (empty ifEmpty: [true] ifNotEmpty: [false]).
+	self assert: (nonEmpty ifEmpty: [false] ifNotEmpty: [true]).
+	self assert: (nonEmpty ifEmpty: [false] ifNotEmpty: [:s | s first = #x])
+)
+
+testIfEmptyifNotEmptyDo = (
+	self assert: (empty ifEmpty: [true] ifNotEmptyDo: [:s | false]).
+	self assert: (nonEmpty ifEmpty: [false] ifNotEmptyDo: [:s | s first = #x])
+)
+
+testIfNotEmpty = (
+	empty ifNotEmpty: [self assert: false].
+	self assert: (nonEmpty ifNotEmpty: [self]) == self.
+	self assert: (nonEmpty ifNotEmpty: [:s | s first]) = #x.
+	self assert: (empty ifNotEmpty: [self]) == empty.
+)
+
+testIfNotEmptyDo = (
+	empty ifNotEmptyDo: [:s | self assert: false].
+	self assert: (nonEmpty ifNotEmptyDo: [:s | s first]) = #x
+)
+
+testIfNotEmptyDoifEmpty = (
+	self assert: (empty ifNotEmptyDo: [:s | false] ifEmpty: [true]).
+	self assert: (nonEmpty ifNotEmptyDo: [:s | s first = #x] ifEmpty: [false])
+)
+
+testIfNotEmptyifEmpty = (
+	self assert: (empty ifEmpty: [true] ifNotEmpty: [false]).
+	self assert: (nonEmpty ifEmpty: [false] ifNotEmpty: [true]).
+	self assert: (nonEmpty ifEmpty: [false] ifNotEmpty: [:s | s first = #x])
+)
+
+testMinMax = (
+	self assert: #(5 6 3 -3 2 1 0 4) minMax = #(-3 6).
+	self assert: #($f $g $a $g $u $z $s $t) minMax = #($a $z).
+	self assert: #(2834.83 -293482.28 99283 23 959323) minMax = #(-293482.28 959323).
+)
+
+testReduce = (
+	"self run: #testReduce"
+	| array set bag |
+	array := Array with: 1 with: 2 with: 3.
+	self assert: (array reduce:[:a :b| a + b]) = 6.
+	set := array asSet.
+	self assert: (set reduce:[:a :b| a + b]) = 6.
+	array := Array with: Color red with: Color green with: Color blue.
+	self assert: (array reduce:[:a :b| a + b]) = Color white.
+	set := array asSet.
+	self assert: (set reduce:[:a :b| a + b]) = Color white.
+	array := Array with: 1 with: 1 with: 1.
+	self assert: (array reduce:[:a :b| a + b]) = 3.
+	bag := array asBag.
+	self assert: (bag reduce:[:a :b| a + b]) = 3.
+)
+
+testTake = (
+	self
+		assert: 2 equals: (#(1 2) take: 5) size;
+		assert: 2 equals: (#(1 2) readStream take: 5) size.
+		"should: [#(1 2) take: -1] raise: Error."
+)
+
+)

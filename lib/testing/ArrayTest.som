@@ -1,0 +1,112 @@
+ArrayTest = ClassTestCase (
+
+| example1 literalArray selfEvaluatingArray otherArray nonSEArray1 nonSEarray2 example2 |
+
+setUp = (
+
+	literalArray := #(1 true 3 #four).
+	selfEvaluatingArray := { 1. true. (3/4). Color black. (2 to: 4) . 5 }.
+	nonSEArray1 := { 1 . Set with: 1 }.
+	nonSEarray2 := { #Array -> Array }.
+	example1 := #(1 2 3 4 5).
+	example2 := {1. 2. 3/4. 4. 5}.
+
+)
+
+testAtWrap = (
+	|tabTest|
+	tabTest := #(5 6 8).
+	self assert:(tabTest atWrap: 2) = 6.
+	self assert:(tabTest atWrap:7) = 5.
+	self assert:( tabTest atWrap:5) = 6.
+	self assert:(tabTest atWrap:0)= 8.
+	self assert:(tabTest atWrap:1)= 5.
+	self assert:(tabTest atWrap:-2) = 5.
+
+
+)
+
+testEmpty = (
+
+	self
+		assert: 0
+		equals: Array empty size
+		description: 'The empty Array should be empty indeed';
+
+		assert: Array
+		equals: Array empty species
+		description: 'The empty Array should be an Array';
+
+		assert: Array empty
+		identical: Array empty
+		description: 'The empty Array should be canonical';
+
+		yourself
+
+
+
+)
+
+testIsArray = (
+
+	self assert: example1 isArray
+
+)
+
+testIsLiteral = (
+	"We work with a copy of literalArray, to avoid corrupting the code."
+
+	| aLiteralArray |
+	aLiteralArray := literalArray copy.
+	self assert: aLiteralArray isLiteral.
+	aLiteralArray at: 1 put: self class.
+	self deny: aLiteralArray isLiteral.
+	"self deny: (literalArray as: WeakArray) isLiteral description: 'instances of Array subclasses are not literal'."
+
+)
+
+"
+testLiteralEqual = (
+	self
+		deny: (example1 literalEqual: example1 asIntegerArray)
+)
+"
+
+"
+testLiteralStoreOn = (
+	| anArray |
+	anArray := {true. false. nil. #a. 'a'. $a. -1. 0. 1. Float pi. Float halfPi. Float halfPi negated.}.
+	anArray := anArray copyWith: anArray.
+	self assert: anArray isLiteral.
+	self assert: (Compiler evaluate: anArray storeString) = anArray.
+)
+"
+
+testNewWithSize = (
+	|array|
+	array := Array new: 5.
+	self assert: array size = 5.
+	1 to: 5 do: [:index | self assert: (array at: index) isNil]
+)
+
+testPremultiply = (
+	self assert: example1 +* #(2 ) = #(2 4 6 8 10 )
+
+)
+
+"
+testPrinting = (
+	self assert: '#(1 true 3 #four)' equals: literalArray printString.
+	self
+		assert: (literalArray = (Compiler evaluate: literalArray printString))
+		description: 'Literal array doesn''t print as a string that when evaluated returns an equivalent Array'.
+	self assert: '{1 . true . (3/4) . Color black . (2 to: 4) . 5}' equals: selfEvaluatingArray printString.
+	self
+		assert: (selfEvaluatingArray = (Compiler evaluate: selfEvaluatingArray printString))
+		description: 'Array doesn''t print as a string that when evaluated returns an equivalent Array'.
+	self assert: '{1 . a Set(1)}' equals: nonSEArray1 printString.
+	self assert: '{#Array=>Array}' equals: nonSEarray2 printString.
+)
+"
+
+)

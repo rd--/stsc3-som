@@ -46,17 +46,14 @@ vmErrorWithBacktrace msg obj = vmBacktrace >> objectListError obj msg
 
 -- * Copy
 
-stringToCharacterArray :: String -> Vm ObjectData
-stringToCharacterArray str = do
-  pc <- vmProgramCounterIncrement
+stringToCharacterArray :: Bool -> String -> Vm ObjectData
+stringToCharacterArray isLiteral str = do
+  pc <- if isLiteral then return stringLiteralId else vmProgramCounterIncrement
   ref <- vecRefFromList (fromUnicodeString str)
   return (DataCharacterArray pc ref)
 
-mutableStringObject :: String -> Vm Object
-mutableStringObject str = fmap (Object (toSymbol "String")) (stringToCharacterArray str)
-
-mutableSymbolObject :: String -> Vm Object
-mutableSymbolObject str = fmap (Object (toSymbol "Symbol")) (stringToCharacterArray str)
+mutableStringObject :: Bool -> String -> Vm Object
+mutableStringObject isLiteral str = fmap (Object (toSymbol "String")) (stringToCharacterArray isLiteral str)
 
 objectDataShallowCopy :: ObjectData -> Vm ObjectData
 objectDataShallowCopy od =
@@ -69,7 +66,7 @@ objectDataShallowCopy od =
       pc <- vmProgramCounterIncrement
       cpy <- vecRefShallowCopy ref
       return (DataCharacterArray pc cpy)
-    DataImmutableString False str -> stringToCharacterArray str
+    DataImmutableString str -> stringToCharacterArray False str
     DataIndexable _ ref -> do
       pc <- vmProgramCounterIncrement
       cpy <- vecRefShallowCopy ref
@@ -80,10 +77,18 @@ objectDataShallowCopy od =
       return (DataNonIndexable pc cpy)
     _ -> return od
 
+{- | Primitive to make a shallow (or spine) copy of an object.
+
+Symbols are unique.
+The class library ensures symbols aren't copied, however when copying arrays we need to do the check here.
+-}
 objectShallowCopy :: Object -> Vm Object
-objectShallowCopy (Object nm obj) = do
-  cpy <- objectDataShallowCopy obj
-  return (Object nm cpy)
+objectShallowCopy object@(Object nm obj) = do
+  case nm of
+    "Symbol" -> return object
+    _ -> do
+      cpy <- objectDataShallowCopy obj
+      return (Object nm cpy)
 
 objectTableShallowCopy :: ObjectTable -> Vm ObjectTable
 objectTableShallowCopy vec = do
@@ -410,12 +415,15 @@ closureClass typ numArg =
     SomSystem -> "Block" ++ show (numArg + 1)
     SmalltalkSystem -> "BlockClosure"
 
--- | Som/St.  Som array literals are mutable, St string literals are mutable...
+{- | Som/St.
+Som array literals are mutable.
+St string literals are mutable.  However equal string literals must also be identical.
+-}
 sysLiteralObject :: SystemType -> Object -> Vm Object
 sysLiteralObject typ obj =
   case (typ, obj) of
-    (SomSystem, Object _ (DataArrayLiteral _)) -> objectShallowCopy obj
-    (SmalltalkSystem, Object _ (DataImmutableString False str))  -> mutableStringObject str
+    (SomSystem, Object "Array" (DataArrayLiteral _)) -> objectShallowCopy obj
+    (SmalltalkSystem, Object "String" (DataImmutableString str))  -> mutableStringObject True str
     _ -> return obj
 
 {- | Evaluate expression.

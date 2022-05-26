@@ -1,0 +1,69 @@
+TrueTest = ClassTestCase (
+
+testAND = (
+	self assert: (true & true) = true.
+	self assert: (true & false) = false.
+)
+
+testAnd = (
+	self assert: (true and: ['alternativeBlock']) = 'alternativeBlock'.
+)
+
+testAsBit = (
+	self assert: (true asBit = 1).
+)
+
+testIfFalse = (
+	self assert: (true ifFalse: ['alternativeBlock']) = nil.
+)
+
+testIfFalseIfTrue = (
+	self assert: (true ifFalse: ['falseAlternativeBlock']
+                      ifTrue: ['trueAlternativeBlock']) = 'trueAlternativeBlock'.
+)
+
+testIfTrue = (
+	self assert: (true ifTrue: ['alternativeBlock']) = 'alternativeBlock'.
+)
+
+testIfTrueIfFalse = (
+	self assert: (true ifTrue: ['trueAlternativeBlock']
+                      ifFalse: ['falseAlternativeBlock']) = 'trueAlternativeBlock'.
+)
+
+"
+testNew = (
+	self should: [True new] raise: Error.
+)
+"
+
+testNot = (
+	self assert: (true not = false).
+)
+
+testOR = (
+	self assert: (true | true) = true.
+	self assert: (true | false) = true.
+)
+
+testOr = (
+	self assert: (true or: ['alternativeBlock']) = true.
+)
+
+testPrintOn = (
+	self assert: (String streamContents: [:stream | true printOn: stream]) = 'true'.
+)
+
+testXor = (
+	self assert: (true xor: true) = false.
+	self assert: (true xor: false) = true.
+	self assert: (true xor: [true]) = false.
+	self assert: (true xor: [false]) = true.
+	"Verify that boolean with non-boolean raise errors."
+"
+	self should: [true xor: [1]] raise: Error.
+	self should: [true xor: 1] raise: Error.
+"
+)
+
+)

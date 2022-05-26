@@ -51,50 +51,6 @@ Double = Float (
 	^ aNumber adaptToFloat: self andSend: #/
 )
 
-atRandom = (
-	<primitive: -1>
-        self primitiveFailed: #atRandom
-)
-
-exponent = (
-	<primitive: 53>
-	^self primitiveFailed: #exponent
-)
-
-truncated = (
-	<primitive: 51>
-	self primitiveFailed: #truncated
-)
-
-fractionPart = (
-	<primitive: 52>
-	^self - self truncated asFloat
-)
-
-sqrt = (
-	<primitive: 55>
-	self primitiveFailed: #sqrt
-)
-
-sin = (
-	<primitive: 56>
-	self primitiveFailed: #sin
-)
-
-ln = (
-	<primitive: 58>
-	self primitiveFailed
-)
-
-exp = (
-	<primitive: 59>
-	self primitiveFailed
-)
-
-asString = (
-	<primitive: -1>
-)
-
 adaptToInteger: rcvr andSend: selector = (
 	^ rcvr asFloat perform: selector with: self
 )
@@ -103,9 +59,38 @@ adaptToInteger: rcvr andCompare: selector = (
 	^ rcvr asFloat perform: selector with: self
 )
 
+asString = (
+	<primitive: -1>
+)
+
+atRandom = (
+	<primitive: -1>
+        self primitiveFailed: #atRandom
+)
+
+exp = (
+	<primitive: 59>
+	self primitiveFailed
+)
+
+exponent = (
+	<primitive: 53>
+	^self primitiveFailed: #exponent
+)
+
+fractionPart = (
+	<primitive: 52>
+	^self - self truncated asFloat
+)
+
 identityHash = (
 	<primitive: 75>
 	^self primitiveFailed
+)
+
+ln = (
+	<primitive: 58>
+	self primitiveFailed
 )
 
 printOn: aStream = (
@@ -113,6 +98,21 @@ printOn: aStream = (
 )
 
 shallowCopy= (
+)
+
+sin = (
+	<primitive: 56>
+	self primitiveFailed: #sin
+)
+
+sqrt = (
+	<primitive: 55>
+	self primitiveFailed: #sqrt
+)
+
+truncated = (
+	<primitive: 51>
+	self primitiveFailed: #truncated
 )
 
 ----

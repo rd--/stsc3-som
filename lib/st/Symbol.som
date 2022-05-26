@@ -17,6 +17,10 @@ classPart = (
 	^(self copyFrom: 1 to: i-1) asSymbol
 )
 
+copy = (
+	"Answer with the receiver, because Symbols are unique."
+)
+
 isCompound = (
 	"return true if the receiver is of the form Class.foo "
 	^self includes: $.

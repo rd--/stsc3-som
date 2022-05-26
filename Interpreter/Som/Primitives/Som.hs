@@ -82,17 +82,11 @@ doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDou
 prArrayAt :: (StError m, MonadIO m) => VecRef Object -> LargeInteger -> m Object
 prArrayAt ref ix = vecRefAtMaybe ref (fromInteger ix - 1) >>= maybe (prError "Array>>at: index out of range") return
 
-prObjectEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
-prObjectEqual rcv arg = do
+prObjectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
+prObjectHashEqual rcv arg = do
   hash1 <- objectIntHash rcv
   hash2 <- objectIntHash arg
   return (booleanObject (hash1 == hash2))
-
-prStringEqual :: (Bool, UnicodeString) -> ObjectData -> Object
-prStringEqual (typ1, str1) rhs =
-  case rhs of
-    DataImmutableString typ2 str2 -> booleanObject ((not typ1 || typ1 == typ2) && str1 == str2)
-    _ -> falseObject
 
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
@@ -125,14 +119,21 @@ prSystemExit exitCode =
      then liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure (fromInteger exitCode)))
      else liftIO (putStrLn (printf "exit: %d" exitCode)) >> return nilObject
 
+prStringEqual :: (String, String) -> Object -> Object
+prStringEqual (lhsClass, lhs) obj =
+  case obj of
+    Object rhsClass (DataImmutableString rhs) ->
+      booleanObject ((lhsClass == rhsClass || (lhsClass == "String" && rhsClass == "Symbol")) && lhs == rhs)
+    _ -> booleanObject False
+
 -- | Primitives with no requirements that, given types have matched, do not fail.
 somPrimitivesO :: SomPrimitiveOf (Maybe Object)
-somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments =
+somPrimitivesO (prClass, prMethod) (Object receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("&", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (lhs Data.Bits..&. rhs))
     ("<", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive Nothing (<) (<) lhs rhs
     ("<<", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftLeft lhs rhs))
-    ("=", DataImmutableString typ str, [Object _ arg]) -> Just (prStringEqual (typ, str) arg)
+    ("=", DataImmutableString lhs, [rhs]) -> Just (prStringEqual (receiverName, lhs) rhs)
     ("=", DataLargeInteger lhs, [Object _ rhs]) -> intNumBoolPrimitive (Just falseObject) (==) (==) lhs rhs
     (">>>", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (largeIntegerShiftRight lhs rhs))
     ("PositiveInfinity", DataClass {}, []) -> Just (doubleObject (read "Infinity"))
@@ -141,23 +142,23 @@ somPrimitivesO (prClass, prMethod) (Object _receiverName receiverObj) arguments 
     ("asDouble", DataLargeInteger x, []) -> Just (doubleObject (fromIntegral x))
     ("asInteger", DataDouble x, []) -> Just (intObject (truncate x)) -- Som?
     ("asString", DataDouble x, []) -> Just (strObject (show x))
-    ("asString", DataImmutableString True x, []) -> Just (strObject x)
+    ("asString", DataImmutableString x, []) -> Just (strObject x)
     ("asString", DataLargeInteger x, []) -> Just (strObject (show x))
-    ("asSymbol", DataImmutableString _ x, []) -> Just (symObject x)
+    ("asSymbol", DataImmutableString x, []) -> Just (symObject x)
     ("bitXor:", DataLargeInteger lhs, [Object _ (DataLargeInteger rhs)]) -> Just (intObject (Data.Bits.xor lhs rhs))
-    ("concatenate:", DataImmutableString _ x, [Object _ (DataImmutableString _ y)]) -> Just (strObject (unicodeStringAppend x y))
+    ("concatenate:", DataImmutableString x, [Object _ (DataImmutableString y)]) -> Just (strObject (unicodeStringAppend x y))
     ("cos", DataDouble x, []) -> Just (doubleObject (cos x))
-    ("fromString:", DataClass {}, [Object _ (DataImmutableString _ x)]) ->
+    ("fromString:", DataClass {}, [Object _ (DataImmutableString x)]) ->
       case prClass of
         "Integer class" -> fmap intObject (unicodeStringReadLargeInteger x)
         "Double class" -> Just (maybe nanObject doubleObject (unicodeStringReadDouble x))
         _ -> Nothing
     ("holder", DataPrimitive x _, []) -> Just (symObject x)
-    ("isDigits", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isDigit str)
-    ("isLetters", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isLetter str)
-    ("isWhiteSpace", DataImmutableString _ str, []) -> Just (prStringAll Data.Char.isSpace str)
-    ("length", DataImmutableString _ str, []) -> Just (intObject (toLargeInteger (unicodeStringLength str)))
-    ("primSubstringFrom:to:", DataImmutableString _ str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (strObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
+    ("isDigits", DataImmutableString str, []) -> Just (prStringAll Data.Char.isDigit str)
+    ("isLetters", DataImmutableString str, []) -> Just (prStringAll Data.Char.isLetter str)
+    ("isWhiteSpace", DataImmutableString str, []) -> Just (prStringAll Data.Char.isSpace str)
+    ("length", DataImmutableString str, []) -> Just (intObject (toLargeInteger (unicodeStringLength str)))
+    ("primSubstringFrom:to:", DataImmutableString str, [Object _ (DataLargeInteger int1), Object _ (DataLargeInteger int2)]) -> Just (strObject (unicodeStringSubstringFromTo str (fromLargeInteger int1) (fromLargeInteger int2)))
     ("round", DataDouble x, []) -> Just (intObject (round x)) -- Som (roundTowardPositive in IEEE 754-2008)
     ("signature", DataMethod _ mth _, []) -> Just (symObject (St.selectorIdentifier (St.methodSelector mth)))
     ("signature", DataPrimitive _ x, []) -> Just (symObject x)
@@ -205,22 +206,22 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveOf (m Object)
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
-    ("==", _, [arg]) -> prObjectEqual receiver arg
+    ("==", _, [arg]) -> prObjectHashEqual receiver arg
     ("at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
     ("at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> prAtPut ref (fromInteger ix) value
     ("atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
-    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error"
+    ("errorPrintln:", DataSystem, [Object _ (DataImmutableString x)]) -> liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error"
     ("exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
     ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
     ("hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
     ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix)]) -> tblAtDefault tbl (fromLargeInteger ix - 1) (prError "Object>>instVarAt:")
     ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix), newObject]) -> tblAtPutDefault tbl (fromLargeInteger ix - 1) newObject (prError "Object>>instVarAt:put")
-    ("instVarNamed:", DataNonIndexable _ tbl, [Object _ (DataImmutableString True key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
+    ("instVarNamed:", DataNonIndexable _ tbl, [Object "Symbol" (DataImmutableString key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
     ("length", DataIndexable _ ref, []) -> deRef ref >>= \v -> return (intObject (fromIntegral (vecLength v)))
-    ("loadFile:", DataSystem, [Object _ (DataImmutableString False x)]) -> prSystemLoadFile x
+    ("loadFile:", DataSystem, [Object "String" (DataImmutableString x)]) -> prSystemLoadFile x
     ("name", DataClass (cd, isMeta) _ _, []) -> return (symObject ((if isMeta then St.metaclassName else id) (St.className cd)))
     ("printNewline", DataSystem, []) -> liftIO (putChar '\n') >> return nilObject
-    ("printString:", DataSystem, [Object _ (DataImmutableString _ x)]) -> liftIO (unicodeStringWrite x) >> return nilObject
+    ("printString:", DataSystem, [Object _ (DataImmutableString x)]) -> liftIO (unicodeStringWrite x) >> return nilObject
     _ ->
       case somPrimitivesM (prClass, prMethod) receiver arguments of
         Just answer -> return answer
@@ -240,9 +241,9 @@ System>>time is elapsed time in milliseconds.
 somPrimitivesV :: SomPrimitiveDispatcher
 somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
-    ("global:", DataSystem, [Object _ (DataImmutableString True x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
-    ("global:put:", DataSystem, [Object _ (DataImmutableString True x), e]) -> vmGlobalAssign (fromUnicodeString x) e
-    ("hasGlobal:", DataSystem, [Object _ (DataImmutableString True x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
+    ("global:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
+    ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssign (fromUnicodeString x) e
+    ("hasGlobal:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
     ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classCachedMethodsVec receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmElapsedTimeInMicroseconds
@@ -278,12 +279,12 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("inspect", _, []) -> objectInspectAndPrint receiver
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
     ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
-    ("load:", DataSystem, [Object "Symbol" (DataImmutableString True x)]) -> systemLoadClassOrNil (fromUnicodeString x)
+    ("load:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> systemLoadClassOrNil (fromUnicodeString x)
     ("new", DataClass (cd,_) _ _,[]) -> classNew cd
-    ("perform:", _, [Object "Symbol" (DataImmutableString True sel)]) -> objectPerform somCoreOpt receiver sel
-    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
-    ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString True sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
-    ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString True sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
+    ("perform:", _, [Object "Symbol" (DataImmutableString sel)]) -> objectPerform somCoreOpt receiver sel
+    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
+    ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
+    ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
     ("value", DataBlock {}, []) -> evalBlock somCoreOpt receiver []
     ("value:", DataBlock {}, [arg]) -> evalBlock somCoreOpt receiver [arg]

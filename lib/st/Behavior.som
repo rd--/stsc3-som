@@ -99,7 +99,7 @@ selectors = (
 
 selectorsDo: selectorBlock = (
 	"Evaluate selectorBlock for all the message selectors in my method dictionary."
-	^self selectors do: selectorBlock
+	self selectors do: selectorBlock
 )
 
 superclass = (

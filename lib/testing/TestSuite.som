@@ -74,6 +74,7 @@ run = (
 run: aResult = (
 	self tests do: [:each |
 		"self changed: each."
+		Transcript show: each; cr.
 		each run: aResult].
 )
 

@@ -10,6 +10,7 @@ fillFrom: aCollection with: aBlock = (
 )
 
 inject: anObject into: aBlock = (
+	"Optimized for speed. See super."
 	| result |
 	result := anObject.
 	1 to: self size do: [:i | result := aBlock value: result value: (self at: i)].
@@ -131,6 +132,15 @@ mergeSortFrom: firstIndex to: lastIndex into: destination by: aBlock = (
 	destination mergeSortFrom: firstIndex to: n into: self by: aBlock.
 	destination mergeSortFrom: n + 1 to: lastIndex into: self by: aBlock.
 	self mergeFirst: firstIndex middle: n last: lastIndex into: destination by: aBlock
+)
+
+occurrencesOf: anObject = (
+	"Answer how many of the receiver's elements are equal to anObject. Optimized version."
+	| tally |
+	tally := 0.
+	1 to: self size do: [ :index |
+		(self at: index) = anObject ifTrue: [ tally := tally + 1 ] ].
+	^tally
 )
 
 quickSort = (

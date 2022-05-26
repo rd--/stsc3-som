@@ -131,6 +131,10 @@ timesRepeat: aBlock = (
 		aBlock value ]
 )
 
+truncated = (
+	"Refer to the comment in Number|truncated."
+)
+
 ----
 
 new = (

@@ -40,6 +40,10 @@ type ObjectTable = Vec (Symbol, Ref Object)
 -- | Identifier.
 type Id = Int
 
+-- | String literals must hash to the same value.
+stringLiteralId :: Id
+stringLiteralId = -1
+
 {- | Method contexts store:
        1. a context identifier to receive non-local returns
        2. the method selector (signature) for back traces
@@ -100,7 +104,7 @@ data ObjectData
   | DataLargeInteger LargeInteger -- ^ Som Integer
   | DataDouble Double
   | DataCharacter Char -- ^ Not in Som
-  | DataImmutableString Bool UnicodeString -- ^ IsSymbol
+  | DataImmutableString UnicodeString
   | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
@@ -124,7 +128,7 @@ objectDataAsDouble o =
 objectDataAsString :: MonadIO m => ObjectData -> m (Maybe String)
 objectDataAsString o =
   case o of
-    DataImmutableString _ str -> return (Just (fromUnicodeString str))
+    DataImmutableString str -> return (Just (fromUnicodeString str))
     DataCharacterArray _ ref -> fmap Just (vecRefToList ref)
     _ -> return Nothing
 
@@ -296,8 +300,8 @@ objectToString (Object nm obj) =
     DataLargeInteger x -> show x
     DataDouble x -> show x
     DataCharacter x -> ['$',x]
-    DataImmutableString isSymbol x ->
-      if isSymbol -- nm == toSymbol "Symbol"
+    DataImmutableString x ->
+      if nm == toSymbol "Symbol"
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
@@ -526,10 +530,10 @@ characterObject :: Char -> Object
 characterObject ch = Object (toSymbol "Character") (DataCharacter ch)
 
 immutableStringObject :: String -> Object
-immutableStringObject str = Object (toSymbol "String") (DataImmutableString False (toUnicodeString str))
+immutableStringObject str = Object (toSymbol "String") (DataImmutableString (toUnicodeString str))
 
 immutableSymbolObject :: String -> Object
-immutableSymbolObject str = Object (toSymbol "Symbol") (DataImmutableString True (toUnicodeString str))
+immutableSymbolObject str = Object (toSymbol "Symbol") (DataImmutableString (toUnicodeString str))
 
 booleanObject :: Bool -> Object
 booleanObject x = if x then reservedObject "true" else reservedObject "false"
@@ -659,7 +663,7 @@ objectIntHash (Object nm obj) =
     DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hashcode
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
-    DataImmutableString isSymbol x -> mHash (isSymbol, x) -- c.f. 'x' hashcode /= #'x' hashcode
+    DataImmutableString x -> mHash (nm, x) -- c.f. 'x' hashcode /= #'x' hashcode
     DataClass (x,_) _ _ -> mHash (nm,St.className x)
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
@@ -669,4 +673,4 @@ objectIntHash (Object nm obj) =
     DataArrayLiteral vec -> mapM objectIntHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm,x)
     DataNonIndexable x _ -> mHash (nm,x)
-    DataCharacterArray x _ -> mHash (nm,x)
+    DataCharacterArray x ref -> if x == stringLiteralId then vecRefToList ref >>= \str -> mHash (nm, str) else mHash (nm,x)
