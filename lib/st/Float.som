@@ -4,6 +4,62 @@ abs = (
 	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
 )
 
+arCosh = (
+	"Answer receiver's area hyperbolic cosine.
+	That is the inverse function of cosh."
+	self < 1
+		ifTrue:
+			[^self error: 'arCosh: receiver must be greater or equal to 1'].
+	^self + 1 = self
+		ifTrue: [self abs ln + 2 ln]
+		ifFalse: [((self squared - 1) sqrt + self) ln]
+)
+
+arSinh = (
+	"Answer receiver's area hyperbolic sine.
+	That is the inverse function of sinh."
+	self = 0.0 ifTrue: [^self].	"Handle negativeZero"
+	^self + 1 = self
+		ifTrue: [(self abs ln + 2 ln) * self sign]
+		ifFalse: [((self squared + 1) sqrt + self) ln]
+)
+
+arTanh = (
+	"Answer receiver's area hyperbolic tangent.
+	That is the inverse function of tanh."
+	self = 0.0 ifTrue: [^self].	"Handle negativeZero"
+	self abs = 1 ifTrue: [^self copySignTo: Float infinity].
+	self abs > 1
+		ifTrue:
+			[^DomainError signal: 'Receiver must be between -1.0 and 1.0'].
+	^((1 + self) / (1 - self)) ln / 2
+)
+
+arcCos = (
+	"Answer the angle in radians."
+	^ Float halfPi - self arcSin
+)
+
+arcSin = (
+	"Answer the angle in radians."
+	((self < -1.0) or: [self > 1.0]) ifTrue: [self error: 'arcSin only takes values between -1 and 1'].
+	((self = -1.0) or: [self = 1.0])
+		ifTrue: [^ Float halfPi * self]
+		ifFalse: [^ (self / (1.0 - (self * self)) sqrt) arcTan]
+)
+
+arcTan: denominator = (
+	"Answer the angle in radians, taking care of 4 quadrants.
+	Implementation note: use signBit and sign: in order to catch cases of negativeZero"
+	self = 0.0
+		ifTrue:
+			[denominator signBit = 0 ifTrue: [ ^0.0 ].
+			^Float pi sign: self ].
+	denominator = 0.0 ifTrue: [ ^ Float halfPi sign: self ].
+	denominator > 0.0 	ifTrue: [ ^(self / denominator) arcTan ].
+	^(self / denominator) arcTan + (Float pi sign: self)
+)
+
 asFloat = (
 )
 
@@ -20,15 +76,18 @@ cos = (
 	^ (self + Float halfPi) sin
 )
 
+cosh = (
+	"Answer receivers hyperbolic cosine."
+	| ex |
+	ex := self abs exp.
+	^(ex + ex reciprocal) / 2
+)
+
 degreeCos = (
-	"Take care of exceptional values"
-	self isFinite ifTrue: [^super degreeCos].
 	^self degreesToRadians cos
 )
 
 degreeSin = (
-	"Take care of exceptional values"
-	self isFinite ifTrue: [^super degreeSin].
 	^self degreesToRadians sin
 )
 
@@ -59,7 +118,7 @@ isInfinite = (
 )
 
 isLiteral = (
-	^true
+	^self isFinite
 )
 
 isNaN = (
@@ -113,12 +172,33 @@ significand = (
 	^ self timesTwoPower: (self exponent negated)
 )
 
+sinh = (
+	"Answer receivers hyperbolic sine"
+	| ex |
+	ex := self abs exp.
+	^self copySignTo: (ex - ex reciprocal) / 2
+)
+
 successor = (
 	^ self + Float epsilon
 )
 
 tan = (
 	^ self sin / self cos
+)
+
+tanh = (
+	"Answer hyperbolic tangent of receiver.
+	Trivial implementation is:
+		^self sinh/self cosh
+	This implementation takes care not to overflow."
+	| ex emx |
+	self = 0.0 ifTrue: [^self].	"Handle negativeZero"
+	self > 20.0 ifTrue: [^1.0].
+	self < -20.0 ifTrue: [^-1.0].
+	ex := self exp.
+	emx := ex reciprocal.
+	^(ex - emx) / (ex + emx)
 )
 
 timesTwoPower: anInteger = (
@@ -165,12 +245,25 @@ negativeInfinity = (
 	^ 0.0 - Float infinity
 )
 
+negativeZero = (
+	^ 1.0 / Float infinity negated
+)
+
 one = (
 	^ 1.0
 )
 
 pi = (
 	^  3.14159265358979323846264338327950288
+)
+
+precision = (
+	"Answer the apparent precision of the floating point representation.
+	That is the maximum number of radix-based digits (bits if radix=2) representable in floating point without round off error.
+	Technically, 52 bits are stored in the representation, and normalized numbers have an implied leading 1 that does not need to be stored.
+	Note that denormalized floating point numbers don't have the implied leading 1, and thus gradually loose precision.
+	This format conforms IEEE 754 double precision standard."
+	^53
 )
 
 radiansPerDegree = (

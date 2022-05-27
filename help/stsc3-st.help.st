@@ -7,6 +7,9 @@ CollectionTest suite run printOn: Transcript
 FalseTest selectorsDo: [ :each | Transcript show: each; cr. FalseTest run: each ]
 FalseTest suite run printOn: Transcript
 
+FloatTest selectorsDo: [ :each | Transcript show: each; cr. FloatTest run: each ]
+FloatTest suite run printOn: Transcript
+
 IntegerTest selectorsDo: [ :each | Transcript show: each; cr. IntegerTest run: each ]
 IntegerTest suite run printOn: Transcript
 

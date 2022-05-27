@@ -234,6 +234,10 @@ isCollection = (
 	^false
 )
 
+isFloat = (
+	^ false
+)
+
 isInteger = (
 	^ false
 )

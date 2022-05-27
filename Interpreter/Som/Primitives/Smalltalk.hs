@@ -192,6 +192,7 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (52, DataDouble x, []) -> return (Just (doubleObject (x - fromInteger (truncate x))))
     (55, DataDouble x, []) -> return (Just (doubleObject (sqrt x)))
     (56, DataDouble x, []) -> return (Just (doubleObject (sin x)))
+    (57, DataDouble x, []) -> return (Just (doubleObject (atan x)))
     (58, DataDouble x, []) -> return (Just (doubleObject (log x)))
     (59, DataDouble x, []) -> return (Just (doubleObject (exp x)))
     (60, DataArrayLiteral vec, [Object _ (DataSmallInteger ix)]) -> return (vecAtMaybe vec (ix - 1))

@@ -59,6 +59,11 @@ adaptToInteger: rcvr andCompare: selector = (
 	^ rcvr asFloat perform: selector with: self
 )
 
+arcTan = (
+	<primitive: 57>
+	self primitiveFailed
+)
+
 asString = (
 	<primitive: -1>
 )

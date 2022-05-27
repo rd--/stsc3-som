@@ -36,8 +36,8 @@ asInteger = (
 
 asNumber = (
 	(self anySatisfy: [ :char | char = $. ])
-		ifTrue: [ ^ Double fromString: self ]
-		ifFalse: [ ^ SmallInteger fromString: self ]
+		ifTrue: [ ^ Float readFrom: self ]
+		ifFalse: [ ^ Integer readFrom: self ]
 )
 
 asString = (

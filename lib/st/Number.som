@@ -38,6 +38,34 @@ adaptToCollection: rcvr andSend: selector = (
 	^ rcvr collect: [:element | element perform: selector with: self]
 )
 
+arCosh = (
+	^self asFloat arCosh
+)
+
+arSinh = (
+	^self asFloat arSinh
+)
+
+arTanh = (
+	^self asFloat arTanh
+)
+
+arcCos = (
+	^self asFloat arcCos
+)
+
+arcSin = (
+	^self asFloat arcSin
+)
+
+arcTan = (
+	^self asFloat arcTan
+)
+
+arcTan: denominator = (
+	^(self asFloat) arcTan: denominator.
+)
+
 asInteger = (
 	^self truncated
 )
@@ -59,7 +87,14 @@ ceiling = (
 closeTo: num = (
 	"are these two numbers close?"
 	num isFloat ifTrue: [^ num closeTo: self asFloat].
-	^[self = num] ifError: [false]
+	^self = num
+)
+
+copySignTo: aNumber = (
+	"Return a number with same magnitude as aNumber and same sign as self."
+	^ self signBit = 0
+		ifTrue: [aNumber abs]
+		ifFalse: [aNumber abs negated].
 )
 
 cos = (
@@ -234,8 +269,24 @@ sign = (
 	^0
 )
 
+sign: aNumber = (
+	"Return a Number with the same sign as aNumber and same magnitude as self."
+	^ aNumber copySignTo: self
+)
+
+signBit = (
+	"Answer 1 if the receiver is negative, zero otherwise."
+	self < 0 ifTrue: [^1].
+	^0
+)
+
 sin = (
 	^self asFloat sin
+)
+
+sinh = (
+	"Answer receivers hyperbolic sine"
+	^self asFloat sinh
 )
 
 squared = (
