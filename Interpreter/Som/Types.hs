@@ -446,21 +446,29 @@ objectAssignInstanceVariable object key value =
 
 -- * Object constructors
 
-{- | Make reserved identifier object.  These are stored in the global dictionary.
+data SystemType = SomSystem | SmalltalkSystem
 
-In Som the class of nil is Nil and in St-80 it is UndefinedObject.
--}
-reservedObject :: String -> Object
-reservedObject x =
+-- | In Som the class of nil is Nil and in St-80 it is UndefinedObject.
+sysNilClass :: SystemType -> String
+sysNilClass sys =
+  case sys of
+    SomSystem -> "Nil"
+    SmalltalkSystem -> "UndefinedObject"
+
+-- | Make reserved identifier object.  These are stored in the global dictionary.
+reservedObjectForSystem :: SystemType -> String -> Object
+reservedObjectForSystem sys x =
   case x of
     "true" -> Object (toSymbol "True") DataBoolean
     "false" -> Object (toSymbol "False") DataBoolean
-    "nil" -> Object (toSymbol "Nil") DataUndefinedObject
+    "nil" -> Object (toSymbol (sysNilClass sys)) DataUndefinedObject
     "system" -> Object (toSymbol "System") DataSystem
     "Smalltalk" -> Object (toSymbol "SmalltalkImage") DataSystem
     _ -> error "reservedObject"
 
-data SystemType = SomSystem | SmalltalkSystem
+-- | echhh...  don't worry for St.
+reservedObject :: String -> Object
+reservedObject = reservedObjectForSystem SomSystem
 
 systemReserverIdentifier :: SystemType -> String
 systemReserverIdentifier typ =
@@ -673,4 +681,4 @@ objectIntHash (Object nm obj) =
     DataArrayLiteral vec -> mapM objectIntHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm,x)
     DataNonIndexable x _ -> mHash (nm,x)
-    DataCharacterArray x ref -> if x == stringLiteralId then vecRefToList ref >>= \str -> mHash (nm, str) else mHash (nm,x)
+    DataCharacterArray _ ref -> vecRefToList ref >>= \str -> mHash (nm, str) -- strings and copies of strings hash equally

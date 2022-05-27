@@ -1,5 +1,9 @@
 Collection = (
 
+, aCollection = (
+	^ self copy addAll: aCollection asCollection; yourself
+)
+
 * arg = (
 	^ arg adaptToCollection: self andSend: #*
 )
@@ -86,10 +90,7 @@ asCollection = (
 )
 
 asIdentitySet = (
-	| answer |
-	answer := IdentitySet new: self size.
-	answer addAll: self.
-	^ answer
+	^(IdentitySet new: self size) addAll: self; yourself
 )
 
 asOrderedCollection = (
@@ -330,6 +331,11 @@ isEmpty = (
 	^self size = 0
 )
 
+isEmptyOrNil = (
+	"Answer whether the receiver contains any elements, or is nil.  Useful in numerous situations where one wishes the same reaction to an empty collection or to nil"
+	^ self isEmpty
+)
+
 isOfSameSizeCheck: otherCollection = (
 	otherCollection size = self size ifFalse: [self errorDifferentSize]
 )
@@ -453,9 +459,8 @@ truncated = (
 )
 
 union: aCollection = (
-	| answer |
-        answer := self asSet addAll: aCollection.
-        ^ answer
+	"Answer the set theoretic union of two collections."
+	^ self asSet addAll: aCollection; yourself
 )
 
 ----
@@ -470,10 +475,9 @@ ofSize: n = (
 
 with: anObject = (
 	"Answer an instance of me containing anObject."
-	| answer |
-	answer := self new.
-	answer add: anObject.
-	^ answer
+	^ self new
+		add: anObject;
+		yourself
 )
 
 with: firstObject with: secondObject = (

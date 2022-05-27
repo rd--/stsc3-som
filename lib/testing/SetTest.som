@@ -1,0 +1,191 @@
+SetTest = ClassTestCase (
+
+| full empty |
+
+setUp = (
+	empty := Set new.
+	full := Set with: 5 with: #abc
+)
+
+tearDown = (
+)
+
+testAdd = (
+	empty add: 5.
+	self assert: (empty includes: 5).
+)
+
+testAddWithOccurences = (
+	empty add: 2 withOccurrences: 3.
+	self assert: (empty includes: 2).
+	self assert: ((empty occurrencesOf: 2) = 1).
+)
+
+testAsSet = (
+	"could be moved in Array or Collection"
+	| newFull |
+	newFull := #(#abc 5) asSet.
+	newFull add: 5.
+	self assert: (newFull = full).
+)
+
+testAtRandom = (
+	full add: 3.
+	full add: 2.
+	full add: 4.
+	full add: 1.
+	self assert: (full includes: (full atRandom)).
+)
+
+testCollect = (
+	| newFull result |
+	newFull := Set withAll: (1 to: 10).
+	result := newFull collect: [:each | each >= 1 ifTrue: [each] ifFalse: ['no']].
+	self assert: (result = newFull).
+	result := newFull collect: [:each | each >= 5 ifTrue: [each] ifFalse: ['no']].
+	self assert: (result = ((Set withAll: (5 to: 10)) add: 'no'; yourself)).
+
+)
+
+testCopy = (
+	| newFull |
+	full add: 3.
+	full add: 2.
+	newFull := full copy.
+	self assert: (full size = newFull size).
+	self assert: ((full select: [:each | (newFull includes: each) not]) isEmpty).
+	self assert: ((newFull select: [:each | (full includes: each) not]) isEmpty).
+
+)
+
+testCopyWithout = (
+	| newFull |
+	full add: 3.
+	full add: 2.
+	newFull := full copyWithout: 3.
+	self assert: (newFull size = (full size - 1)).
+	self deny: (newFull includes: 3).
+	self assert: ((newFull select: [:each | (full includes: each) not]) isEmpty).
+	self assert: ((full select: [:each | (newFull includes: each) not]) = (Set with: 3)).
+)
+
+testDo = (
+	| newFull result |
+	newFull := Set withAll: (1 to: 5).
+	result := 0.
+	newFull do: [:each | result := (result + each)].
+	self assert: (result = 15).
+
+)
+
+testGrow = (
+	empty addAll: (1 to: 100).
+	self assert: (empty size = 100).
+
+
+)
+
+testIfAbsentAdd = (
+	| it |
+	it := 5.
+	self deny: (empty includes: it).
+	self assert: (empty ifAbsentAdd: it).
+	self assert: (empty includes: it).
+	self deny: (empty ifAbsentAdd: it).
+	self assert: (empty includes: it)
+
+)
+
+testIncludes = (
+	self assert: (full includes: 5).
+	self assert: (full includes: #abc).
+	self deny: (full includes: 3).
+)
+
+testIntersection = (
+	| newFull col |
+	full add: 3; add: 2.
+	col := full intersection: full.
+	self assert: (full = col).
+	newFull := Set with: 8 with: 9 with: #z.
+	col := newFull intersection: full.
+	self assert: (col isEmpty).
+	newFull add: 5; add: #abc; add: 7.
+	col := newFull intersection: full.
+	self assert: ((full select: [:each | (newFull includes: each)]) = col).
+)
+
+testLike = (
+	self assert: ((full like: 5) = 5).
+	self assert: ((full like: 8) isNil).
+)
+
+testOccurrences = (
+	self assert: ((empty occurrencesOf: 0) = 0).
+	self assert: ((full occurrencesOf: 5) = 1).
+	full add: 5.
+	self assert: ((full occurrencesOf: 5) = 1).
+)
+
+testRemove = (
+	full remove: 5.
+	self assert: (full includes: #abc).
+	self deny: (full includes: 5).
+)
+
+testRemoveAll = (
+	"Allows one to remove all elements of a collection"
+	| c1 c2 s2 |
+	c1 := full.
+	c2 := c1 copy.
+	s2 := c2 size.
+	c1 removeAll.
+	self assert: c1 size = 0.
+	self assert: c2 size = s2 description: 'the copy has not been modified'.
+)
+
+testRemoveIfAbsent = (
+	| result1 result2  |
+	result1 := true.
+	result2 := true.
+	full remove: 8 ifAbsent: [ result1 := false ].
+	self assert: (result1 = false).
+	full remove: 5 ifAbsent: [ result2 := false ].
+	self assert: (result2 = true).
+)
+
+testSize = (
+	self assert: (empty size = 0).
+	self assert: (full size = 2).
+	empty add: 2.
+	empty add: 1.
+	full add: 2.
+	self assert: (empty size = 2).
+	self assert: (full size = 3).
+	empty remove: 2.
+	self assert: (empty size = 1).
+)
+
+testUnion = (
+	| newFull col newCol |
+	full add: 3.
+	full add: 2.
+	col := full union: full.
+	self assert: (full = col).
+	newFull := Set with: 8 with: 9 with: #z.
+	col := newFull union: full.
+	self assert: (col size = (full size + newFull size)).
+	self assert: ((col select: [:each | (full includes: each) not]) = newFull).
+	self assert: ((col select: [:each | (newFull includes: each) not]) = full).
+	full add: 9.
+	col := newFull union: full.
+	newCol := newFull copy.
+	newCol remove: 9.
+	self assert: (col size = (full size + newFull size - 1)).
+	self assert: ((col select: [:each | (full includes: each) not]) = newCol).
+	newCol := full copy.
+	newCol remove: 9.
+	self assert: ((col select: [:each | (newFull includes: each) not]) = newCol).
+)
+
+)

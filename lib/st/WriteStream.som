@@ -105,7 +105,9 @@ next = (
 )
 
 on: aCollection = (
-	self on: aCollection from: 1 to: aCollection size
+	super on: aCollection.
+	readLimit := 0.
+	writeLimit := aCollection size
 )
 
 on: aCollection from: firstIndex to: lastIndex = (

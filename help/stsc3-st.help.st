@@ -1,8 +1,17 @@
+AssociationTest testSelectors do: [ :each | Transcript show: each; cr. AssociationTest run: each ]
+AssociationTest suite run printOn: Transcript
+
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
 ArrayTest suite run printOn: Transcript
 
+BagTest testSelectors do: [ :each | Transcript show: each; cr. BagTest run: each ]
+BagTest suite run printOn: Transcript
+
 CollectionTest testSelectors do: [ :each | Transcript show: each; cr. CollectionTest run: each ]
 CollectionTest suite run printOn: Transcript
+
+DictionaryTest testSelectors do: [ :each | Transcript show: each; cr. DictionaryTest run: each ]
+DictionaryTest suite run printOn: Transcript
 
 FalseTest testSelectors do: [ :each | Transcript show: each; cr. FalseTest run: each ]
 FalseTest suite run printOn: Transcript
@@ -31,6 +40,9 @@ ReadWriteStreamTest suite run printOn: Transcript
 SequenceableCollectionTest testSelectors do: [ :each | Transcript show: each; cr. SequenceableCollectionTest run: each ]
 SequenceableCollectionTest suite run printOn: Transcript
 
+SetTest testSelectors do: [ :each | Transcript show: each; cr. SetTest run: each ]
+SetTest suite run printOn: Transcript
+
 SmallIntegerTest testSelectors do: [ :each | Transcript show: each; cr. SmallIntegerTest run: each ]
 SmallIntegerTest suite run printOn: Transcript
 
@@ -39,6 +51,9 @@ SortedCollectionTest suite run printOn: Transcript
 
 TrueTest testSelectors do: [ :each | Transcript show: each; cr. TrueTest run: each ]
 TrueTest suite run printOn: Transcript
+
+UndefinedObjectTest testSelectors do: [ :each | Transcript show: each; cr. UndefinedObjectTest run: each ]
+UndefinedObjectTest suite run printOn: Transcript
 
 WriteStreamTest testSelectors do: [ :each | Transcript show: each; cr. WriteStreamTest run: each ]
 WriteStreamTest suite run printOn: Transcript

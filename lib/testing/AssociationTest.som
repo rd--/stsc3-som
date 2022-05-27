@@ -1,0 +1,32 @@
+AssociationTest = ClassTestCase (
+
+| a b |
+
+setUp = (
+	a := 1 -> 'one'.
+	b := 1 -> 'een'.
+)
+
+testEquality = (
+	self
+		assert: (a key = b key);
+		deny: (a value = b value);
+		deny: (a = b)
+)
+
+testHash = (
+	self
+		assert: (a hash = a copy hash)
+)
+
+"
+testStoreStringEvaluatesToEqualValue = (
+	self assert: 1 -> 2 equals: (Compiler evaluate: (1 -> 2) storeString).
+	self assert: false -> true equals: (Compiler evaluate: (false -> true) storeString).
+	self assert: #foo -> #bar equals: (Compiler evaluate: (#foo -> #bar) storeString).
+	self assert: #foo -> #+ equals: (Compiler evaluate: (#foo -> #+) storeString).
+	self assert: #+ -> #bar equals: (Compiler evaluate: (#+ -> #bar) storeString).
+)
+"
+
+)

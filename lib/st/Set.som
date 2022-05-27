@@ -30,9 +30,10 @@ collect: aBlock = (
 )
 
 copyWithout: oldElement = (
-	| answer |
-	answer := self copy	remove: oldElement ifAbsent: [].
-	^answer
+	"Answer a copy of the receiver that does not contain any elements equal to oldElement."
+	^ self copy
+		remove: oldElement ifAbsent: [];
+		yourself
 )
 
 do: aBlock = (
@@ -65,6 +66,12 @@ ifAbsentAdd: anObject = (
 
 includes: anObject = (
 	(array at: (self scanFor: anObject)) ifNil: [ ^false ] ifNotNil: [ ^true ]
+)
+
+like: anObject = (
+	"Answer an object in the receiver that is equal to anObject,
+	nil if no such object is found. Relies heavily on hash properties"
+	^(array at: (self scanFor: anObject)) ifNotNil:[:obj| obj enclosedSetElement]
 )
 
 noCheckNoGrowFillFrom: anArray = (

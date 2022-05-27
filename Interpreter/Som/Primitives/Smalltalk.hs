@@ -47,12 +47,6 @@ symObject = immutableSymbolObject
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
 prStringAll f = booleanObject . unicodeStringAll f
 
-prObjectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
-prObjectHashEqual rcv arg = do
-  hash1 <- objectIntHash rcv
-  hash2 <- objectIntHash arg
-  return (booleanObject (hash1 == hash2))
-
 prSystemLoadFile :: (StError m, MonadIO m) => UnicodeString -> m Object
 prSystemLoadFile aString = do
     let fn = fromUnicodeString aString
@@ -218,7 +212,7 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (83, _, [Object "Symbol" (DataImmutableString sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel)
     (84, _, [Object "Symbol" (DataImmutableString sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg)
     (100, _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl)
-    (110, _, [arg]) -> fmap Just (prObjectHashEqual receiver arg)
+    (110, _, [arg]) -> return (Just (booleanObject (receiver == arg)))
     (111, _, []) -> fmap Just (objectClass receiver)
     (113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prQuit x)
     (130, DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just (intObject 0))

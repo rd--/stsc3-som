@@ -209,13 +209,17 @@ ifNil: nilBlock = (
 	^ self
 )
 
+ifNil: ifNilBlock ifNotNil: ifNotNilBlock = (
+	^ifNotNilBlock cull: self
+)
+
 ifNotNil: ifNotNilBlock = (
 	"Evaluate the block, unless I'm == nil (q.v.)"
 	^ ifNotNilBlock cull: self
 )
 
-ifNil: ifNilBlock ifNotNil: ifNotNilBlock = (
-	^ifNotNilBlock cull: self
+ifNotNil: notNilBlock ifNil: nilBlock = (
+	^ notNilBlock cull: self
 )
 
 initialize = (
@@ -231,6 +235,10 @@ isArray = (
 )
 
 isCollection = (
+	^false
+)
+
+isDictionary = (
 	^false
 )
 
