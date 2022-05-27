@@ -47,6 +47,19 @@ next: anInteger put: anObject = (
 	^anObject
 )
 
+nextMatchAll: aColl = (
+    "Answer true if next N objects are the ones in aColl,
+     else false.  Advance stream of true, leave as was if false."
+    | save |
+    save := self position.
+    aColl do: [:each |
+       (self next) = each ifFalse: [
+            self position: save.
+            ^ false]
+        ].
+    ^ true
+)
+
 nextMatchFor: anObject = (
 	^anObject = self next
 )
@@ -73,6 +86,15 @@ readInto: aCollection startingAt: startIndex count: n = (
 take: maxNumberOfElements = (
 	"See Collection protocol."
 	^ self any: maxNumberOfElements
+)
+
+upToEnd = (
+	"Answer the remaining elements in the stream."
+	| elements |
+	elements := OrderedCollection new.
+	[self atEnd] whileFalse: [ 
+		elements add: self next].
+	^ elements
 )
 
 ----------------------------

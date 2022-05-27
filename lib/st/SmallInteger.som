@@ -116,6 +116,18 @@ adaptToFloat: rcvr andCompare: selector = (
 	^ rcvr perform: selector with: self asFloat
 )
 
+digitAt: n = (
+	"Answer the value of an apparent byte-indexable field in the receiver,
+	 analogous to the large integers, which are organized as bytes."
+	n = 1 ifTrue: "Negate carefully in case the receiver is SmallInteger minVal"
+		[self < 0 ifTrue:
+			[^-256 - self bitAnd: 255].
+		 ^self bitAnd: 255].
+	self < 0 ifTrue:
+		[^(-256 - self bitShift: -8) + 1 digitAt: n - 1].
+	^(self bitShift: 8 - (n bitShift: 3)) bitAnd: 255
+)
+
 even = (
 	^(self bitAnd: 1) = 0
 )
@@ -173,6 +185,24 @@ identityHash = (
 	^self
 )
 
+lowBit = (
+	" Answer the index of the low order one bit.
+		2r00101000 lowBit       (Answers: 4)
+		2r-00101000 lowBit      (Answers: 4)
+	  First we skip bits in groups of 8, then do a lookup in a table.
+	  While not optimal, this is a good tradeoff; long
+	  integer #lowBit always invokes us with bytes."
+	| n result lastByte |
+	n := self.
+	n = 0 ifTrue: [ ^ 0 ].
+	result := 0.
+	[(lastByte := n bitAnd: 255) = 0]
+		whileTrue: [
+			result := result + 8.
+			n := n bitShift: -8 ].
+	^result + (Integer lowBitPerByteTable at: lastByte)
+)
+
 odd = (
 	^(self bitAnd: 1) = 1
 )
@@ -214,11 +244,27 @@ sqrtFloor = (
 	^guess
 )
 
+sqrtRem = (
+	| s |
+	s := self sqrtFloor.
+	^{s. self - (s*s)}
+)
+
 ----
 
 fromString: aString = (
 	<primitive: -1>
         self primitiveFailed: #fromString:
+)
+
+maxVal = (
+	"maxBound :: Int"
+	^ 9223372036854775807
+)
+
+minVal = (
+	"minBound :: Int"
+	^ -9223372036854775808
 )
 
 )

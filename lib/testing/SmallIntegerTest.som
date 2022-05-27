@@ -1,0 +1,40 @@
+SmallIntegerTest = ClassTestCase (
+
+testDivide = (
+	self assert: 2 / 1 = 2.
+	"self assert: (3 / 2) isFraction."
+	self assert: 4 / 2 = 2.
+)
+
+testEven = (
+	self assert: (SmallInteger minVal even).
+	self deny: (SmallInteger maxVal even).
+	self deny: ((SmallInteger minVal + 1) even).
+	self assert: ((SmallInteger maxVal - 1) even).
+	self deny: (1 even).
+	self deny: (-1 even).
+	self assert: (2 even).
+	self assert: (-2 even).
+	self assert: (0 even).
+)
+
+testOdd = (
+	self deny: (SmallInteger minVal odd).
+	self assert: (SmallInteger maxVal odd).
+	self assert: ((SmallInteger minVal + 1) odd).
+	self deny: ((SmallInteger maxVal - 1) odd).
+	self assert: (1 odd).
+	self assert: (-1 odd).
+	self deny: (2 odd).
+	self deny: (-2 odd).
+	self deny: (0 odd).
+)
+
+testPrintString = (
+	self assert: 1 printString  = '1'.
+	self assert: -1 printString  = '-1'.
+	self assert: 12345 printString  = '12345'.
+	self assert: -54321 printString  = '-54321'
+)
+
+)

@@ -56,8 +56,24 @@ ceiling = (
 		ifFalse: [^truncation + 1]
 )
 
+closeTo: num = (
+	"are these two numbers close?"
+	num isFloat ifTrue: [^ num closeTo: self asFloat].
+	^[self = num] ifError: [false]
+)
+
 cos = (
 	^self asFloat cos
+)
+
+degreeCos = (
+	"Answer the cosine of the receiver taken as an angle in degrees."
+	^ (90 - (180 + self \\ 360 - 180) abs) degreesToRadians sin
+)
+
+degreeSin = (
+	"Answer the sine of the receiver taken as an angle in degrees."
+	^(90 - self) degreeCos
 )
 
 degreesToRadians = (
@@ -115,6 +131,10 @@ fractionPart = (
 
 integerPart = (
 	^self truncated
+)
+
+isInfinite = (
+	^ false
 )
 
 isNaN = (
@@ -285,6 +305,16 @@ truncateTo: aNumber = (
 
 one = (
 	^1
+)
+
+readFrom: stringOrStream = (
+	"Answer a number as described on stringOrStream.
+	If stringOrStream does not start with a valid number description, fail."
+	^(FortranNumberParser on: stringOrStream) nextNumber
+)
+
+readFrom: stringOrStream ifFail: aBlock = (
+	^(FortranNumberParser on: stringOrStream) failBlock: aBlock; nextNumber
 )
 
 zero = (

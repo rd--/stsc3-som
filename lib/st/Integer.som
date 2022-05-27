@@ -6,6 +6,12 @@ Integer = Number (
 	^aNumber adaptToInteger: self andCompare: #=
 )
 
+<< shiftAmount = (
+	"left shift"
+	shiftAmount < 0 ifTrue: [self error: 'negative arg'].
+	^ self bitShift: shiftAmount
+)
+
 >> shiftAmount  = (
 	"right shift"
 	shiftAmount < 0 ifTrue: [self error: 'negative arg'].
@@ -27,7 +33,22 @@ asCharacter = (
 )
 
 asInteger = (
-	^self
+)
+
+asFloat = (
+	"Answer a Float that best approximates the value of the receiver."
+	self subclassResponsibility
+)
+
+benchFib  "Handy send-heavy benchmark" = (
+	"(result // seconds to run) = approx calls per second"
+	" | r t |
+	  t := Time millisecondsToRun: [r := 26 benchFib].
+	  (r * 1000) // t"
+	"138000 on a Mac 8100/100"
+	^ self < 2
+		ifTrue: [1]
+		ifFalse: [(self-1) benchFib + (self-2) benchFib + 1]
 )
 
 bitAt: anInteger = (
@@ -56,6 +77,19 @@ bitShift: shiftCount = (
 		ifFalse: [magnitudeShift]
 )
 
+crossSumBase: aBase = (
+	|aResult|
+	"Precondition"
+	self assert:[aBase isInteger and: [aBase >=2]].
+	self < 0 ifTrue: [^self negated crossSumBase: aBase].
+	self < aBase ifTrue: [^ self].
+	aResult := self \\ aBase + (self // aBase crossSumBase: aBase).
+	"Postcondition
+	E.g. 18 crossSumBase: 10 -> 9 => 18\\(10-1) = 0"
+	self assert: [((aResult \\ (aBase - 1) = 0)) = ((self \\ (aBase - 1)) =0)].
+	^aResult
+)
+
 denominator = (
 	"Let an Integer be polymorphic to a Fraction. See #isFraction."
 	^1
@@ -76,6 +110,10 @@ factorial = (
 
 fractionPart = (
 	^0
+)
+
+highBit = (
+	^ self subclassResponsibility
 )
 
 integerPart = (
@@ -166,7 +204,65 @@ printAsLiteralOn: aStream = (
 	^self printOn: aStream
 )
 
+raisedTo: n modulo: m = (
+	"Answer the modular exponential."
+	| a s mInv |
+	n = 0 ifTrue: [^1].
+	(self >= m or: [self < 0]) ifTrue: [^self \\ m raisedTo: n modulo: m].
+	n < 0 ifTrue: [^(self reciprocalModulo: m) raisedTo: n negated modulo: m].
+	^self slidingLeftRightRaisedTo: n modulo: m
+)
+
+raisedToInteger: exp modulo: m = (
+	(exp = 0) ifTrue: [^ 1].
+	exp even
+		ifTrue: [^ (self raisedToInteger: (exp // 2) modulo: m) squared \\ m]
+		ifFalse: [^ (self * (self raisedToInteger: (exp - 1) modulo: m)) \\ m].
+)
+
 rounded = (
+)
+
+slidingLeftRightRaisedTo: n modulo: m = (
+	"Private - compute (self raisedTo: n) \\ m,
+	Note: this method has to be fast because it is generally used with large integers in cryptography.
+	It thus operate on exponent bits from left to right by packets with a sliding window rather than bit by bit (see below)."
+	| pow j k w index oddPowersOfSelf square |
+	"Precompute powers of self for odd bit patterns xxxx1 up to length w + 1.
+	The width w is chosen with respect to the total bit length of n,
+	such that each bit pattern will on average be encoutered P times in the whole bit sequence of n.
+	This costs (2 raisedTo: w) multiplications, but more will be saved later (see below)."
+	k := n highBit.
+	w := (k highBit - 1 >> 1 min: 16) max: 1.
+	oddPowersOfSelf := Array new: 1 << w.
+	oddPowersOfSelf at: 1 put: (pow := self).
+	square := self * self \\ m.
+	2 to: oddPowersOfSelf size do: [:i | pow := oddPowersOfSelf at: i put: pow * square \\ m].
+	"Now exponentiate by searching precomputed bit patterns with a sliding window"
+	pow := 1.
+	[k > 0]
+		whileTrue:
+			[pow := pow * pow \\ m.
+			"Skip bits set to zero (the sliding window)"
+			(n bitAt: k) = 0
+				ifFalse:
+					["Find longest odd bit pattern up to window length (w + 1)"
+					j := k - w max: 1.
+					[j < k and: [(n bitAt: j) = 0]] whileTrue: [j := j + 1].
+					"We found an odd bit pattern of length k-j+1;
+					perform the square powers for each bit
+					(same cost as bitwise algorithm);
+					compute the index of this bit pattern in the precomputed powers."
+					index := 0.
+					[k > j] whileTrue:
+						[pow := pow * pow \\ m.
+						index := index * 2 + (n bitAt: k).
+						k := k - 1].
+					"Perform a single multiplication for the whole bit pattern.
+					This saves up to (k-j) multiplications versus a naive algorithm operating bit by bit"
+					pow := pow * (oddPowersOfSelf at: index + 1) \\ m].
+			k := k - 1].
+	^pow
 )
 
 sqrtFloor = (
@@ -175,6 +271,16 @@ sqrtFloor = (
 	The following post-conditions apply:
 	1) self sqrtFloor squared <= self
 	2) (self sqrtFloor + 1) squared > self"
+	self subclassResponsibility
+)
+
+sqrtRem = (
+	"Return an array with floor sqrt and sqrt remainder.
+	Assume self >= 0.
+	The following invariants apply:
+	1) self  sqrtRem first squared <= self
+	2) (self sqrtRem first + 1) squared > self
+	3) self sqrtRem first squared + self sqrtRem last = self"
 	self subclassResponsibility
 )
 
@@ -204,11 +310,14 @@ truncated = (
 
 ----
 
+lowBitPerByteTable = (
+	^#(1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 6 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 7 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 6 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 8 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 6 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 7 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 6 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1 5 1 2 1 3 1 2 1 4 1 2 1 3 1 2 1)
+)
+
 new = (
 	self == Integer ifTrue: [^ self error: 'Integer is an abstract class.  Make a concrete subclass.'].
 	^ super new
 )
-
 
 primesUpTo: max = (
 	"Return a list of prime integers up to the given integer."
@@ -263,6 +372,18 @@ primesUpTo: max do: aBlock = (
 			aBlock value: index ].
 		index := index + increment.
 		increment := 6 - increment ]
+)
+
+readFrom: aStringOrStream = (
+	^self readFrom: aStringOrStream base: 10
+)
+
+readFrom: aStringOrStream ifFail: aBlock = (
+	^(FortranNumberParser on: aStringOrStream) nextIntegerBase: 10 ifFail: aBlock
+)
+
+readFrom: aStringOrStream base: base = (
+	^(FortranNumberParser on: aStringOrStream) nextIntegerBase: base
 )
 
 )

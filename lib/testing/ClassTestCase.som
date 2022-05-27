@@ -32,19 +32,6 @@ targetClass = (
   ^ Smalltalk at: className asString asSymbol
 )
 
-testCoverage = (
-	| untested |
-	self class mustTestCoverage ifTrue:
-		[ untested := self selectorsNotTested.
-		self assert: untested isEmpty
-		description: untested size asString, ' selectors are not covered' ]
-)
-
-testNew = (
-	"This should not throw an exception."
-	self targetClass new.
-)
-
 ----------------------------
 
 isAbstract = (

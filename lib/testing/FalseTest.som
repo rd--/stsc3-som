@@ -31,12 +31,6 @@ testIfTrueIfFalse = (
                       ifFalse: ['falseAlternativeBlock']) = 'falseAlternativeBlock'.
 )
 
-"
-testNew = (
-	self should: [False new] raise: TestResult error.
-)
-"
-
 testNot = (
 	self assert: (false not = true).
 )

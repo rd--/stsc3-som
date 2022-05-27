@@ -4,8 +4,32 @@ abs = (
 	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
 )
 
+asFloat = (
+)
+
+closeTo: num = (
+ 	"are these two numbers close?"
+	num isNumber ifFalse: [^[self = num] ifError: [false]].
+	self = 0.0 ifTrue: [^num abs < 0.0001].
+	num = 0 ifTrue: [^self abs < 0.0001].
+	^self = num asFloat
+		or: [(self - num) abs / (self abs max: num abs) < 0.0001]
+)
+
 cos = (
 	^ (self + Float halfPi) sin
+)
+
+degreeCos = (
+	"Take care of exceptional values"
+	self isFinite ifTrue: [^super degreeCos].
+	^self degreesToRadians cos
+)
+
+degreeSin = (
+	"Take care of exceptional values"
+	self isFinite ifTrue: [^super degreeSin].
+	^self degreesToRadians sin
 )
 
 degreesToRadians = (
@@ -27,6 +51,11 @@ isFinite = (
 
 isFloat = (
 	^true
+)
+
+isInfinite = (
+	"Return true if the receiver is positive or negative infinity."
+	^ self = Float infinity or: [self = Float negativeInfinity]
 )
 
 isLiteral = (
@@ -132,6 +161,10 @@ nan = (
 	^ 0.0 / 0.0
 )
 
+negativeInfinity = (
+	^ 0.0 - Float infinity
+)
+
 one = (
 	^ 1.0
 )
@@ -142,6 +175,14 @@ pi = (
 
 radiansPerDegree = (
 	^ Float pi / 180.0
+)
+
+readFrom: aStream = (
+	^(super readFrom: aStream) asFloat
+)
+
+readFrom: aStream ifFail: aBlock = (
+	^(super readFrom: aStream ifFail: [^aBlock value]) asFloat
 )
 
 sqrt2 = (
