@@ -1,0 +1,52 @@
+ReadWriteStreamTest = ClassTestCase (
+
+testConstructionUsingWith = (
+	"Use the with: constructor."
+	| aStream |
+	aStream := ReadWriteStream with: #(1 2).
+	self assert: (aStream contents = #(1 2)) description: 'Ensure correct initialization.'
+)
+
+testIsEmpty = (
+	| stream |
+	stream := ReadWriteStream on: String new.
+	self assert: stream isEmpty.
+	stream nextPut: $a.
+	self deny: stream isEmpty.
+	stream reset.
+	self deny: stream isEmpty.
+	stream next.
+	self deny: stream isEmpty.
+
+)
+
+testOnFromTo = (
+	self assert: (ReadWriteStream
+						on: (String withAll: ((0 to: 255) collect: [:n| n asCharacter]))
+						from: $A asInteger + 1
+						to: $Z asInteger + 1)
+					contents
+		equals: (String withAll: ($A to: $Z))
+)
+
+testOnFromToWriting = (
+	| aToZ |
+	aToZ := String withAll: ($A to: $Z).
+	self assert: ((ReadWriteStream
+						on: (String withAll: ((0 to: 255) collect: [:n| n asCharacter]))
+						from: $A asInteger + 1
+						to: $Z asInteger + 1)
+					nextPutAll: aToZ;
+					contents)
+		equals: aToZ
+)
+
+testReadWriteStreamNextNBug = (
+	| aStream |
+	aStream := ReadWriteStream on: String new.
+	aStream nextPutAll: 'Hello World'.
+	"This should not fail"
+	aStream next: 5.
+)
+
+)

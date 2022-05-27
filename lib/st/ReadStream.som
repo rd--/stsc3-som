@@ -1,5 +1,12 @@
 ReadStream = PositionableStream (
 
+| initialPositionOrNil |
+
+contents = (
+	"Answer with a copy of my collection from the start to readLimit."
+	^collection copyFrom: (initialPositionOrNil ifNil: [1]) to: readLimit
+)
+
 next = (
 	"Answer with the next object in the Stream represented by the receiver.
 	Fail if the collection of this stream is not an Array or a String. Fail if
@@ -52,7 +59,8 @@ on: aCollection from: firstIndex to: lastIndex = (
 						ifFalse: [lastIndex].
 	position := firstIndex <= 1
 				ifTrue: [0]
-				ifFalse: [firstIndex - 1]
+				ifFalse: [firstIndex - 1].
+	initialPositionOrNil := position + 1
 )
 
 readInto: aCollection startingAt: startIndex count: n = (
@@ -69,6 +77,19 @@ readInto: aCollection startingAt: startIndex count: n = (
 	^max
 )
 
+readStream = (
+	"polymorphic with SequenceableCollection.  Return self"
+)
+
+skipTo: anObject = (
+	"fast version using indexOf:"
+	(position := collection indexOf: anObject startingAt: position + 1) = 0 ifTrue: [
+		"not present. consume all characters"
+		position := readLimit.
+		^false ].
+	^true
+)
+
 upTo: anObject = (
 	"fast version using indexOf:"
 	| start end |
@@ -79,6 +100,17 @@ upTo: anObject = (
 	"skip to the end and return the data passed over"
 	position := end.
 	^collection copyFrom: start to: (end-1)
+)
+
+upToAnyOf: aCollection do: aBlock = (
+	"Overriden for speed"
+	| end result |
+	end := collection indexOfAnyOf: aCollection startingAt: 1 + position.
+	(end = 0 or: [end > readLimit]) ifTrue: [^self upToEnd].
+	result := collection copyFrom: 1 + position to: -1 + end.
+	position := end.
+	aBlock value: (collection at: end).
+	^result
 )
 
 upToEnd = (

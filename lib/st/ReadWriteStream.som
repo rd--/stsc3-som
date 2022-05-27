@@ -1,5 +1,11 @@
 ReadWriteStream = WriteStream (
 
+= other = (
+	(self class == ReadWriteStream and: [other class == ReadWriteStream]) ifFalse: [
+		^ super = other].	"does an identity test.  Don't read contents of FileStream"
+	^ self position = other position and: [self contents = other contents]
+)
+
 close = (
 	"Presumably sets the status of the stream to be closed.
 	This message does nothing at this level, but is included for FileStream
@@ -7,10 +13,20 @@ close = (
 	^self
 )
 
+closed = (
+	"If you have close (for FileStream compatibility), you must respond to closed.  The result in nonsense here.  TK 29 May 96"
+	^ false
+)
+
 contents = (
-	"Answer with a copy of my collection from 1 to readLimit."
+	"Answer with a copy of my collection from the start to readLimit."
 	readLimit := readLimit max: position.
-	^collection copyFrom: 1 to: readLimit
+	^collection copyFrom: (initialPositionOrNil ifNil: [1]) to: readLimit
+)
+
+hash = (
+	self class == ReadWriteStream ifFalse: [^ super hash].
+	^ (self position + readLimit + 53) hash
 )
 
 next = (
@@ -23,6 +39,20 @@ next = (
 	position >= readLimit
 		ifTrue: [^nil]
 		ifFalse: [^collection at: (position := position + 1)]
+)
+
+next: anInteger = (
+	"Answer the next anInteger elements of my collection.  overriden for efficiency"
+	| ans endPosition |
+	readLimit := readLimit max: position.
+	endPosition := position + anInteger  min:  readLimit.
+	ans := collection copyFrom: position+1 to: endPosition.
+	position := endPosition.
+	^ans
+)
+
+readStream = (
+	"polymorphic with SequenceableCollection.  Return self"
 )
 
 )

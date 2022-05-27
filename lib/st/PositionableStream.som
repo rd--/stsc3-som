@@ -7,17 +7,70 @@ atEnd = (
 	^position >= readLimit
 )
 
+back = (
+	"Go back one element and return it."
+	self position = 0 ifTrue: [self errorCantGoBack].
+	self skip: -1.
+	^ self peek
+)
+
+backUpTo: subCollection = (
+	"Back up the position to the subCollection.  Position must be somewhere within the stream initially.  Leave it just after it.  Return true if succeeded.  No wildcards, and case does matter."
+	| pattern startMatch |
+	pattern := ReadStream on: subCollection reversed.
+	startMatch := nil.
+	[pattern atEnd] whileFalse:
+		[self position = 0 ifTrue: [^ false].
+		self skip: -1.
+		(self next) = (pattern next)
+			ifTrue: [pattern position = 1 ifTrue: [startMatch := self position]]
+			ifFalse: [pattern position: 0.
+					startMatch ifNotNil: [
+						self position: startMatch-1.
+						startMatch := nil]].
+		self skip: -1].
+	self position: startMatch.
+	^ true
+)
+
 collectionSpecies = (
 	"Answer the species of collection into which the receiver can stream"
 	^ collection species
 )
 
 contents = (
-	^ collection copyFrom: 1 to: readLimit
+	"Answer with a copy of my collection from 1 to readLimit."
+	^collection copyFrom: 1 to: readLimit
+)
+
+errorCantGoBack = (
+	self error: 'Can''t Go Back'
 )
 
 isEmpty = (
-	^ position = 0
+	"Returns true if both the set of past and future sequence values of the receiver are empty. Otherwise returns false"
+	^ self atEnd and: [position = 0]
+)
+
+last = (
+	"Return the element that was read last"
+	^ collection at: position
+)
+
+match: subCollection = (
+	"Set the access position of the receiver to be past the next occurrence of the subCollection. Answer whether subCollection is found.  No wildcards, and case does matter."
+	| pattern startMatch |
+	pattern := ReadStream on: subCollection.
+	startMatch := nil.
+	[pattern atEnd] whileFalse:
+		[self atEnd ifTrue: [^ false].
+		(self next) = (pattern next)
+			ifTrue: [pattern position = 1 ifTrue: [startMatch := self position]]
+			ifFalse: [pattern position: 0.
+					startMatch ifNotNil: [
+						self position: startMatch.
+						startMatch := nil]]].
+	^ true
 )
 
 next: anInteger = (
@@ -91,6 +144,28 @@ positionError = (
 	self error: 'Attempt to set the position of a PositionableStream out of bounds'
 )
 
+positionOfSubCollection: subCollection ifAbsent: exceptionBlock = (
+	"Return a position such that that element at the new position equals the first element of sub, and the next elements equal the rest of the elements of sub. Begin the search at the current position.
+	If no such match is found, answer the result of evaluating argument, exceptionBlock."
+	| pattern startPosition currentPosition |
+	pattern := subCollection readStream.
+	startPosition := self position.
+	[ pattern atEnd or: [ self atEnd ] ] whileFalse: [
+		self next = pattern next ifFalse: [
+			self position: self position - pattern position + 1.
+			pattern reset ] ].
+	currentPosition := self position.
+	self position: startPosition.
+	pattern atEnd ifTrue: [ ^currentPosition + 1 - subCollection size ].
+	^exceptionBlock value
+)
+
+positionOfSubCollection: subCollection = (
+	"Return a position such that that element at the new position equals the first element of sub, and the next elements equal the rest of the elements of sub. Begin the search at the current position.
+	If no such match is found, answer 0."
+	^self positionOfSubCollection: subCollection ifAbsent: [0]
+)
+
 reset = (
 	position := 0
 )
@@ -127,12 +202,33 @@ upTo: anObject = (
 	^newStream contents
 )
 
+upToAll: aCollection = (
+	"Answer a subcollection from the current access position to the occurrence (if any, but not inclusive) of aCollection. If aCollection is not in the stream, answer the entire rest of the stream."
+	| startPos endMatch result |
+	startPos := self position.
+	(self match: aCollection)
+		ifTrue: [endMatch := self position.
+			self position: startPos.
+			result := self upToPosition: endMatch - aCollection size.
+			self position: endMatch.
+			^ result]
+		ifFalse: [self position: startPos.
+			^ self upToEnd]
+)
+
 upToEnd = (
 	"Answer a subcollection from the current access position through the last element of the receiver."
 	| newStream |
 	newStream := WriteStream on: (self collectionSpecies new: 100).
 	[self atEnd] whileFalse: [ newStream nextPut: self next ].
 	^ newStream contents
+)
+
+upToAnyOf: aCollection = (
+	"Answer a subcollection from the current access position to the
+	occurrence (if any, but not inclusive) of any object in the collection. If
+	no matching object is found, answer the entire rest of the receiver."
+	^self upToAnyOf: aCollection do: [:matchingObject | ]
 )
 
 upToAnyOf: delimiters do: aBlock = (
@@ -170,6 +266,11 @@ upToAnyOf: delimiters do: aBlock = (
 					false "Found the delimiter." ] ] whileTrue.
 		bytesRead = 0 ifFalse: [
 			aBlock value: (buffer at: pos) ] ]
+)
+
+upToPosition: anInteger = (
+	"Answer a subcollection containing items starting from the current position and ending including the given position. Usefully different to #next: in that in the case of MultiByteFileStream, and perhaps others, positions measure in terms of encoded items, while #next: convention is to name a number of items, independent of their encoding in the underlying buffer."
+	^ self next: anInteger - position
 )
 
 ----

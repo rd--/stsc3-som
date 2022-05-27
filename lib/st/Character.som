@@ -127,6 +127,13 @@ storeOn: aStream = (
 	aStream nextPut: self
 )
 
+to: other = (
+	"Answer with a collection in ascii order -- $a to: $z"
+	^ (self asInteger to: other asciiValue)
+		collect:	[:ascii | Character value: ascii]
+		as: String
+)
+
 tokenish = (
 	^self isLetter or: [self isDigit or: [self = $:]]
 )
@@ -139,6 +146,11 @@ backSpace = (
 
 carriageReturn = (
 	^self value: 13
+)
+
+codePoint: anInteger = (
+	"Return a character whose encoding value is integer. For ansi compability."
+	^self value: anInteger
 )
 
 cr = (

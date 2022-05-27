@@ -73,6 +73,11 @@ nextPutAll: aCollection = (
 	^aCollection
 )
 
+nextSatisfy: aBlock = (
+	self do: [:each | (aBlock value: each) ifTrue: [^ each]].
+	self error: 'No object could satisfy the block'.
+)
+
 readInto: aCollection startingAt: startIndex count: n = (
 	"Read n objects into the given collection.
 	Return number of elements that have been read."
@@ -81,6 +86,20 @@ readInto: aCollection startingAt: startIndex count: n = (
 		obj := self next ifNil: [ ^i ].
 		aCollection at: startIndex + i put: obj].
 	^n
+)
+
+reject: aBlock = (
+	^ self select: [:element | (aBlock value: element) == false]
+)
+
+select: block = (
+	^ Generator on: [:g |
+		[self atEnd] whileFalse: [
+			self next
+				ifNil: [g yield: nil]
+				ifNotNil: [:object |
+					(block value: object)
+						ifTrue: [g yield: object]]]]
 )
 
 take: maxNumberOfElements = (
@@ -92,7 +111,7 @@ upToEnd = (
 	"Answer the remaining elements in the stream."
 	| elements |
 	elements := OrderedCollection new.
-	[self atEnd] whileFalse: [ 
+	[self atEnd] whileFalse: [
 		elements add: self next].
 	^ elements
 )

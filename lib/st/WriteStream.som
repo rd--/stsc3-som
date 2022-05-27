@@ -1,14 +1,20 @@
 WriteStream = PositionableStream (
 
-| writeLimit |
+| writeLimit initialPositionOrNil |
 
 contents = (
+	"Answer with a copy of my collection from the start to the current position."
 	readLimit := readLimit max: position.
-	^collection copyFrom: 1 to: position
+	^collection copyFrom: (initialPositionOrNil ifNil: [1]) to: position
 )
 
 cr = (
 	self nextPut: Character cr
+)
+
+crlf = (
+	"Append a carriage return and a line feed to the receiver."
+	self nextPut: Character cr; nextPut: Character lf
 )
 
 crtab = (
@@ -21,6 +27,28 @@ crtab: anInteger = (
 	anInteger timesRepeat: [self nextPut: Character tab]
 )
 
+ensureASpace = (
+	"Append a space character to the receiver IFF there is not one on the end."
+	self ensureEndsWith: Character space
+)
+
+ensureCr = (
+	"Append a cr character to the receiver IFF there is not one on the end."
+	self ensureEndsWith: Character cr
+)
+
+ensureEndsWith: anObject = (
+	"Append anObject to the receiver IFF there is not one on the end."
+	self peekLast = anObject ifFalse:
+		[self nextPut: anObject]
+)
+
+ensureNoSpace = (
+	"If there is not one on the end, remove it."
+	(position > 0 and: [(collection at: position) = Character space])
+		ifTrue: [self skip: -1].
+)
+
 growTo: anInteger = (
 	"anInteger is the required minimal new size of the collection"
 	| oldSize grownCollection newSize |
@@ -29,6 +57,10 @@ growTo: anInteger = (
 	grownCollection := collection class new: newSize.
 	collection := grownCollection replaceFrom: 1 to: oldSize with: collection startingAt: 1.
 	writeLimit := collection size.
+)
+
+lf = (
+	self nextPut: Character lf
 )
 
 next: anInteger putAll: aCollection startingAt: startIndex = (
@@ -56,14 +88,24 @@ nextPut: anObject = (
 			[^collection at: (position := position + 1) put: anObject]
 )
 
+nextPutAll: aCollection = (
+	| newEnd |
+	(collection class == aCollection class)
+		ifFalse: [ ^ super nextPutAll: aCollection ].
+	newEnd := position + aCollection size.
+	newEnd > writeLimit ifTrue:
+		[self growTo: newEnd + 10].
+	collection replaceFrom: position+1 to: newEnd  with: aCollection startingAt: 1.
+	position := newEnd.
+	^aCollection
+)
+
 next = (
 	self shouldNotImplement
 )
 
 on: aCollection = (
-	super on: aCollection.
-	readLimit := 0.
-	writeLimit := aCollection size
+	self on: aCollection from: 1 to: aCollection size
 )
 
 on: aCollection from: firstIndex to: lastIndex = (
@@ -75,7 +117,8 @@ on: aCollection from: firstIndex to: lastIndex = (
 						ifFalse: [lastIndex].
 	position := firstIndex <= 1
 				ifTrue: [0]
-				ifFalse: [firstIndex - 1]
+				ifFalse: [firstIndex - 1].
+	initialPositionOrNil := position + 1
 )
 
 pastEndPut: anObject = (
@@ -87,6 +130,13 @@ pastEndPut: anObject = (
 	^ anObject
 )
 
+peekLast = (
+	"Return that item just put at the end of the stream"
+	^ position > 0
+		ifTrue: [collection at: position]
+		ifFalse: [nil]
+)
+
 position: anInteger = (
 	readLimit := readLimit max: position.
 	super position: anInteger
@@ -96,9 +146,21 @@ print: anObject = (
 	anObject printOn: self
 )
 
+readStream = (
+	"Answer a readStream on my contents truncated to current position.
+	Beware, the readStream shares the contents, so it will be modified if I'm written backward."
+	readLimit := readLimit max: position.
+	^ReadStream on: collection from: (initialPositionOrNil ifNil: [1]) to: position
+)
+
 reset = (
 	readLimit := readLimit max: position.
 	position := 0
+)
+
+setToEnd = (
+	readLimit := readLimit max: position.
+	super setToEnd.
 )
 
 size = (
@@ -109,6 +171,11 @@ space = (
 	self nextPut: Character space
 )
 
+space: anInteger = (
+	"Append anInteger space characters to the receiver."
+	anInteger timesRepeat: [self space]
+)
+
 store: anObject = (
 	anObject storeOn: self
 )
@@ -117,12 +184,20 @@ tab = (
 	self nextPut: Character tab
 )
 
+tab: anInteger = (
+	anInteger timesRepeat: [self tab]
+)
+
 with: aCollection = (
 	super on: aCollection.
 	position := readLimit := writeLimit := aCollection size
 )
 
 ----
+
+on: aCollection = (
+	^self basicNew on: aCollection
+)
 
 on: aCollection from: firstIndex to: lastIndex = (
 	^self basicNew
