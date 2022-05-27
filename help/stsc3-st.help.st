@@ -13,6 +13,9 @@ IntegerTest suite run printOn: Transcript
 IntervalTest selectorsDo: [ :each | Transcript show: each; cr. IntervalTest run: each ]
 IntervalTest suite run printOn: Transcript
 
+NumberTest selectorsDo: [ :each | Transcript show: each; cr. NumberTest run: each ]
+NumberTest suite run printOn: Transcript
+
 OrderedCollectionTest selectorsDo: [ :each | Transcript show: each; cr. OrderedCollectionTest run: each ]
 OrderedCollectionTest suite run printOn: Transcript
 
