@@ -6,7 +6,7 @@ species = (
 
 ----
 
-| Ascii CrLf |
+| Ascii CrLf Separators |
 
 ascii = (
 	"Return a set containing all the ASCII characters"
@@ -19,6 +19,11 @@ crlf = (
 
 isAbstract = (
 	^self = CharacterSet
+)
+
+separators = (
+	"Return a set containing just the whitespace characters"
+	^Separators ifNil: [ Separators := self newFrom: Character separators ]
 )
 
 )

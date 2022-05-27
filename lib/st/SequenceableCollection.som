@@ -346,6 +346,18 @@ indexOfAnyOf: aCollection startingAt: start = (
 	^0
 )
 
+indexOfNoneOf: aCollection = (
+	^self indexOfNoneOf: aCollection startingAt: 1
+)
+
+indexOfNoneOf: aCollection startingAt: start = (
+	"Answer the index of the first occurence of any element not included in aCollection after start within the receiver.
+	If the receiver does not contain anElement, answer zero, which is an invalid index."
+	start to: self size do: [ :index |
+		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
+	^0
+)
+
 indexOfSubCollection: aSubCollection = (
 	^self
 		indexOfSubCollection: aSubCollection
@@ -415,6 +427,43 @@ lastIndexOf: anElement startingAt: lastIndex = (
 lastIndexOf: anElement startingAt: lastIndex ifAbsent: exceptionBlock = (
 	| index |
 	(index := self lastIndexOf: anElement startingAt: lastIndex) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+lastIndexOfAnyOf: aCollection = (
+	"Answer the index of the last occurence of any element of aCollection
+	within the receiver. If the receiver does not contain any of those
+	elements, answer 0"
+	^self lastIndexOfAnyOf: aCollection startingAt: self size
+)
+
+lastIndexOfAnyOf: aCollection startingAt: lastIndex = (
+	"Answer the index of the last occurence of any element of aCollection
+	within the receiver. If the receiver does not contain any of those
+	elements, answer 0"
+	lastIndex to: 1 by: -1 do: [ :index |
+		(aCollection includes: (self at: index)) ifTrue: [ ^index ] ].
+	^0
+)
+
+lastIndexOfAnyOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
+	"Answer the index of the last occurence of any element of aCollection
+	within the receiver. If the receiver does not contain any of those
+	elements, answer the result of evaluating the argument, exceptionBlock."
+	| index |
+	(index := self lastIndexOfAnyOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+lastIndexOfNoneOf: aCollection startingAt: lastIndex = (
+	lastIndex to: 1 by: -1 do: [ :index |
+		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
+	^0
+)
+
+lastIndexOfNoneOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
+	| index |
+	(index := self lastIndexOfNoneOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
 )
 
