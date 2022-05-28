@@ -66,6 +66,7 @@ arcTan = (
 
 asString = (
 	<primitive: -1>
+	self primitiveFailed
 )
 
 atRandom = (

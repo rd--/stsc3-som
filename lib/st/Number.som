@@ -263,6 +263,86 @@ printOn: aStream = (
 	^self subclassResponsibility
 )
 
+printOn: aStream base: base = (
+	"This method should print a representation of the number for the given base,
+	excluding the base prefix (and the letter r for radix)"
+	^self subclassResponsibility
+)
+
+printOn: aStream maxDecimalPlaces: placesDesired = (
+	"Print a representation of the receiver on aStream in decimal notation with at most prescribed number of places after decimal separator."
+	| rounder rounded roundedFractionPart placesRequired shorten |
+	placesDesired <= 0 ifTrue: [^ self rounded printOn: aStream].
+	rounder := 10 raisedToInteger: placesDesired.
+	rounded := self roundTo: rounder reciprocal.
+	rounded negative ifTrue: [aStream nextPut: $-].
+	rounded := rounded abs.
+	rounded integerPart truncated printOn: aStream.
+	roundedFractionPart := (rounded fractionPart * rounder) truncated.
+	placesRequired := placesDesired.
+	[roundedFractionPart = 0 ifTrue: [^self].
+	(shorten := roundedFractionPart // 10) * 10 = roundedFractionPart]
+		whileTrue:
+			[placesRequired := placesRequired - 1.
+			roundedFractionPart := shorten].
+	placesRequired > 0
+		ifTrue:
+			[aStream nextPut: $..
+			roundedFractionPart printOn: aStream base: 10 length: placesRequired padded: true]
+)
+
+printOn: aStream showingDecimalPlaces: placesDesired = (
+	"Print a representation of the receiver on aStream in decimal notation with prescribed number of places after decimal separator."
+	| rounder rounded roundedFractionPart |
+	placesDesired <= 0 ifTrue: [^ self rounded printOn: aStream].
+	rounder := 10 raisedToInteger: placesDesired.
+	rounded := self roundTo: rounder reciprocal.
+	rounded negative ifTrue: [aStream nextPut: $-].
+	rounded := rounded abs.
+	rounded integerPart truncated printOn: aStream.
+	aStream nextPut: $..
+	roundedFractionPart := (rounded fractionPart * rounder) truncated.
+	roundedFractionPart printOn: aStream base: 10 length: placesDesired padded: true
+)
+
+printShowingDecimalPlaces: placesDesired = (
+	"Print the receiver showing precisely the given number of places desired.  If placesDesired is positive, a decimal point and that many digits after the decimal point will always be shown.  If placesDesired is zero, a whole number will be shown, without a decimal point."
+	^String new: placesDesired + 10 streamContents: [:aStream |
+		self printOn: aStream showingDecimalPlaces: placesDesired]
+"
+23 printShowingDecimalPlaces: 2
+23.5698 printShowingDecimalPlaces: 2
+-234.567 printShowingDecimalPlaces: 5
+23.4567 printShowingDecimalPlaces: 0
+23.5567 printShowingDecimalPlaces: 0
+-23.4567 printShowingDecimalPlaces: 0
+-23.5567 printShowingDecimalPlaces: 0
+100000000 printShowingDecimalPlaces: 1
+0.98 printShowingDecimalPlaces: 5
+-0.98 printShowingDecimalPlaces: 2
+2.567 printShowingDecimalPlaces: 2
+-2.567 printShowingDecimalPlaces: 2
+0 printShowingDecimalPlaces: 2
+"
+)
+
+printShowingMaxDecimalPlaces: placesDesired = (
+	"Print the receiver showing at most the given number of places desired after the decimal point.
+	Trailing zeros of decimal part are discarded, so the number of digits after the decimal point may vary.
+	When placesDesired is zero or negative, or when fraction part vanish, no decimal point is shown."
+	^String new: placesDesired + 10 streamContents: [:aStream |
+		self printOn: aStream maxDecimalPlaces: placesDesired]
+)
+
+printString = (
+	^self printStringBase: 10
+)
+
+printStringBase: base = (
+	^ String streamContents:
+		[:strm | self printOn: strm base: base]
+)
+
 quo: aNumber = (
 	"Integer quotient defined by division with truncation toward zero. -9 quo:
 	4 = -2, -0.9 quo: 0.4 = -2. rem: answers the remainder from this division."

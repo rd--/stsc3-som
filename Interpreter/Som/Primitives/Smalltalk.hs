@@ -97,7 +97,6 @@ stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("asString", DataDouble x, []) -> fmap Just (mutableStringObject False (show x))
-    ("asString", DataSmallInteger x, []) -> fmap Just (mutableStringObject False (show x))
     ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
@@ -113,7 +112,6 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
     ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
     ("holder", DataPrimitive x _, []) -> return (Just (symObject x))
-    ("infinity", DataClass {}, []) -> return (Just (doubleObject (read "Infinity")))
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> fmap Just (vmError "Primitive>>invokeOn:with: not implemented")

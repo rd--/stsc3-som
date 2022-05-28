@@ -1,21 +1,15 @@
 NumberParser = Object (
 
-| sourceStream base neg integerPart fractionPart exponent scale nDigits lastNonZero requestor failBlock |
+| sourceStream base neg integerPart fractionPart exponent nDigits lastNonZero requestor failBlock |
 
 allowPlusSign = (
 	"return a boolean indicating if plus sign is allowed or not"
-
 	^self subclassResponsibility
 )
 
 allowPlusSignInExponent = (
 	"return a boolean indicating if plus sign is allowed or not in exponent"
-
 	^self allowPlusSign
-)
-
-error: aString = (
-	NumberParserError signal: aString
 )
 
 expected: aString = (
@@ -32,7 +26,6 @@ expected: aString = (
 
 exponentLetters = (
 	"answer the list of possible exponents for Numbers."
-
 	^self subclassResponsibility
 )
 
@@ -41,7 +34,6 @@ failBlock: aBlockOrNil = (
 )
 
 isExponentLetter: aCharacter = (
-
 	^self exponentLetters includes: aCharacter
 )
 
@@ -49,18 +41,16 @@ makeFloatFromMantissa: m exponent: k base: aRadix = (
 	"Convert infinite precision arithmetic into Floating point.
 	This alogrithm rely on correct IEEE rounding mode
 	being implemented in Integer>>asFloat and Fraction>>asFloat"
-
 	k = 0 ifTrue: [ ^m asFloat ].
 	k > 0 ifTrue: [ ^(m * (aRadix raisedToInteger: k)) asFloat ].
 	^m asFloat / (aRadix raisedToInteger: k negated) asFloat
 )
 
-nextElementaryLargeIntegerBase: aRadix = (
+nextElementaryIntegerBase: aRadix = (
 	"Form an unsigned integer with incoming digits from sourceStream.
 	Return this integer, or zero if no digits found.
-	Stop reading if end of digits or if a LargeInteger is formed.
+	Stop reading if end of digits.
 	Count the number of digits and the position of lastNonZero digit and store them in instVar."
-
 	| value digit char |
 	value := 0.
 	nDigits := 0.
@@ -82,7 +72,6 @@ nextInteger = (
 	"Read an Integer from sourceStream, asnwser that Integer.
 	This is a generic version dealing with an optional sign and a simple sequence of decimal digits.
 	Subclass might define extended syntax."
-
 	base := 10.
 	^self nextIntegerBase: base ifFail: [^self expected: ('a digit between 0 and ' copyWith: (Character digitValue: base - 1))]
 )
@@ -90,7 +79,6 @@ nextInteger = (
 nextIntegerBase: aRadix = (
 	"Form an integer with following digits.
 	Fail if no digit found"
-
 	| isNeg value |
 	isNeg := self peekSignIsMinus.
 	value := self nextUnsignedIntegerBase: aRadix.
@@ -101,7 +89,6 @@ nextIntegerBase: aRadix = (
 
 nextIntegerBase: aRadix ifFail: aBlock = (
 	"Form an integer with optional sign and following digits from sourceStream."
-
 	| isNeg value |
 	isNeg := self peekSignIsMinus.
 	value := self nextUnsignedIntegerOrNilBase: aRadix.
@@ -113,7 +100,6 @@ nextIntegerBase: aRadix ifFail: aBlock = (
 
 nextNumber = (
 	"read next number from sourceStream contents"
-
 	^self subclassResponsibility
 )
 
@@ -121,7 +107,6 @@ nextUnsignedInteger = (
 	"Read an Integer from sourceStream, asnwser that Integer.
 	This is a generic version dealing with a simple sequence of decimal digits.
 	Subclass might define extended syntax."
-
 	base := 10.
 	^self nextUnsignedIntegerBase: base ifFail: [^self expected: ('a digit between 0 and ' copyWith: (Character digitValue: base - 1))]
 )
@@ -130,7 +115,6 @@ nextUnsignedIntegerBase: aRadix = (
 	"Form an unsigned integer with incoming digits from sourceStream.
 	Fail if no digit found.
 	Count the number of digits and the lastNonZero digit and store int in instVar "
-
 	| value |
 	value := self nextUnsignedIntegerOrNilBase: aRadix.
 	value ifNil: [^self expected: ('a digit between 0 and ' copyWith: (Character digitValue: aRadix - 1))].
@@ -141,7 +125,6 @@ nextUnsignedIntegerBase: aRadix ifFail: errorBlock = (
 	"Form an unsigned integer with incoming digits from sourceStream.
 	Answer this integer, or execute errorBlock if no digit found.
 	Count the number of digits and the position of lastNonZero digit and store them in instVar"
-
 	| value |
 	value := self nextUnsignedIntegerOrNilBase: aRadix.
 	value ifNil: [^errorBlock value].
@@ -152,10 +135,8 @@ nextUnsignedIntegerOrNilBase: aRadix = (
 	"Form an unsigned integer with incoming digits from sourceStream.
 	Answer this integer, or nil if no digit found.
 	Count the number of digits and the position of lastNonZero digit and store them in instVar"
-
-	| nPackets high nDigitsHigh lastNonZeroHigh low |
-	"read no more digits than one elementary LargeInteger"
-	high :=  self nextElementaryLargeIntegerBase: aRadix.
+	| high |
+	high :=  self nextElementaryIntegerBase: aRadix.
 	nDigits = 0 ifTrue: [^nil].
 	^high
 )
@@ -166,7 +147,7 @@ on: aStringOrStream = (
 		ifFalse: [ aStringOrStream ].
 	base := 10.
 	neg := false.
-	integerPart := fractionPart := exponent := scale := 0.
+	integerPart := fractionPart := exponent := 0.
 	requestor := failBlock := nil
 )
 
@@ -241,9 +222,8 @@ neg <Boolean> true in case of minus sign
 integerPart <Integer> the integer part of the number
 fractionPart <Integer> the fraction part of the number if any
 exponent <Integer> the exponent used in scientific notation if any
-scale <Integer> the scale used in case of ScaledDecimal number if any
 nDigits <Integer> number of digits read to form an Integer
-lasNonZero <Integer> position of last non zero digit, starting at 1 from left, 0 if all digits are zero
+lastNonZero <Integer> position of last non zero digit, starting at 1 from left, 0 if all digits are zero
 requestor <TextEditor | nil> can be used to insert an error message in the requestor
 failBlock <BlockClosure> Block to execute whenever an error occurs.
 	The fail block can have 0, 1 or 2 arguments (errorString and source position)

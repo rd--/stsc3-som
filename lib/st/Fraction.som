@@ -357,14 +357,14 @@ readFrom: stringOrStream = (
 	The fraction may be specified as numerator/denominator, or just a numerator, or as integerPart.fractionPart.
 	In numerator/denominator form, both parts may have a radix specification and an exponent, but only numerator can have a sign.
 	In fractional digits form, an alternate radix and an exponent can also be provided, the integer or fraction part being optional."
-	^(ExtendedNumberParser on: stringOrStream) nextFraction
+	^(SmalltalkNumberParser on: stringOrStream) nextFraction
 )
 
 readFrom: stringOrStream base: aRadix = (
 	"Answer a Fraction as described on aStream.
 	The Fraction may be specified as numerator/denominator, or just with numerator.
 	Both numerator and denominator can have an exponent, but only numerator can have a sign."
-	^(ExtendedNumberParser on: stringOrStream) nextFractionBase: aRadix
+	^(SmalltalkNumberParser on: stringOrStream) nextFractionBase: aRadix
 )
 
 comment = (^'
