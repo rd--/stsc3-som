@@ -19,6 +19,9 @@ FalseTest suite run printOn: Transcript
 FloatTest testSelectors do: [ :each | Transcript show: each; cr. FloatTest run: each ]
 FloatTest suite run printOn: Transcript
 
+FractionTest testSelectors do: [ :each | Transcript show: each; cr. FractionTest run: each ]
+FractionTest suite run printOn: Transcript
+
 IntegerTest testSelectors do: [ :each | Transcript show: each; cr. IntegerTest run: each ]
 IntegerTest suite run printOn: Transcript
 

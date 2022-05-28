@@ -4,6 +4,11 @@ abs = (
 	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
 )
 
+adaptToFraction: rcvr andSend: selector = (
+	"If I am involved in arithmetic with a Fraction, convert it to a Float."
+	^ rcvr asFloat perform: selector with: self
+)
+
 arCosh = (
 	"Answer receiver's area hyperbolic cosine.
 	That is the inverse function of cosh."

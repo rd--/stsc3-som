@@ -32,6 +32,12 @@ adaptToFloat: rcvr andSend: selector = (
 	^ self adaptToNumber: rcvr andSend: selector
 )
 
+adaptToFraction: rcvr andCompare: selector = (
+	"If I am involved in comparison with a Fraction.
+	Default behaviour is to process comparison as any other selectors."
+	^ self adaptToFraction: rcvr andSend: selector
+)
+
 adaptToInteger: rcvr andCompare: selector = (
 	^ self adaptToInteger: rcvr andSend: selector
 )
@@ -243,6 +249,11 @@ isDictionary = (
 )
 
 isFloat = (
+	^ false
+)
+
+isFraction = (
+	"Answer true if the receiver is a Fraction."
 	^ false
 )
 

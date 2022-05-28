@@ -147,6 +147,13 @@ integerPart = (
 	^self
 )
 
+isFraction = (
+	"Each Integer is considered as a special kind of Fraction with self as numerator and a unit denominator.
+	Rationale: A Fraction with a unit denominator will be automatically reduced to an Integer.
+	Hence Integer has to be polymorphic to Fraction."
+	^true
+)
+
 isInteger = (
 	^ true
 )
@@ -227,8 +234,22 @@ noMask: mask = (
 	^0 = (self bitAnd: mask)
 )
 
+numerator = (
+	"Let an Integer be polymorphic to a Fraction. See #isFraction."
+	^self
+)
+
 printAsLiteralOn: aStream = (
 	^self printOn: aStream
+)
+
+quo: aNumber = (
+	"Refer to the comment in Number quo: "
+	| quo |
+	aNumber isInteger ifTrue:
+		[quo := (self divideByInteger: aNumber) at: 1.
+		^ quo normalize].
+	^ aNumber adaptToInteger: self andSend: #quo:
 )
 
 raisedTo: n modulo: m = (

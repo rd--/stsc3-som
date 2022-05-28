@@ -1,0 +1,417 @@
+Fraction = Number (
+
+| numerator denominator |
+
+* aNumber = (
+	"Answer the result of multiplying the receiver by aNumber."
+	| d1 d2 |
+	aNumber isFraction ifTrue:
+		[d1 := numerator gcd: aNumber denominator.
+		d2 := denominator gcd: aNumber numerator.
+		(d2 = denominator and: [d1 = aNumber denominator])
+			ifTrue: [^ numerator // d1 * (aNumber numerator // d2)].
+		^ Fraction numerator: numerator // d1 * (aNumber numerator // d2)
+				denominator: denominator // d2 * (aNumber denominator // d1)].
+	^ aNumber adaptToFraction: self andSend: #*
+)
+
++ aNumber = (
+	"Answer the sum of the receiver and aNumber."
+	| n d d1 d2 |
+	aNumber isInteger ifTrue:
+		[^Fraction numerator: numerator + (denominator * aNumber) denominator: denominator].
+	aNumber isFraction ifTrue:
+		[d := denominator gcd: aNumber denominator.
+		n := numerator * (d1 := aNumber denominator // d) + (aNumber numerator * (d2 := denominator // d)).
+		d1 := d1 * d2.
+		n := n // (d2 := n gcd: d).
+		(d := d1 * (d // d2)) = 1 ifTrue: [^ n].
+		^ Fraction numerator: n denominator: d].
+	^ aNumber adaptToFraction: self andSend: #+
+)
+
+- aNumber = (
+	"Answer the difference between the receiver and aNumber."
+	aNumber isInteger ifTrue:
+		[^Fraction numerator: numerator - (denominator * aNumber) denominator: denominator].
+	aNumber isFraction ifTrue:
+		[^ self + aNumber negated].
+	^ aNumber adaptToFraction: self andSend: #-
+)
+
+/ aNumber = (
+	"Answer the result of dividing the receiver by aNumber."
+	aNumber isFraction
+		ifTrue: [^self * aNumber reciprocal].
+	^ aNumber adaptToFraction: self andSend: #/
+)
+
+< aNumber = (
+	aNumber isFraction ifTrue:
+		[^ numerator * aNumber denominator < (aNumber numerator * denominator)].
+	^ aNumber adaptToFraction: self andCompare: #<
+)
+
+<= aNumber = (
+	aNumber isFraction ifTrue:
+		[^ numerator * aNumber denominator <= (aNumber numerator * denominator)].
+	^ aNumber adaptToFraction: self andCompare: #<=
+)
+
+= aNumber = (
+	aNumber isNumber ifFalse: [^ false].
+	aNumber isInteger ifTrue: ["If properly reduced, self cannot be an Integer" ^ false].
+	aNumber isFraction
+		ifTrue: ["Assume that both Fraction are reduced"
+				^ numerator = aNumber numerator and:
+					[denominator = aNumber denominator]].
+	^ aNumber adaptToFraction: self andCompare: #=
+)
+
+> aNumber = (
+	aNumber isFraction ifTrue:
+		[^ numerator * aNumber denominator > (aNumber numerator * denominator)].
+	^ aNumber adaptToFraction: self andCompare: #>
+)
+
+>= aNumber = (
+	aNumber isFraction ifTrue:
+		[^ numerator * aNumber denominator >= (aNumber numerator * denominator)].
+	^ aNumber adaptToFraction: self andCompare: #>=
+)
+
+adaptToInteger: rcvr andCompare: selector = (
+	"Assuming that self is properly reduced, it cannot be an Integer"
+	selector == #= ifTrue: [^false].
+	selector == #~= ifTrue: [^true].
+	"Inequality: avoid division with this transformation:
+	rcvr op: (num/den)
+	rcvr - (num/den) op: 0
+	rcvr*den op: num"
+	^rcvr * denominator perform: selector with: numerator
+)
+
+adaptToInteger: rcvr andSend: selector = (
+	"If I am involved in arithmetic with an Integer, convert it to a Fraction."
+	^ (Fraction numerator: rcvr denominator: 1) perform: selector with: self
+)
+
+asExactFloat = (
+	"When we know that this Fraction is an exact Float, this conversion is much faster than asFloat."
+	^numerator asFloat timesTwoPower: 1 - denominator highBit
+)
+
+asFloat = (
+	^numerator asFloat / denominator asFloat
+)
+
+asFraction = (
+	"Answer the receiver itself."
+	^self
+)
+
+asNonFraction = (
+	"Answer a number equivalent to the receiver that is not a fraction."
+	^self asFloat
+)
+
+denominator = (
+	^denominator
+)
+
+floorLog: radix = (
+	"Unlike super, this version is exact when radix is integer"
+	| d n |
+	radix isInteger ifFalse: [^super floorLog: radix].
+	n := numerator floorLog: radix.
+	d := denominator floorLog: radix.
+	^(numerator * (radix raisedTo: d))
+		< (denominator * (radix raisedTo: n))
+		ifTrue: [n - d - 1]
+		ifFalse: [n - d]
+)
+
+gcd: aFraction = (
+	| d |
+	d := denominator gcd: aFraction denominator.
+	^(numerator *(aFraction denominator//d) gcd: aFraction numerator*(denominator//d)) / (denominator//d*aFraction denominator)
+)
+
+hash = (
+	"Hash is reimplemented because = is implemented."
+	"Care is taken that a Fraction equal to a Float also has an equal hash"
+	self isAnExactFloat ifTrue: [^self asExactFloat hash].
+	"Else, I cannot be exactly equal to a Float, use own hash algorithm."
+	^numerator hash hashMultiply bitXor: denominator hash
+)
+
+isAnExactFloat = (
+	"Answer true if this Fraction can be converted exactly to a Float"
+	^ denominator isPowerOfTwo
+		and: ["I have a reasonable significand: not too big"
+			numerator highBitOfMagnitude <= Float precision
+				and: ["I have a reasonable exponent: not too small"
+					Float emin + denominator highBitOfMagnitude <= Float precision]]
+)
+
+isFraction = (
+	^ true
+)
+
+lcm: n = (
+	"Answer the least common multiple of the receiver and n."
+	^self // (self gcd: n) * n
+)
+
+ln = (
+	"This function is defined because super ln might overflow."
+	| res |
+	self <= 0 ifTrue: [DomainError signal: 'ln is only defined for x > 0'].
+	"Test self < 1 before converting to float in order to avoid precision loss due to gradual underflow."
+	numerator < denominator ifTrue: [^self reciprocal ln negated].
+	res := super ln.
+	res isFinite ifTrue: [^res].
+	^numerator ln - denominator ln
+)
+
+log = (
+	"This function is defined because super log might overflow."
+	| res |
+	self <= 0 ifTrue: [DomainError signal: 'log is only defined for x > 0'].
+	"Test self < 1 before converting to float in order to avoid precision loss due to gradual underflow."
+	numerator < denominator ifTrue: [^self reciprocal log negated].
+	res := super log.
+	res isFinite ifTrue: [^res].
+	^numerator log - denominator log
+)
+
+log2 = (
+	"This function is defined because super log2 might overflow."
+	| res |
+	self <= 0 ifTrue: [DomainError signal: 'log2 is only defined for x > 0'].
+	"Test self < 1 before converting to float in order to avoid precision loss due to gradual underflow."
+	numerator < denominator ifTrue: [^self reciprocal log2 negated].
+	res := super log2.
+	res isFinite ifTrue: [^res].
+	^numerator log2 - denominator log2
+)
+
+negated = (
+	"Refer to the comment in Number|negated."
+	^ Fraction
+		numerator: numerator negated
+		denominator: denominator
+)
+
+negative = (
+	^numerator negative
+)
+
+nthRoot: aPositiveInteger = (
+	"Answer the nth root of the receiver."
+	| guess |
+	guess := (numerator nthRootTruncated: aPositiveInteger) / (denominator nthRootTruncated: aPositiveInteger).
+	(guess raisedTo: aPositiveInteger) = self ifTrue: [^guess].
+	"There is no exact nth root, so answer a Float approximation"
+	^(self abs ln / aPositiveInteger) exp * self sign
+)
+
+numerator = (
+	^numerator
+)
+
+printOn: aStream = (
+	aStream nextPut: $(.
+	numerator printOn: aStream.
+	aStream nextPut: $/.
+	denominator printOn: aStream.
+	aStream nextPut: $).
+)
+
+printOn: aStream base: base = (
+	aStream nextPut: $(.
+	numerator printOn: aStream base: base.
+	aStream nextPut: $/.
+	denominator printOn: aStream base: base.
+	aStream nextPut: $).
+)
+
+printOn: aStream showingDecimalPlaces: placesDesired = (
+	"Same as super, but provides a faster implementation by inlining some Fraction protocol thus avoiding intermediate Fraction creation."
+	| roundedFractionPart integerPart scaling |
+	placesDesired <= 0
+		ifTrue: [self rounded printOn: aStream]
+		ifFalse:
+			[scaling := 10 raisedToInteger: placesDesired.
+			integerPart := numerator abs quo: denominator.
+			roundedFractionPart := (numerator abs - (integerPart * denominator)) * scaling * 2 + denominator quo: denominator * 2.
+			roundedFractionPart = scaling
+				ifTrue:
+					[integerPart := integerPart + 1.
+					roundedFractionPart := 0].
+			"Don't print minus sign if result is rouded to zero"
+			(numerator negative and: [integerPart > 0 or: [roundedFractionPart > 0]]) ifTrue: [aStream nextPut: $-].
+			integerPart printOn: aStream.
+			aStream nextPut: $..
+			roundedFractionPart printOn: aStream base: 10 length: placesDesired padded: true].
+)
+
+printTruncatedOn: aStream showingDecimalPlaces: placesDesired = (
+	"Print a representation of the receiver on aStream in decimal notation with prescribed number of places after decimal separator.
+	Print as if the receiver was truncated to requested precision."
+	| truncatedFractionPart integerPart scaling |
+	placesDesired <= 0
+		ifTrue: [self truncated printOn: aStream]
+		ifFalse:
+			[scaling := 10 raisedToInteger: placesDesired.
+			integerPart := numerator abs quo: denominator.
+			truncatedFractionPart := (numerator abs - (integerPart * denominator)) * scaling quo: denominator.
+			numerator negative ifTrue: [aStream nextPut: $-].
+			integerPart printOn: aStream.
+			aStream nextPut: $..
+			truncatedFractionPart printOn: aStream base: 10 length: placesDesired padded: true].
+)
+
+raisedToFraction: aFraction = (
+	| root |
+	root := (self numerator nthRootTruncated: aFraction denominator) / (self denominator nthRootTruncated: aFraction denominator).
+	(root raisedToInteger: aFraction denominator) = self ifTrue: [^root raisedToInteger: aFraction numerator].
+	^super raisedToFraction: aFraction
+)
+
+raisedToInteger: anInteger = (
+	"See Number | raisedToInteger:"
+	anInteger = 0 ifTrue: [^ 1].
+	anInteger < 0 ifTrue: [^ self reciprocal raisedToInteger: anInteger negated].
+	^ Fraction numerator: (numerator raisedToInteger: anInteger)
+		denominator: (denominator raisedToInteger: anInteger)
+)
+
+reciprocal = (
+	numerator abs = 1 ifTrue: [^denominator * numerator].
+	^self class numerator: denominator denominator: numerator
+)
+
+reduced = (
+	| gcd numer denom |
+	numerator = 0 ifTrue: [^0].
+	gcd := numerator gcd: denominator.
+	numer := numerator // gcd.
+	denom := denominator // gcd.
+	denom = 1 ifTrue: [^numer].
+	^Fraction numerator: numer denominator: denom
+)
+
+setNumerator: n denominator: d = (
+	d isZero ifTrue: [ ^(ZeroDivide dividend: n) signal ].
+	numerator := n asInteger.
+	(denominator := d asInteger) negative ifTrue: [ "keep sign in numerator"
+		numerator := numerator negated.
+		denominator := denominator negated ]
+)
+
+sqrt = (
+	| d n |
+	n := numerator sqrt.
+	d := denominator sqrt.
+	"The #sqrt method in integer will only answer a Float if there's no exact square root.
+	So, we need a float anyway."
+	(n isInfinite or: [ d isInfinite ]) ifTrue: [
+		^self asFloat sqrt ].
+	^n / d
+)
+
+squared = (
+	"See Fraction (Number) | squared"
+	^ Fraction numerator: numerator squared denominator: denominator squared
+)
+
+storeOn: aStream base: base = (
+	aStream nextPut: $(.
+	numerator storeOn: aStream base: base.
+	aStream nextPut: $/.
+	denominator storeOn: aStream base: base.
+	aStream nextPut: $).
+)
+
+truncated = (
+	"Refer to the comment in Number|truncated."
+	^numerator quo: denominator
+)
+
+
+----------------------------
+
+numerator: numInteger denominator: denInteger = (
+	"Answer an instance of me (numInteger/denInteger).
+	NOTE: This primitive initialization method will not reduce improper fractions,
+	so normal usage should be coded as, eg,
+		(Fraction numerator: a denominator: b) reduced
+	or, more simply, as
+		a / b."
+	^self new setNumerator: numInteger denominator: denInteger
+)
+
+readFrom: stringOrStream = (
+	"Answer a fraction as described on aStream.
+	The fraction may be specified as numerator/denominator, or just a numerator, or as integerPart.fractionPart.
+	In numerator/denominator form, both parts may have a radix specification and an exponent, but only numerator can have a sign.
+	In fractional digits form, an alternate radix and an exponent can also be provided, the integer or fraction part being optional."
+	^(ExtendedNumberParser on: stringOrStream) nextFraction
+)
+
+readFrom: stringOrStream base: aRadix = (
+	"Answer a Fraction as described on aStream.
+	The Fraction may be specified as numerator/denominator, or just with numerator.
+	Both numerator and denominator can have an exponent, but only numerator can have a sign."
+	^(ExtendedNumberParser on: stringOrStream) nextFractionBase: aRadix
+)
+
+comment = (^'
+
+Fraction provides methods for dealing with fractions like 1/3 as a ratio of two integers (as apposed to a decimal representation 0.33333...).
+
+instance variables:
+	numerator	<Integer> the number appearing before the fraction bar (above)
+	denominator	<Integer> the number appearing after the fraction bar (below)
+
+A Fraction is generally created by sending the message / to an Integer, like in
+
+    1 / 3
+
+Alternatively, it is possible to create a new instance of Fraction by sending #numerator:denominator: to the class.
+In this later case, it is then user responsibility to ensure that it conforms to the following invariants:
+
+- the denominator shall allways be positive.
+  A negative Fraction shall have a negative numerator, never a negative denominator.
+  Example: 1 / -3 will return -1/3
+- the denominator shall allways be greater than 1.
+  A Fraction with denominator 1 shall be reduced to its numerator (an Integer).
+  Example 3 / 1 will answer 3 (the Integer) not 3/1
+- the numerator and denominator shall never have common multiples.
+  Common multiples shall allways be simplified until (numerator gcd: denominator) = 1.
+  Example 8 / 6 will answer 4 / 3, because both 8=2*4 and 6=2*3 are both divisible by 2.
+
+A Fraction non conforming to above invariants could be the cause of undefined behavior and unexpected results.
+If unsure, it is advised to send the message #reduced to the freshly created instance so as to obtain a conforming Fraction, or an Integer.
+
+Note that Fraction and Integer represent together the set of Rational numbers:
+- Integer is a subset of rational (those which are whole numbers)
+- Fraction is used for representing the complementary subset of rational (those which are not whole numbers)
+
+There could have been a Rational superclass to both Integer and Fraction, and a message #isRational for testing if a Number is a Rational, as well as a message #asRational for converting a Number to a Rational.
+But this level of indirection is not strictly necessary: instead, the notion of Rational and Fraction are collapsed in Squeak, and Integer are considered as a sort of special Fraction with unitary denominator.
+Thus #isFraction is the testing message, to which every Integer will also answer true, since considered as a sort of Fraction.
+And #asFraction is the conversion message, that may answer an instance of Fraction or Integer, depending if the corresponding rational number is whole or not.
+
+All public arithmetic operations will answer reduced fractions.
+Examples:
+
+(2/3) + (2/3)
+(2/3) + (1/2)		"case showing reduction to common denominator"
+(2/3) + (4/3)		"case where result is reduced to an Integer"
+(2/3) raisedToInteger: 5		 "fractions also can be exponentiated"
+
+')
+
+)

@@ -1,0 +1,140 @@
+FractionTest = ClassTestCase (
+
+assert: a classAndValueEquals: b = (
+	self assert: a class = b class.
+	self assert: a = b
+)
+
+testCeiling = (
+	self assert: (3 / 2) ceiling = 2.
+	self assert: (-3 / 2) ceiling = -1.
+)
+
+testDegreeCos = (
+	"self run: #testDegreeCos"
+	-361/3 to: 359/3 do: [:i |
+		self assert: (i degreeCos closeTo: i degreesToRadians cos)].
+)
+
+testDegreeSin = (
+	"self run: #testDegreeSin"
+	-361/3 to: 359/3 do: [:i |
+		self assert: (i degreeSin closeTo: i degreesToRadians sin)].
+)
+
+testFloor = (
+	self assert: (3 / 2) floor = 1.
+	self assert: (-3 / 2) floor = -2.
+)
+
+testFractionPrinting = (
+	self assert: (353/359) printString = '(353/359)'.
+	self assert: ((59/61) printString) = '(59/61)'.
+)
+
+"
+testFractionReading = (
+	self assert: (Fraction readFrom: '4') equals: 4.
+	self assert: (Fraction readFrom: '45') equals: 45.
+	self assert: (Fraction readFrom: '-45') equals: -45.
+	self assert: (Fraction readFrom: '4e2') equals: 400.
+	self assert: (Fraction readFrom: '33e-2') equals: 33/100.
+	self assert: (Fraction readFrom: '23/17') equals: 23/17.
+	self assert: (Fraction readFrom: '-122/17') equals: -122/17.
+)
+"
+
+testIntegerWholeDivision = (
+	self assert: 4 / (2/3) classAndValueEquals: 6.
+	self assert: 4 / (-2/3) classAndValueEquals: -6.
+	self assert: -4 / (-2/3) classAndValueEquals: 6.
+	self assert: -4 / (2/3) classAndValueEquals: -6.
+)
+
+testIntegerWholeMultiplication = (
+	self assert: 4 * (3/2) classAndValueEquals: 6.
+	self assert: 4 * (-3/2) classAndValueEquals: -6.
+	self assert: -4 * (-3/2) classAndValueEquals: 6.
+	self assert: -4 * (3/2) classAndValueEquals: -6.
+)
+
+testReciprocal = (
+	self
+		assert: (1/2) reciprocal classAndValueEquals: 2;
+		assert: (3/4) reciprocal equals: (4/3);
+		assert: (-1/3) reciprocal classAndValueEquals: -3;
+		assert: (-3/5) reciprocal equals: (-5/3)
+)
+
+testRounded = (
+	self assert: (4 / 5) rounded = 1.
+	self assert: (6 / 5) rounded = 1.
+	self assert: (-4 / 5) rounded = -1.
+	self assert: (-6 / 5) rounded = -1.
+	"In case of tie, round to upper magnitude"
+	self assert: (3 / 2) rounded = 2.
+	self assert: (-3 / 2) rounded = -2.
+)
+
+testThatFractionDenominatorIsPositive = (
+	self assert: (-3 / 2) numerator negative description: 'a Fraction sign is allways carried by its numerator'.
+	self assert: (-3 / 2) denominator positive description: 'a Fraction denominator is allways positive'.
+	self assert: (3 / -2) numerator negative description: 'a Fraction sign is allways carried by its numerator'.
+	self assert: (3 / -2) denominator positive description: 'a Fraction denominator is allways positive'.
+	self assert: (-3 / -2) numerator positive description: 'two negative signs are simplified'.
+	self assert: (-3 / -2) denominator positive description: 'a Fraction denominator is allways positive'.
+)
+
+testThatFractionIsReduced = (
+	self assert: (4 / 6) numerator equals: 2.
+	self assert: (4 / 6) denominator equals: 3.
+	self assert: (4 / 2) classAndValueEquals: 2.
+	"Fraction class>>#numerator:denominator: does not automatically reduce the Fraction.
+	Since it does not guaranty above invariant, it must be used with care."
+	self assert: (Fraction numerator: 4 denominator: 6) numerator equals: 4.
+	self assert: (Fraction numerator: 4 denominator: 6) denominator equals: 6.
+	self assert: (Fraction numerator: 4 denominator: 6) reduced numerator equals: 2.
+	self assert: (Fraction numerator: 4 denominator: 6) reduced denominator equals: 3.
+)
+
+testTruncated = (
+	self assert: (3 / 2) truncated = 1.
+	self assert: (-3 / 2) truncated = -1.
+)
+
+testWholeDifference = (
+	self assert: (2/3) - (5/3) classAndValueEquals: -1.
+)
+
+testWholeDivision = (
+
+	self assert: (3/2) / (3/4) classAndValueEquals: 2.
+
+	self assert: (3/2) / (-3/4) classAndValueEquals: -2.
+
+	self assert: (-3/2) / (-3/4) classAndValueEquals: 2.
+
+	self assert: (-3/2) / (3/4) classAndValueEquals: -2.
+
+)
+
+testWholeMultiplication = (
+
+	self assert: (3/2) * (4/3) classAndValueEquals: 2.
+
+	self assert: (3/2) * (-4/3) classAndValueEquals: -2.
+
+	self assert: (-3/2) * (-4/3) classAndValueEquals: 2.
+
+	self assert: (-3/2) * (4/3) classAndValueEquals: -2.
+
+)
+
+testWholeSum = (
+
+	self assert: (5/3) + (1/3) classAndValueEquals: 2.
+
+)
+
+
+)

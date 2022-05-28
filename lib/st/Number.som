@@ -46,6 +46,10 @@ adaptToCollection: rcvr andSend: selector = (
 	^ rcvr collect: [:element | element perform: selector with: self]
 )
 
+adaptToFraction: rcvr andSend: selector = (
+	^ self subclassResponsibility
+)
+
 arCosh = (
 	^self asFloat arCosh
 )
@@ -231,6 +235,8 @@ printOn: aStream = (
 )
 
 quo: aNumber = (
+	"Integer quotient defined by division with truncation toward zero. -9 quo:
+	4 = -2, -0.9 quo: 0.4 = -2. rem: answers the remainder from this division."
 	^(self / aNumber) truncated
 )
 
