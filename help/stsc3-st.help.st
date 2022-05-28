@@ -7,6 +7,9 @@ ArrayTest suite run printOn: Transcript
 BagTest testSelectors do: [ :each | Transcript show: each; cr. BagTest run: each ]
 BagTest suite run printOn: Transcript
 
+CharacterTest testSelectors do: [ :each | Transcript show: each; cr. CharacterTest run: each ]
+CharacterTest suite run printOn: Transcript
+
 CollectionTest testSelectors do: [ :each | Transcript show: each; cr. CollectionTest run: each ]
 CollectionTest suite run printOn: Transcript
 
@@ -22,11 +25,20 @@ FloatTest suite run printOn: Transcript
 FractionTest testSelectors do: [ :each | Transcript show: each; cr. FractionTest run: each ]
 FractionTest suite run printOn: Transcript
 
+HeapTest testSelectors do: [ :each | Transcript show: each; cr. HeapTest run: each ]
+HeapTest suite run printOn: Transcript
+
+IdentityBagTest testSelectors do: [ :each | Transcript show: each; cr. IdentityBagTest run: each ]
+IdentityBagTest suite run printOn: Transcript
+
 IntegerTest testSelectors do: [ :each | Transcript show: each; cr. IntegerTest run: each ]
 IntegerTest suite run printOn: Transcript
 
 IntervalTest testSelectors do: [ :each | Transcript show: each; cr. IntervalTest run: each ]
 IntervalTest suite run printOn: Transcript
+
+MatrixTest testSelectors do: [ :each | Transcript show: each; cr. MatrixTest run: each ]
+MatrixTest suite run printOn: Transcript
 
 NumberTest testSelectors do: [ :each | Transcript show: each; cr. NumberTest run: each ]
 NumberTest suite run printOn: Transcript
@@ -52,6 +64,12 @@ SmallIntegerTest suite run printOn: Transcript
 
 SortedCollectionTest testSelectors do: [ :each | Transcript show: each; cr. SortedCollectionTest run: each ]
 SortedCollectionTest suite run printOn: Transcript
+
+StringTest testSelectors do: [ :each | Transcript show: each; cr. StringTest run: each ]
+StringTest suite run printOn: Transcript
+
+SymbolTest testSelectors do: [ :each | Transcript show: each; cr. SymbolTest run: each ]
+SymbolTest suite run printOn: Transcript
 
 TrueTest testSelectors do: [ :each | Transcript show: each; cr. TrueTest run: each ]
 TrueTest suite run printOn: Transcript

@@ -25,19 +25,79 @@ String = ArrayedCollection (
 )
 
 , anObject = (
+	"Concatenate the argument to the receiver.
+		Transcript cr; show: 'The value is: ', 3.
+	"
 	^ self copyReplaceFrom: self size + 1
 		  to: self size
 		  with: anObject asString
 )
 
 asInteger = (
-	^ SmallInteger fromString: self
+	^self asIntegerSigned: true
+)
+
+asIntegerSigned: signed = (
+	"Return the first decimal integer I can find or nil."
+	| index character size result negative |
+	index := 0.
+	size := self size.
+	"Find the first character between $0 and $9."
+	[ (index := index + 1) > size or: [ (self at: index) isDigit ] ] whileFalse.
+	index > size ifTrue: [ ^nil ].
+	negative := signed and: [ index > 1 and: [ (self at: index - 1) == $- ] ].
+	"Parse the number."
+	size - index > 15 ifTrue: [
+		negative ifTrue: [ index := index - 1 ].
+		^Integer readFrom: (
+			ReadStream
+				on: self
+				from: index
+				to: size) ].
+	result := (self at: index) digitValue.
+	[ (index := index + 1) <= size
+		and: [ (character := self at: index) isDigit ] ]  whileTrue: [
+		result := result * 10 + character digitValue ].
+	negative ifTrue: [ ^result negated ].
+	^result
 )
 
 asNumber = (
 	(self anySatisfy: [ :char | char = $. ])
 		ifTrue: [ ^ Float readFrom: self ]
 		ifFalse: [ ^ Integer readFrom: self ]
+)
+
+asSignedInteger = (
+	"Return the first signed integer I can find or nil."
+	^self asIntegerSigned: true
+)
+
+asSmalltalkComment = (
+	"return this string, munged so that it can be treated as a comment in Smalltalk code.  Quote marks are added to the beginning and end of the string, and whenever a solitary quote mark appears within the string, it is doubled"
+	^String streamContents:  [ :str |
+		| quoteCount first |
+		str nextPut: $".
+		quoteCount := 0.
+		first := true.
+		self do: [ :char |
+			char = $"
+				ifTrue: [
+					first ifFalse: [
+						str nextPut: char.
+						quoteCount := quoteCount + 1 ] ]
+				ifFalse: [
+					quoteCount odd ifTrue: [
+						"add a quote to even the number of quotes in a row"
+						str nextPut: $" ].
+					quoteCount := 0.
+					str nextPut: char ].
+			first := false ].
+		quoteCount odd ifTrue: [
+			"check at the end"
+			str nextPut: $". ].
+		str nextPut: $".
+	].
 )
 
 asString = (
@@ -47,6 +107,11 @@ asString = (
 asSymbol = (
 	<primitive: -1>
 	self primitiveFailed
+)
+
+asUnsignedInteger = (
+	"Returns the first unsigned integer I can find or nil."
+	^self asIntegerSigned: false
 )
 
 at: index = (
@@ -93,6 +158,25 @@ compare: s = (
 	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter ]
 )
 
+condensedIntoOneLine = (
+	"Return a copy of the receiver with all separators converted to spaces, and with no consecutive spaces.  A formatting tool."
+	^ String streamContents:
+		[ : stream | | prior |
+		prior := $X.  "some non-separator"
+		self do:
+			[ : char | char isSeparator ifTrue: [ prior isSeparator ifFalse: [stream space]] ifFalse: [ stream nextPut: char ].
+			prior := char ] ]
+)
+
+capitalized = (
+	"Return a copy with the first letter capitalized"
+	| cap |
+	self isEmpty ifTrue: [ ^self copy ].
+	cap := self copy.
+	cap at: 1 put: (cap at: 1) asUppercase.
+	^ cap
+)
+
 caseInsensitiveCompare: s = (
 	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter asUppercase ]
 )
@@ -124,13 +208,227 @@ compare: s withNormalisingBlock: aBlock = (
 	^endResult
 )
 
+findAnySubStr: delimiters startingAt: start = (
+	"Answer the index of the character within the receiver, starting at start, that begins a substring matching one of the delimiters.  delimiters is an Array of Strings (Characters are permitted also).  If the receiver does not contain any of the delimiters, answer size + 1."
+	^delimiters inject: 1 + self size into: [:min :delim |
+		"delim may be a char, a string of length 1, or a substring"
+		| ind |
+		ind := delim isCharacter
+			ifTrue: [self indexOf: delim
+						startingAt: start ifAbsent: [min]]
+			ifFalse: [self indexOfSubCollection: delim
+						startingAt: start ifAbsent: [min]].
+		min min: ind]
+)
+
+findDelimiters: delimiters startingAt: start = (
+	"Answer the index of the character within the receiver, starting at start, that matches one of the delimiters. If the receiver does not contain any of the delimiters, answer size + 1."
+	delimiters size = 1 ifTrue: [ ^self indexOf: delimiters anyOne startingAt: start ifAbsent: self size + 1 ].
+	^self indexOfAnyOf: delimiters startingAt: start ifAbsent: self size + 1
+)
+
+findLastOccurrenceOfString: subString startingAt: start = (
+	"Answer the index of the last occurrence of subString within the receiver, starting at start. If
+	the receiver does not contain subString, answer 0.  Case-sensitive match used."
+	| last now |
+	last := self findString: subString startingAt: start.
+	last = 0 ifTrue: [^ 0].
+	[last > 0] whileTrue:
+		[now := last.
+		last := self findString: subString startingAt: last + 1].
+	^ now
+)
+
+findString: subString = (
+	"Answer the index of subString within the receiver, starting at start. If
+	the receiver does not contain subString, answer 0."
+	^self findString: subString startingAt: 1.
+)
+
+findString: subString startingAt: start = (
+	"Answer the index of subString within the receiver, starting at start. If
+	the receiver does not contain subString, answer 0."
+	^self findSubstring: subString in: self startingAt: start
+)
+
+findSubstring: key in: body startingAt: start = (
+	| index c1 c2 keySize |
+	(keySize := key size) = 0 ifTrue: [ ^0 ].
+		start to: body size - keySize + 1 do: [ :startIndex |
+			index := 0.
+			[ (body at: startIndex + index) == (key at: (index := index + 1)) ] whileTrue: [
+				index = keySize ifTrue: [ ^startIndex ] ] ].
+		^0
+)
+
+format: aCollection = (
+	^self class new: self size * 11 // 10 "+10%" streamContents: [ :output |
+		| lastIndex nextIndex |
+		lastIndex := 1.
+		[ (nextIndex := self indexOfAnyOf: String formatCharacterSet startingAt: lastIndex) = 0 ] whileFalse: [
+			nextIndex = lastIndex ifFalse: [
+				output next: nextIndex - lastIndex putAll: self startingAt: lastIndex ].
+			(self at: nextIndex) == $\
+				ifTrue: [ output nextPut: (self at: (nextIndex := nextIndex + 1)) ]
+				ifFalse: [ "${"
+					"Parse the index - a positive integer in base 10."
+					| digitValue collectionIndex |
+					collectionIndex := 0.
+					[ (digitValue := self basicAt: (nextIndex := nextIndex + 1)) between: 48 "$0 asciiValue" and: 57 "$9 asciiValue" ] whileTrue: [
+						collectionIndex := collectionIndex * 10 + digitValue - 48. "$0 asciiValue" ].
+					digitValue =  125 "$} asciiValue" ifFalse: [ self error: '$} expected' ].
+					output nextPutAll: (aCollection at: collectionIndex) asString ].
+			lastIndex := nextIndex + 1 ].
+		lastIndex <= self size ifTrue: [
+			output next: self size - lastIndex + 1 putAll: self startingAt: lastIndex ] ]
+)
+
+isAllDigits = (
+	"whether the receiver is composed entirely of digits"
+	^self allSatisfy: [ :character | character isDigit ]
+)
+
+isAllSeparators = (
+	"whether the receiver is composed entirely of separators"
+	self do: [ :c | c isSeparator ifFalse: [ ^false ] ].
+	^true
+)
+
+isAsciiString = (
+	^self allSatisfy: [ :each | each asciiValue <= 127 ]
+)
 
 isLiteral = (
 	^true
 )
 
+isOctetString = (
+	"Answer whether the receiver can be represented as a byte string.
+	This is different from asking whether the receiver *is* a ByteString
+	(i.e., #isByteString)"
+	1 to: self size do: [:pos |
+		(self basicAt: pos) >= 256 ifTrue: [^ false].
+	].
+	^ true.
+)
+
 isString = (
 	^ true
+)
+
+keywords = (
+	"Answer an array of the keywords that compose the receiver."
+	| keywords |
+	keywords := Array streamContents:
+		[:kwds |
+		| kwd |
+		kwd := WriteStream on: (String new: 16).
+		1 to: self size do:
+			[:i |
+			| char |
+			kwd nextPut: (char := self at: i).
+			char = $: ifTrue:
+					[kwds nextPut: kwd contents.
+					kwd reset]].
+		(kwd position = 0) ifFalse: [kwds nextPut: kwd contents]].
+	(keywords size >= 1 and: [(keywords at: 1) = ':']) ifTrue:
+		["Has an initial keyword, as in #:if:then:else:"
+		keywords := keywords allButFirst].
+	(keywords size >= 2 and: [(keywords at: keywords size - 1) = ':']) ifTrue:
+		["Has a final keyword, as in #nextPut::andCR"
+		keywords := keywords copyReplaceFrom: keywords size - 1
+								to: keywords size with: {':' , keywords last}].
+	^ keywords
+)
+
+lineCorrespondingToIndex: anIndex = (
+	"Answer a string containing the line at the given character position."
+	self lineIndicesDo: [:start :endWithoutDelimiters :end |
+		anIndex <= end ifTrue: [^self copyFrom: start to: endWithoutDelimiters]].
+	^''
+)
+
+lineCount = (
+	"Answer the number of lines represented by the receiver, where every line delimiter CR, LF or CRLF pair adds one line."
+	| lineCount |
+	lineCount := 0.
+	self lineIndicesDo: [:start :endWithoutDelimiters :end |
+		lineCount := lineCount + 1].
+	^lineCount
+)
+
+lineIndicesDo: aBlock = (
+	"execute aBlock with 3 arguments for each line:
+	- start index of line
+	- end index of line without line delimiter
+	- end index of line including line delimiter(s) CR, LF or CRLF"
+	| cr lf start sz nextLF nextCR |
+	start := 1.
+	sz := self size.
+	cr := Character cr.
+	nextCR := self indexOf: cr startingAt: 1.
+	lf := Character lf.
+	nextLF := self indexOf: lf startingAt: 1.
+	[ start <= sz ] whileTrue: [
+		(nextLF = 0 and: [ nextCR = 0 ])
+			ifTrue: [ "No more CR, nor LF, the string is over"
+					aBlock value: start value: sz value: sz.
+					^self ].
+		(nextCR = 0 or: [ 0 < nextLF and: [ nextLF < nextCR ] ])
+			ifTrue: [ "Found a LF"
+					aBlock value: start value: nextLF - 1 value: nextLF.
+					start := 1 + nextLF.
+					nextLF := self indexOf: lf startingAt: start ]
+			ifFalse: [ 1 + nextCR = nextLF
+				ifTrue: [ "Found a CR-LF pair"
+					aBlock value: start value: nextCR - 1 value: nextLF.
+					start := 1 + nextLF.
+					nextCR := self indexOf: cr startingAt: start.
+					nextLF := self indexOf: lf startingAt: start ]
+				ifFalse: [ "Found a CR"
+					aBlock value: start value: nextCR - 1 value: nextCR.
+					start := 1 + nextCR.
+					nextCR := self indexOf: cr startingAt: start ]]]
+)
+
+lineNumber: anIndex = (
+	"Answer a string containing the characters in the given line number."
+	| lineCount |
+	lineCount := 0.
+	self lineIndicesDo: [:start :endWithoutDelimiters :end |
+		(lineCount := lineCount + 1) = anIndex ifTrue: [^self copyFrom: start to: endWithoutDelimiters]].
+	^nil
+)
+
+linesDo: aBlock = (
+	"Execute aBlock with each line in this string. The terminating line delimiters CR, LF or CRLF pairs are not included in what is passed to aBlock"
+	self lineIndicesDo: [:start :endWithoutDelimiters :end |
+		aBlock value: (self copyFrom: start to: endWithoutDelimiters)]
+)
+
+match: text = (
+	"Answer whether text matches the pattern in this string.
+	Matching ignores upper/lower case differences.
+	Where this string contains #, text may contain any character.
+	Where this string contains *, text may contain any sequence of characters."
+	^ self startingAt: 1 match: text startingAt: 1
+"
+	'*'			match: 'zort' true
+	'*baz'		match: 'mobaz' true
+	'*baz'		match: 'mobazo' false
+	'*baz*'		match: 'mobazo' true
+	'*baz*'		match: 'mozo' false
+	'foo*'		match: 'foozo' true
+	'foo*'		match: 'bozo' false
+	'foo*baz'	match: 'foo23baz' true
+	'foo*baz'	match: 'foobaz' true
+	'foo*baz'	match: 'foo23bazo' false
+	'foo'		match: 'Foo' true
+	'foo*baz*zort' match: 'foobazort' false
+	'foo*baz*zort' match: 'foobazzort' true
+	'*foo#zort'	match: 'afoo3zortthenfoo3zort' true
+	'*foo*zort'	match: 'afoodezortorfoo3zort' true
+"
 )
 
 print = (
@@ -159,6 +457,51 @@ size = (
 	^self basicSize
 )
 
+startingAt: keyStart match: text startingAt: textStart = (
+	"Answer whether text matches the pattern in this string.
+	Matching ignores upper/lower case differences.
+	Where this string contains #, text may contain any character.
+	Where this string contains *, text may contain any sequence of characters."
+	| anyMatch matchStart matchEnd i matchStr j ii jj |
+	i := keyStart.
+	j := textStart.
+	"Process consecutive *s and #s at the beginning."
+	anyMatch := false.
+	[ i <= self size and: [
+		(self at: i)
+			caseOf: {
+				[ $* ] -> [
+					anyMatch := true.
+					i := i + 1.
+					true ].
+				[ $# ] -> [
+					i := i + 1.
+					j := j + 1.
+					true ] }
+			otherwise: [ false ] ] ] whileTrue.
+	i > self size ifTrue: [
+		^j - 1 = text size or: [ "We reached the end by matching the character with a #."
+			anyMatch and: [ j <= text size ] "Or there was a * before the end." ] ].
+	matchStart := i.
+	"Now determine the match string"
+	matchEnd := self size.
+	(ii := self indexOf: $* startingAt: matchStart) > 0 ifTrue: [ matchEnd := ii-1 ].
+	(ii := self indexOf: $# startingAt: matchStart) > 0 ifTrue: [ matchEnd := matchEnd min: ii-1 ].
+	matchStr := self copyFrom: matchStart to: matchEnd.
+	"Now look for the match string"
+	[jj := text findString: matchStr startingAt: j.
+	anyMatch ifTrue: [jj > 0] ifFalse: [jj = j]]
+		whileTrue:
+		["Found matchStr at jj.  See if the rest matches..."
+		(self startingAt: matchEnd+1 match: text startingAt: jj + matchStr size) ifTrue:
+			[^ true "the rest matches -- success"].
+		"The rest did not match."
+		anyMatch ifFalse: [^ false].
+		"Preceded by * -- try for a later match"
+		j := j+1].
+	^ false "Failed to find the match string"
+)
+
 storeOn: aStream = (
 	| x |
 	aStream nextPut: $'.
@@ -167,6 +510,54 @@ storeOn: aStream = (
 		aStream nextPut: (x := self at: i).
 		x = $' ifTrue: [aStream nextPut: x]].
 	aStream nextPut: $'
+)
+
+substrings = (
+	"Answer an array of the substrings that compose the receiver."
+	| result end beginning |
+	result := WriteStream on: (Array new: 10).
+	end := 0.
+	"find one substring each time through this loop"
+	[ "find the beginning of the next substring"
+	beginning := end+1.
+	[beginning <= self size and:[(self at: beginning) isSeparator]]
+		whileTrue:[beginning := beginning + 1].
+	beginning <= self size] whileTrue: [
+		"find the end"
+		end := beginning.
+		[end <= self size and:[(self at: end) isSeparator not]]
+			whileTrue:[end := end + 1].
+		end := end - 1.
+		result nextPut: (self copyFrom: beginning to: end).
+	].
+	^result contents
+)
+
+subStrings = (
+	"Added 2000/04/08 For ANSI <readableString> protocol."
+	^ self substrings
+)
+
+subStrings: separators = (
+	"Answer an array containing the substrings in the receiver separated
+	by the elements of separators."
+	| char result sourceStream subString |
+	(separators isString or:[separators allSatisfy: [:element | element isCharacter]]) ifFalse:
+		[^ self error: 'separators must be Characters.'].
+	sourceStream := ReadStream on: self.
+	result := OrderedCollection new.
+	subString := String new.
+	[sourceStream atEnd]
+		whileFalse:
+			[char := sourceStream next.
+			(separators includes: char)
+				ifTrue: [subString notEmpty
+						ifTrue:
+							[result add: subString copy.
+							subString := String new]]
+				ifFalse: [subString := subString , (String with: char)]].
+	subString notEmpty ifTrue: [result add: subString copy].
+	^ result asArray
 )
 
 withBlanksTrimmed = (
@@ -179,6 +570,26 @@ withBlanksTrimmed = (
 	^self
 		copyFrom: first
 		to: last
+)
+
+withFirstCharacterDownshifted = (
+	"Return a copy with the first letter downShifted"
+	| answer |
+	self ifEmpty: [^ self copy].
+	answer := self copy.
+	answer at: 1 put: (answer at: 1) asLowercase.
+	^ answer.
+)
+
+withoutQuoting = (
+	"remove the initial and final quote marks, if present"
+	"'''h''' withoutQuoting"
+	| quote |
+	self size < 2 ifTrue: [ ^self ].
+	quote := self first.
+	(quote = self last and: [ quote = $' or: [ quote = $" ] ])
+		ifTrue: [ ^self copyFrom: 2 to: self size - 1 ]
+		ifFalse: [ ^self ].
 )
 
 ----
@@ -196,6 +607,10 @@ crlf = (
 empty = (
 	"A canonicalized empty String instance."
 	^ ''
+)
+
+formatCharacterSet = (
+	^ CharacterSet newFrom: #(${ $\)
 )
 
 isVariable = (

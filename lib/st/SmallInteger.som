@@ -50,9 +50,7 @@ SmallInteger = Integer (
 	aNumber isZero ifTrue: [self error: 'divide by zero'].
 	(aNumber isMemberOf: SmallInteger)
 		ifTrue: [^ (Fraction numerator: self denominator: aNumber) reduced].
-	(aNumber isMemberOf: Fraction)
-		ifTrue: [^ (Fraction numerator: self denominator: 1) / aNumber].
-	^super / aNumber
+	^ aNumber adaptToInteger: self andSend: #/
 )
 
 \\ aNumber = (
@@ -169,6 +167,19 @@ highBit = (
 
 highBitOfByte = (
 	^ #(0 1 2 2 3 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 7 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8) at: self + 1
+)
+
+highBitOfMagnitude = (
+	"Answer the index of the high order bit of the receiver, or zero if the
+	receiver is zero. This method is used for negative SmallIntegers as well,
+	since Squeak's LargeIntegers are sign/magnitude."
+	self < 0 ifTrue: [
+		"Beware: do not use highBitOfPositiveReceiver
+		because self negated is not necessarily a SmallInteger
+		(see SmallInteger minVal)"
+		^self negated highBitOfMagnitude].
+	"Implementation note: this method could be as well inlined here."
+	^self highBitOfPositiveReceiver
 )
 
 highBitOfPositiveReceiver = (

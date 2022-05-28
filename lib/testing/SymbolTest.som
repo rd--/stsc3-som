@@ -1,0 +1,61 @@
+SymbolTest = ClassTestCase (
+
+testCapitalized = (
+	| uc lc |
+	uc := #MElViN.
+	lc := #mElViN.
+	self assert:  lc capitalized = uc.
+	self assert: uc capitalized = uc.
+)
+
+testIsBinaryReturnsFalseForKeywordSelectors = (
+	self deny: #do: isBinary.
+	self deny: #ifTrue:ifFalse: isBinary.
+	self deny: #with:with:with:with: isBinary.
+)
+
+testIsBinaryReturnsFalseForUnarySelectors = (
+	self deny: #timesRepeat isBinary.
+	self deny: #once isBinary.
+	self deny: #isBinary isBinary.
+)
+
+testIsBinaryReturnsTrueForOperatorLikeSymbols = (
+	self assert: #+ isBinary.
+	self assert: #>>= isBinary.
+	self assert: #| isBinary.
+)
+
+testNumArgs2 = (
+    "TODO: need to be extended to support shrinking and for selectors like #+ "
+	self assert: (#test numArgs: 0) = #test.
+	self assert: (#test numArgs: 1) = #test:.
+	self assert: (#test numArgs: 2) = #test:with:.
+	self assert: (#test numArgs: 3) = #test:with:with:.
+	self assert: (#test: numArgs: 0) = #test:.
+	self assert: (#test: numArgs: 1) = #test:.
+	self assert: (#test: numArgs: 2) = #test:with:.
+	self assert: (#test: numArgs: 3) = #test:with:with:.
+	self assert: (#test:with: numArgs: 0) = #test:with:.
+	self assert: (#test:with: numArgs: 1) = #test:with:.
+	self assert: (#test:with: numArgs: 2) = #test:with:.
+	self assert: (#test:with: numArgs: 3) = #test:with:with:.
+	self assert: (#test:with: numArgs: 4) = #test:with:with:with:.
+	self assert: (#test:with:with: numArgs: 0) = #test:with:with:.
+	self assert: (#test:with:with: numArgs: 1) = #test:with:with:.
+	self assert: (#test:with:with: numArgs: 2) = #test:with:with:.
+	self assert: (#test:with:with: numArgs: 3) = #test:with:with:.
+	self assert: (#test:with:with: numArgs: 4) = #test:with:with:with:.
+)
+
+testWithFirstCharacterDownshifted = (
+	| uc lc empty |
+	uc := #MElViN.
+	lc := #mElViN.
+	empty := #' '.
+	self assert:  uc withFirstCharacterDownshifted = lc.
+	self assert: lc withFirstCharacterDownshifted = lc.
+)
+
+
+)

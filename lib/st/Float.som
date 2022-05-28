@@ -4,6 +4,21 @@ abs = (
 	^(self < 0.0) ifTrue: [ ^0.0 - self ] ifFalse: [ ^self ]
 )
 
+adaptToFraction: rcvr andCompare: selector = (
+	self isFinite ifFalse: [
+		selector == #= ifTrue: [ ^false ].
+		selector == #~= ifTrue: [ ^true ].
+		(selector == #< or: [ selector == #'<=' ])
+			ifTrue: [ ^self >= 0.0].
+		(selector == #> or: [ selector == #'>=' ])
+			ifTrue: [ ^0.0 >= self ].
+		^self error: 'unknow comparison selector' ].
+	rcvr isAnExactFloat ifTrue: [^rcvr asExactFloat perform: selector with: self].
+	selector == #= ifTrue: [^false].
+	selector == #~= ifTrue: [^true].
+	^ rcvr asFloat perform: selector with: self
+)
+
 adaptToFraction: rcvr andSend: selector = (
 	"If I am involved in arithmetic with a Fraction, convert it to a Float."
 	^ rcvr asFloat perform: selector with: self
@@ -220,6 +235,11 @@ timesTwoPower: anInteger = (
 
 e = (
 	^ 2.718281828459045235360287471353
+)
+
+emin = (
+	"Answer exponent of minimal normalized representable value"
+	^-1022
 )
 
 epsilon = (

@@ -1,0 +1,468 @@
+Heap = Collection (
+
+| array tally sortBlock indexUpdateBlock |
+
+= anObject = (
+	"Heap are considered to be equal when they have the same sortBlock and the same elements. This method is expensive due to the sorted copies of the arrays. Try not to use it."
+	self == anObject ifTrue: [ ^true ].
+	anObject isHeap ifFalse: [ ^false ].
+	anObject size = tally ifFalse: [ ^false ].
+	anObject sortBlock = sortBlock ifFalse: [ ^false ].
+	^((array first: tally) sort: sortBlock) = ((anObject array first: tally) sort: sortBlock)
+)
+
+add: anObject = (
+	"Include newObject as one of the receiver's elements. Answer newObject."
+	tally = array size ifTrue:[self grow].
+	array at: (tally := tally + 1) put: anObject.
+	indexUpdateBlock ifNotNil: [ indexUpdateBlock value: anObject value: tally ].
+	self upHeap: tally.
+	^anObject
+)
+
+array = (
+	^array
+)
+
+at: index = (
+	"Return the element at the given position within the receiver"
+	index > tally ifTrue: [ ^self errorSubscriptBounds: index ].
+	^array at: index
+)
+
+at: index put: newObject = (
+	"Heaps are accessed with #add: not #at:put:"
+	^self shouldNotImplement
+)
+
+capacity = (
+	"Answer the current capacity of the receiver."
+	^array size
+)
+
+collect: aBlock = (
+	^(array first: tally) replace: aBlock
+)
+
+compact = (
+	"Remove any empty slots in the receiver."
+	self growTo: self size.
+)
+
+copyEmpty = (
+	"Answer a copy of the receiver without any of the receiver's elements."
+	^self class sortBlock: sortBlock
+)
+
+do: aBlock = (
+	"Evaluate aBlock with each of the receiver's elements as the argument."
+	1 to: tally do:[:i| aBlock value: (array at: i)]
+)
+
+downHeap: anIndex = (
+	"Check the heap downwards for correctness starting at anIndex.
+	 Everything above (i.e. left of) anIndex is ok."
+	| childIndex childValue index value |
+	index := anIndex.
+	value := array at: anIndex.
+	[ (childIndex := 2 * index) >= tally or: [
+		"Select the child with the larger value. We know there are two children."
+		childValue := array at: childIndex.
+		(sortBlock
+			ifNil: [ (array at: childIndex + 1) <= childValue ]
+			ifNotNil: [ sortBlock value: (array at: childIndex + 1) value: childValue ])
+			ifTrue: [
+				childValue := array at: (childIndex := childIndex + 1) ].
+		"Check if the value at index is at the right position."
+		sortBlock
+			ifNil: [ value <= childValue ]
+			ifNotNil: [ sortBlock value: value value: childValue ] ] ]
+		whileFalse: [
+			"Move value downwards the tree."
+			array at: index put: childValue.
+			indexUpdateBlock ifNotNil: [ indexUpdateBlock value: childValue value: index ].
+			"Contine from childIndex"
+			index := childIndex ].
+	childIndex = tally ifTrue: [ "Special case: there's only one child."
+		"Check if the value at index is at the right position."
+		childValue := array at: childIndex.
+		(sortBlock
+			ifNil: [ value <= childValue ]
+			ifNotNil: [ sortBlock value: value value: childValue ])
+			ifFalse: [
+				"Move value downwards the tree."
+				array at: index put: childValue.
+				indexUpdateBlock ifNotNil: [ indexUpdateBlock value: childValue value: index ].
+				"Contine from childIndex"
+				index := childIndex ] ].
+	array at: index put: value.
+	indexUpdateBlock ifNotNil: [ indexUpdateBlock value: value value: index ]
+)
+
+downHeapSingle: anIndex = (
+	"This version is optimized for the case when only one element in the receiver can be at a wrong position. It avoids one comparison at each node when travelling down the heap and checks the heap upwards after the element is at a bottom position. Since the probability for being at the bottom of the heap is much larger than for being somewhere in the middle this version should be faster."
+	| childIndex index value |
+	index := anIndex.
+	value := array at: anIndex.
+	[ (childIndex := 2 * index) < tally ] whileTrue:[
+		"Select the child with the larger value. We know there are two children."
+		(sortBlock
+			ifNil: [ (array at: childIndex + 1) <= (array at: childIndex) ]
+			ifNotNil: [ sortBlock value: (array at: childIndex + 1) value: (array at: childIndex) ])
+			ifTrue: [ childIndex := childIndex + 1 ].
+		array at: index put: (array at: childIndex).
+		indexUpdateBlock ifNotNil: [ indexUpdateBlock value: (array at: index) value: index ].
+		"and repeat at the next level"
+		index := childIndex ].
+	childIndex = tally ifTrue: [ "Child with no sibling"
+		array at: index put: (array at: childIndex).
+		indexUpdateBlock ifNotNil: [ indexUpdateBlock value: (array at: index) value: index ].
+		index := childIndex ].
+	array at: index put: value.
+	indexUpdateBlock ifNotNil: [ indexUpdateBlock value: value value: index ].
+	self upHeap: index
+)
+
+first = (
+	"Return the first element in the receiver"
+	^array at: 1
+)
+
+grow = (
+	"Become larger."
+	self growTo: self size + self growSize.
+)
+
+growSize = (
+	"Return the size by which the receiver should grow if there are no empty slots left."
+	^array size max: 5
+)
+
+growTo: newSize = (
+	"Grow to the requested size."
+	| newArray |
+	newArray := Array new: (newSize max: tally).
+	newArray replaceFrom: 1 to: tally with: array startingAt: 1.
+	array := newArray
+)
+
+indexUpdateBlock: aBlockOrNil = (
+	"aBlockOrNil is either nil or a two argument block. The first argument is the object whose index has changed in the heap, the second is the new index. The block will be evaluated whenever an element is moved in the heap's internal array. If you don't plan to remove elements by index (see #removeAt:), then you should not set this block."
+	indexUpdateBlock := aBlockOrNil.
+)
+
+isEmpty = (
+	"Answer whether the receiver contains any elements."
+	^tally = 0
+)
+
+isHeap = (
+	^ true
+)
+
+isValidHeap = (
+	"Check the size first."
+	(tally between: 0 and: array size) ifFalse: [ ^false ].
+	"Check the sort order between parent and child nodes."
+	1 to: (tally bitShift: -1) do: [ :index |
+		| childIndex |
+		childIndex := 2 * index.
+		sortBlock
+			ifNil: [ (array at: index) <= (array at: childIndex) ifFalse: [ ^false ] ]
+			ifNotNil: [ (sortBlock value: (array at: index) value: (array at: childIndex)) ifFalse: [ ^false ] ].
+		childIndex < tally ifTrue: [
+			childIndex := childIndex + 1.
+			sortBlock
+				ifNil: [ (array at: index) <= (array at: childIndex) ifFalse: [ ^false ] ]
+				ifNotNil: [ (sortBlock value: (array at: index) value: (array at: childIndex)) ifFalse: [ ^false ] ] ] ].
+	"Check for elements left in array after tally."
+	tally + 1 to: array size do: [ :index |
+		(array at: index) ifNotNil: [ ^false ] ].
+	^true
+)
+
+postCopy = (
+	super postCopy.
+	array := array copy
+)
+
+privateRemoveAt: index = (
+	"Remove the element at the given index and make sure the sorting order is okay. The value of index must not be larger than tally."
+	| removed |
+	removed := array at: index.
+	index = tally ifTrue: [
+		array at: index put: nil.
+		tally := tally - 1.
+		^removed ].
+	array
+		at: index put: (array at: tally);
+		at: tally put: nil.
+	tally := tally - 1.
+	2 * index <= tally "The node at index has at least one child."
+		ifTrue: [ self downHeapSingle: index ]
+		ifFalse: [ self upHeap: index ].
+	^removed
+)
+
+privateReverseSort = (
+	"Arrange to have the array sorted in reverse order.
+	WARNING: this method breaks the heap invariants. It's up to the sender to restore them afterwards."
+	| oldTally |
+	self deprecated: 'Use #sort if you want to sort.'.
+	oldTally := tally.
+	[tally > 1] whileTrue:
+		[array swap: 1 with: tally.
+		tally := tally - 1.
+		self downHeapSingle: 1].
+	tally := oldTally
+)
+
+remove: oldObject ifAbsent: aBlock = (
+	"Remove oldObject as one of the receiver's elements. If several of the
+	elements are equal to oldObject, only one is removed. If no element is
+	equal to oldObject, answer the result of evaluating anExceptionBlock.
+	Otherwise, answer the argument, oldObject."
+	1 to: tally do:[:i|
+		(array at: i) = oldObject ifTrue:[^self privateRemoveAt: i]].
+	^aBlock value
+)
+
+removeAll = (
+	array atAllPut: nil.
+	tally := 0
+)
+
+removeAt: index = (
+	"Remove the element at the given index and make sure the sorting order is okay."
+	index > tally ifTrue: [ self errorSubscriptBounds: index ].
+	^self privateRemoveAt: index
+)
+
+removeFirst = (
+	"Remove the root element and make sure the sorting order is okay. Optimized version for the most common use case."
+	| removed |
+	tally = 0 ifTrue: [ self errorSubscriptBounds: 1 ].
+	removed := array at: 1.
+	array
+		at: 1 put: (array at: tally);
+		at: tally put: nil.
+	(tally := tally - 1) > 1 ifTrue: [
+		"Root node has at least one child."
+		self downHeapSingle: 1 ].
+	^removed
+)
+
+select: aBlock = (
+	"Evaluate aBlock with each of my elements as the argument. Collect into
+	a new collection like the receiver, only those elements for which aBlock
+	evaluates to true."
+	| newCollection |
+	newCollection := self copyEmpty.
+	1 to: tally do: [ :index |
+		| element |
+		(aBlock value: (element := array at: index)) ifTrue: [
+			newCollection add: element ] ].
+	^ newCollection
+)
+
+setCollection: aCollection = (
+	array := aCollection.
+	tally := 0.
+)
+
+setCollection: aCollection tally: newTally = (
+	array := aCollection.
+	tally := newTally.
+)
+
+size = (
+	"Answer how many elements the receiver contains."
+	^ tally
+)
+
+sort = (
+	"Fully sort the heap. This method preserves the heap invariants and can thus be sent safely"
+	| start end element originalIndexUpdateBlock |
+	end := tally.
+	"Temporarly remove indexUpdateBlock to speed up sorting."
+	originalIndexUpdateBlock := indexUpdateBlock.
+	indexUpdateBlock := nil.
+	[ tally > 1 ] whileTrue: [
+		element := array at: tally.
+		array
+			at: tally put: (array at: 1);
+			at: 1 put: element.
+		tally := tally - 1.
+		self downHeapSingle: 1 ].
+	tally := end.
+	start := 1.
+	originalIndexUpdateBlock ifNil: [
+		"The was no indexUpdateBlock; just reverse the elements"
+		[ start < end ] whileTrue: [
+			element := array at: start.
+			array
+				at: start put: (array at: end);
+				at: end put: element.
+			start := start + 1.
+			end := end - 1 ].
+		^self ].
+	"Restore indexUpdateBlock, reverse the elements and update the indices."
+	indexUpdateBlock := originalIndexUpdateBlock.
+	start := 1.
+	[ start < end ] whileTrue: [
+		| endValue |
+		element := array at: start.
+		endValue := array at: end.
+		array
+			at: start put: endValue;
+			at: end put: element.
+		indexUpdateBlock
+			value: endValue value: start;
+			value: element value: end.
+		start := start + 1.
+		end := end - 1 ].
+	start = end ifTrue: [ indexUpdateBlock value: (array at: start) value: start ]
+)
+
+sortBlock = (
+	^sortBlock
+)
+
+sortBlock: aBlock = (
+	| oldIndexUpdateBlock |
+	sortBlock := aBlock.
+	"Restore the heap invariant."
+	tally <= 1 ifTrue: [ ^self ].
+	oldIndexUpdateBlock := indexUpdateBlock.
+	indexUpdateBlock := nil.
+	(tally bitShift: -1) to: 1 by: -1 do: [ :index | self downHeap: index ].
+	indexUpdateBlock := oldIndexUpdateBlock ifNil: [ ^self ].
+	1 to: tally do: [ :index |
+		indexUpdateBlock value: (array at: index) value: index ]
+)
+
+upHeap: anIndex = (
+	"Check the heap upwards for correctness starting at anIndex.
+	 Everything below anIndex is ok."
+	| index parentValue parentIndex value |
+	anIndex = 1 ifTrue: [
+		indexUpdateBlock ifNotNil: [ indexUpdateBlock value: (array at: 1) value: 1 ].
+		^self ].
+	value := array at: (index := anIndex).
+	[ index > 1 and: [
+		parentValue := array at: (parentIndex := index bitShift: -1).
+		sortBlock
+			ifNil: [ value <= parentValue ]
+			ifNotNil: [ sortBlock value: value value: parentValue ] ] ]
+		whileTrue: [
+			array at: index put: parentValue.
+			indexUpdateBlock ifNotNil: [ indexUpdateBlock value: parentValue value: index ].
+			index := parentIndex ].
+	array at: index put: value.
+	indexUpdateBlock ifNotNil: [ indexUpdateBlock value: value value: index ]
+)
+
+
+----------------------------
+
+new = (
+	^self new: 10
+)
+
+new: n = (
+	^super new setCollection: (Array new: n)
+)
+
+on: anArray = (
+	"Create a new heap using anArray as the internal array"
+	^self on: anArray size: anArray size sortBlock: nil
+)
+
+on: anArray size: size = (
+	"Create a new heap using the first size elements of anArray as the internal array"
+	^self
+		on: anArray
+		size: size
+		sortBlock: nil
+)
+
+on: anArray size: size sortBlock: aBlockOrNil = (
+	"Create a new heap using the first size elements of anArray as the internal array and sorted by aBlockOrNil"
+	anArray isArray ifFalse: [ self error: 'Array expected.' ].
+	anArray size < size ifTrue: [ self error: 'size must not be larger than anArray size' ].
+	^super new
+		setCollection: anArray tally: size;
+		sortBlock: aBlockOrNil;
+		yourself
+)
+
+sortBlock: aBlock = (
+	"Create a new heap sorted by the given block"
+	^self new sortBlock: aBlock
+)
+
+withAll: aCollection = (
+	"Create a new heap with all the elements from aCollection"
+	^self withAll: aCollection sortBlock: nil
+)
+
+withAll: aCollection sortBlock: sortBlock = (
+	"Create a new heap with all the elements from aCollection, sorted by sortBlock"
+	| array |
+	array := aCollection asArray.
+	array == aCollection ifTrue: [ array := array copy ].
+	^self on: array size: array size sortBlock: sortBlock
+)
+
+
+comment = (^'
+
+I implement a special data structure called Binary Heap [ https://en.wikipedia.org/wiki/Binary_heap ], which is the most commonly used variant of the Heap data structure [ https://en.wikipedia.org/wiki/Heap_%28data_structure%29 ].
+A Heap is a kind of binary tree stored in a linear array - see details after the instance variables description.
+
+Heaps are good at handling priority queues because:
+1) greatest priority element according to the sort block will be stored in first position and thus accessed in O(1) operations
+2) worse time for inserting or removing an element is in O(log n) operations, where n is the size of the Heap
+	Insertion/Removal times are more efficient than above upper bound, provided that:
+	a) Elements are only removed at the beginning
+	b) Elements are added with arbitrary sort order.
+3) there is no need to fully sort the Heap, which makes it more efficient than a SortedCollection
+
+The heap can be fully sorted by sending the message #sort.
+Worse time for fully sorting the Heap is in O(n log n) operations, but this is rarely used a feature.
+Remind that the Heap does not fully sort the collection if you don''t ask.
+Thus don''t expect #do: and other iterators to enumerate elements according to the sortBlock order.
+
+Instance variables:
+	array		<Array>	The data repository
+	tally		<Integer>	The number of elements in the heap
+	sortBlock	<Block|nil>	A two-argument block defining the sort order,
+							or nil in which case the default sort order is
+								[:element1 :element2| element1 <= element2]
+	indexUpdateBlock 	<Block|nil>
+							A two-argument block of the form [:data :index | ... ]
+							which allows an application object to keep track of its
+							index within the heap.  Useful for quick heap update
+							when object''s sort value changes (for example, when an
+							object in a priority queue has its priority increased
+							by an external event, you don''t want to have to search
+							through the whole heap to find the index before fixing
+							the heap).  No update occurs if nil.
+
+The Heap can be viewed as a binary tree (every node in the tree has at most two children).
+The root is stored in first slot of internal array.
+The children are stored in next two slots.
+The children of children in next four slots.
+etc...
+For a node A of index i (1 based), the two children B1 and B2 are thus stored in indices (2*i) and (2*i+1).
+Of course, the children indices must be less than the tally otherwise they are considered inexistent.
+
+The Heap does arrange to preserve the following invariant:
+For any children B of a node A, A is sorted before B, in other words, (sortBlock value: A value: B) = true
+This implies that the root is always the first element according to sort order.
+
+
+')
+
+
+)

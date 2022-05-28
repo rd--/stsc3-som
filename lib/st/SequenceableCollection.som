@@ -526,6 +526,15 @@ readStream = (
 	^ ReadStream on: self
 )
 
+replaceAll: oldObject with: newObject = (
+	"Replace all occurences of oldObject with newObject"
+
+	| index |
+	index := 0.
+	[ (index := self indexOf: oldObject startingAt: index + 1) = 0 ]
+		whileFalse: [ self at: index put: newObject ]
+)
+
 replaceFrom: start to: stop with: replacement = (
 	"This destructively replaces elements from start to stop in the receiver.
 	Answer the receiver itself. Use copyReplaceFrom:to:with: for

@@ -257,6 +257,10 @@ isFraction = (
 	^ false
 )
 
+isHeap = (
+	^ false
+)
+
 isInteger = (
 	^ false
 )

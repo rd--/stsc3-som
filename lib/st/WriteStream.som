@@ -2,6 +2,25 @@ WriteStream = PositionableStream (
 
 | writeLimit initialPositionOrNil |
 
+<< aCollection = (
+	"we want a readable version of nextPutAll however it may be difficult to fully recreate nextPutAll:
+	for all the different types of stream. Rather then simply send to nextPutAll:
+	we handle the String (or ByteArray) argument
+	as fast as possible - the rest we delegate to putOn: This means that we handle single characters and bytes
+	whereas nextPutAll: is only for sequencable collections.
+	.
+	Note this may not work in every case that nextPutAll: does subject to extensive testing,
+	but it should work in the important cases"
+	| newEnd |
+	collection class == aCollection class ifFalse:
+		[ aCollection putOn: self. ^ self ].
+	newEnd := position + aCollection size.
+	newEnd > writeLimit ifTrue:
+		[self growTo: newEnd + 10].
+	collection replaceFrom: position+1 to: newEnd  with: aCollection startingAt: 1.
+	position := newEnd.
+)
+
 contents = (
 	"Answer with a copy of my collection from the start to the current position."
 	readLimit := readLimit max: position.
@@ -9,6 +28,7 @@ contents = (
 )
 
 cr = (
+	"Append a carriage return character to the receiver."
 	self nextPut: Character cr
 )
 
@@ -18,11 +38,15 @@ crlf = (
 )
 
 crtab = (
+	"Append a return character, followed by a single tab character, to the
+	receiver."
 	self nextPut: Character cr.
 	self nextPut: Character tab
 )
 
 crtab: anInteger = (
+	"Append a return character, followed by anInteger tab characters, to the
+	receiver."
 	self nextPut: Character cr.
 	anInteger timesRepeat: [self nextPut: Character tab]
 )
@@ -50,7 +74,7 @@ ensureNoSpace = (
 )
 
 growTo: anInteger = (
-	"anInteger is the required minimal new size of the collection"
+	" anInteger is the required minimal new size of the collection "
 	| oldSize grownCollection newSize |
 	oldSize := collection size.
 	newSize := anInteger + (oldSize // 4 max: 20).
@@ -60,7 +84,12 @@ growTo: anInteger = (
 )
 
 lf = (
+	"Append a line feed character to the receiver."
 	self nextPut: Character lf
+)
+
+next = (
+	self shouldNotImplement
 )
 
 next: anInteger putAll: aCollection startingAt: startIndex = (
@@ -81,16 +110,23 @@ next: anInteger putAll: aCollection startingAt: startIndex = (
 )
 
 nextPut: anObject = (
+	"Primitive. Insert the argument at the next position in the Stream
+	represented by the receiver. Fail if the collection of this stream is not an
+	Array or a String. Fail if the stream is positioned at its end, or if the
+	position is out of bounds in the collection. Fail if the argument is not
+	of the right type for the collection. Optional. See Object documentation
+	whatIsAPrimitive."
 	<primitive: 66>
-	position = writeLimit
-		ifTrue: [^self pastEndPut: anObject]
+	position >= writeLimit
+		ifTrue: [^ self pastEndPut: anObject]
 		ifFalse:
-			[^collection at: (position := position + 1) put: anObject]
+			[position := position + 1.
+			^collection at: position put: anObject]
 )
 
 nextPutAll: aCollection = (
 	| newEnd |
-	(collection class == aCollection class)
+	collection class == aCollection class
 		ifFalse: [ ^ super nextPutAll: aCollection ].
 	newEnd := position + aCollection size.
 	newEnd > writeLimit ifTrue:
@@ -98,10 +134,6 @@ nextPutAll: aCollection = (
 	collection replaceFrom: position+1 to: newEnd  with: aCollection startingAt: 1.
 	position := newEnd.
 	^aCollection
-)
-
-next = (
-	self shouldNotImplement
 )
 
 on: aCollection = (
@@ -140,12 +172,9 @@ peekLast = (
 )
 
 position: anInteger = (
+	"Refer to the comment in PositionableStream|position:."
 	readLimit := readLimit max: position.
 	super position: anInteger
-)
-
-print: anObject = (
-	anObject printOn: self
 )
 
 readStream = (
@@ -156,11 +185,17 @@ readStream = (
 )
 
 reset = (
+	"Refer to the comment in PositionableStream|reset."
 	readLimit := readLimit max: position.
 	position := 0
 )
 
+resetToStart = (
+	readLimit := position := 0.
+)
+
 setToEnd = (
+	"Refer to the comment in PositionableStream|setToEnd."
 	readLimit := readLimit max: position.
 	super setToEnd.
 )
@@ -170,6 +205,7 @@ size = (
 )
 
 space = (
+	"Append a space character to the receiver."
 	self nextPut: Character space
 )
 
@@ -179,14 +215,17 @@ space: anInteger = (
 )
 
 store: anObject = (
+	"Have anObject print on the receiver for purposes of rereading."
 	anObject storeOn: self
 )
 
 tab = (
+	"Append a tab character to the receiver."
 	self nextPut: Character tab
 )
 
 tab: anInteger = (
+	"Append anInteger tab characters to the receiver."
 	anInteger timesRepeat: [self tab]
 )
 
@@ -195,13 +234,12 @@ with: aCollection = (
 	position := readLimit := writeLimit := aCollection size
 )
 
-----
-
-on: aCollection = (
-	^self basicNew on: aCollection
-)
+----------------------------
 
 on: aCollection from: firstIndex to: lastIndex = (
+	"Answer an instance of me on a copy of the argument, aCollection,
+	determined by the indices firstIndex and lastIndex. Position the instance
+	at the beginning of the collection."
 	^self basicNew
 		on: aCollection
 		from: firstIndex
@@ -209,11 +247,20 @@ on: aCollection from: firstIndex to: lastIndex = (
 )
 
 with: aCollection = (
+	"Answer an instance of me on the argument, aCollection, positioned to
+	store objects at the end of aCollection."
 	^self basicNew with: aCollection
 )
 
 with: aCollection from: firstIndex to: lastIndex = (
+	"Answer an instance of me on the subcollection of the argument,
+	aCollection, determined by the indices firstIndex and lastIndex. Position
+	the instance to store at the end of the subcollection."
 	^self basicNew with: (aCollection copyFrom: firstIndex to: lastIndex)
 )
+
+comment = (^'
+I represent an accessor for a sequence of objects that can only store objects in the sequence.
+')
 
 )

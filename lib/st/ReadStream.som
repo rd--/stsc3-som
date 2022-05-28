@@ -2,22 +2,27 @@ ReadStream = PositionableStream (
 
 | initialPositionOrNil |
 
+ascii = (
+)
+
+binary = (
+)
+
 contents = (
 	"Answer with a copy of my collection from the start to readLimit."
 	^collection copyFrom: (initialPositionOrNil ifNil: [1]) to: readLimit
 )
 
 next = (
-	"Answer with the next object in the Stream represented by the receiver.
-	Fail if the collection of this stream is not an Array or a String. Fail if
-	the stream is positioned at its end, or if the position is out of bounds in
-	the collection. Optional. See Object documentation whatIsAPrimitive."
-
+	"Primitive. Answer the next object in the Stream represented by the
+	receiver. Fail if the collection of this stream is not an Array or a String.
+	Fail if the stream is positioned at its end, or if the position is out of
+	bounds in the collection. Optional. See Object documentation
+	whatIsAPrimitive."
 	<primitive: 65>
 	position >= readLimit
 		ifTrue: [^nil]
 		ifFalse: [^collection at: (position := position + 1)]
-
 )
 
 next: anInteger = (
@@ -48,7 +53,6 @@ next: n into: aCollection startingAt: startIndex = (
 
 nextPut: anObject = (
 	self shouldNotImplement
-
 )
 
 on: aCollection from: firstIndex to: lastIndex = (
@@ -61,6 +65,9 @@ on: aCollection from: firstIndex to: lastIndex = (
 				ifTrue: [0]
 				ifFalse: [firstIndex - 1].
 	initialPositionOrNil := position + 1
+)
+
+openReadOnly = (
 )
 
 readInto: aCollection startingAt: startIndex count: n = (
@@ -77,8 +84,17 @@ readInto: aCollection startingAt: startIndex count: n = (
 	^max
 )
 
+readOnly = (
+)
+
 readStream = (
 	"polymorphic with SequenceableCollection.  Return self"
+	^ self
+)
+
+size = (
+	"Compatibility with other streams (e.g., FileStream)"
+	^readLimit
 )
 
 skipTo: anObject = (
@@ -123,16 +139,16 @@ upToEnd = (
 ----------------------------
 
 on: aCollection from: firstIndex to: lastIndex = (
-	"Answer with a new instance streaming over a copy of aCollection from firstIndex to lastIndex."
+	"Answer with a new instance streaming over a copy of aCollection from
+	firstIndex to lastIndex."
 	^self basicNew
 		on: aCollection
 		from: firstIndex
 		to: lastIndex
-
 )
 
 comment = (^'
-I am a reader of an indexable collection.  I only define the message next.
+I represent an accessor for a sequence of objects that can only read objects from the sequence.
 ')
 
 )

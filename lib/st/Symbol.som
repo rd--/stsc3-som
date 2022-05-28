@@ -10,6 +10,10 @@ asString = (
 asSymbol = (
 )
 
+capitalized = (
+	^ self asString capitalized asSymbol
+)
+
 classPart = (
 	"I must be a compound selector.  Return my class name"
 	| i |
@@ -23,6 +27,10 @@ copy = (
 
 cull: anObject  = (
 	^anObject perform: self
+)
+
+isBinary = (
+	^ self isInfix.
 )
 
 isCompound = (
@@ -81,6 +89,20 @@ numArgs = (
 	^n
 )
 
+numArgs: n = (
+	"Answer a string that can be used as a selector with n arguments.
+	 TODO: need to be extended to support shrinking and for selectors like #+ "
+	| numArgs offset |
+	(numArgs := self numArgs) >= n ifTrue: [ ^self ].
+	numArgs = 0
+		ifTrue: [ offset := 1 ]
+		ifFalse: [ offset := 0 ].
+	^(String new: n - numArgs + offset * 5 + offset + self size streamContents: [ :stream |
+		stream nextPutAll: self.
+		numArgs = 0 ifTrue: [ stream nextPut: $:. ].
+		numArgs + offset + 1 to: n do: [ :i | stream nextPutAll: 'with:' ] ]) asSymbol
+)
+
 replaceFrom: start to: stop with: replacement startingAt: repStart = (
 	self errorNoModification
 )
@@ -105,6 +127,11 @@ value: anObject = (
 
 value: anObject value: anotherObject = (
 	^anObject perform: self with: anotherObject
+)
+
+withFirstCharacterDownshifted = (
+	"Answer an object like the receiver but with first character downshifted if necesary"
+	^self asString withFirstCharacterDownshifted asSymbol.
 )
 
 ----

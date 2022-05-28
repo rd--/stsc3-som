@@ -3,6 +3,8 @@ PositionableStream = Stream (
 | collection position readLimit |
 
 atEnd = (
+	"Primitive. Answer whether the receiver can access any more objects.
+	Optional. See Object documentation whatIsAPrimitive."
 	<primitive: 67>
 	^position >= readLimit
 )
@@ -15,7 +17,11 @@ back = (
 )
 
 backUpTo: subCollection = (
-	"Back up the position to the subCollection.  Position must be somewhere within the stream initially.  Leave it just after it.  Return true if succeeded.  No wildcards, and case does matter."
+	"Back up the position to he subCollection.  Position must be somewhere within the stream initially.  Leave it just after it.  Return true if succeeded.  No wildcards, and case does matter."
+"Example:
+	| strm | strm := ReadStream on: 'zabc abdc'.
+	strm setToEnd; backUpTo: 'abc'; position
+"
 	| pattern startMatch |
 	pattern := ReadStream on: subCollection reversed.
 	startMatch := nil.
@@ -33,6 +39,10 @@ backUpTo: subCollection = (
 	^ true
 )
 
+basicBack = (
+	^self back
+)
+
 basicUpTo: anObject = (
 	"Answer a subcollection from the current access position to the
 	occurrence (if any, but not inclusive) of anObject in the receiver. If
@@ -46,7 +56,7 @@ basicUpTo: anObject = (
 
 collectionSpecies = (
 	"Answer the species of collection into which the receiver can stream"
-	^ collection species
+	^collection species
 )
 
 contents = (
@@ -55,11 +65,13 @@ contents = (
 )
 
 errorCantGoBack = (
-	self error: 'Can''t Go Back'
+	self error: ' CantGoBack '
 )
 
 isEmpty = (
-	"Returns true if both the set of past and future sequence values of the receiver are empty. Otherwise returns false"
+	"Answer whether the receiver's contents has no elements."
+	"Returns true if both the set of past and future sequence values of
+the receiver are empty. Otherwise returns false"
 	^ self atEnd and: [position = 0]
 )
 
@@ -85,10 +97,18 @@ match: subCollection = (
 )
 
 next: anInteger = (
+	"Answer the next anInteger elements of my collection. Must override
+	because default uses self contents species, which might involve a large
+	collection."
 	| newArray |
-	newArray := self contents species new: anInteger.
+	newArray := self collectionSpecies new: anInteger.
 	1 to: anInteger do: [:index | newArray at: index put: self next].
 	^newArray
+)
+
+next: anInteger putAll: aCollection = (
+	"Store the next anInteger elements from the given collection."
+	^self next: anInteger putAll: aCollection startingAt: 1
 )
 
 next: anInteger putAll: aCollection startingAt: startIndex = (
@@ -96,6 +116,25 @@ next: anInteger putAll: aCollection startingAt: startIndex = (
 	startIndex to: startIndex + anInteger - 1 do: [ :index |
 		self nextPut: (aCollection at: index) ].
 	^aCollection
+)
+
+nextDelimited: terminator = (
+	"Answer the contents of the receiver, up to the next terminator character. Doubled terminators indicate an embedded terminator character.  For example: 'this '' was a quote'. Start postioned before the initial terminator."
+	| out ch |
+	out := WriteStream on: (String new: 1000).
+	self atEnd ifTrue: [^ ''].
+	self next == terminator ifFalse: [self skip: -1].	"absorb initial terminator"
+	[(ch := self next) == nil] whileFalse: [
+		(ch == terminator) ifTrue: [
+			self peek == terminator ifTrue: [
+				self next.  "skip doubled terminator"
+			] ifFalse: [
+				^ out contents  "terminator is not doubled; we're done!"
+			].
+		].
+		out nextPut: ch.
+	].
+	^ out contents
 )
 
 nextLine = (
@@ -128,12 +167,22 @@ peek = (
 	^nextObject
 )
 
+peekBack = (
+	"Return the element at the previous position, without changing position.  Use indirect messages in case self is a StandardFileStream."
+	| element |
+	self position = 0 ifTrue: [self errorCantGoBack].
+	self position = 1 ifTrue: [self position: 0.  ^ nil].
+	self skip: -2.
+	element := self next.
+	self skip: 1.
+	^ element
+)
+
 peekFor: anObject = (
 	"Answer false and do not move over the next element if it is not equal to
 	the argument, anObject, or if the receiver is at the end. Answer true
 	and increment the position for accessing elements, if the next element is
 	equal to anObject."
-
 	self atEnd ifTrue: [^false].
 	"gobble it if found"
 	self next = anObject ifTrue: [ ^true ].
@@ -142,17 +191,29 @@ peekFor: anObject = (
 )
 
 position = (
+	"Answer the current position of accessing the sequence of objects."
 	^position
 )
 
 position: anInteger = (
-	anInteger >= 0 & (anInteger <= readLimit)
+	"Set the current position for accessing the objects to be anInteger, as long
+	as anInteger is within the bounds of the receiver's contents. If it is not,
+	create an error notification."
+	(anInteger >= 0 and: [anInteger <= readLimit])
 		ifTrue: [position := anInteger]
 		ifFalse: [self positionError]
 )
 
 positionError = (
+	"Since I am not necessarily writable, it is up to my subclasses to override
+	position: if expanding the collection is preferrable to giving this error."
 	self error: 'Attempt to set the position of a PositionableStream out of bounds'
+)
+
+positionOfSubCollection: subCollection = (
+	"Return a position such that that element at the new position equals the first element of sub, and the next elements equal the rest of the elements of sub. Begin the search at the current position.
+	If no such match is found, answer 0."
+	^self positionOfSubCollection: subCollection ifAbsent: [0]
 )
 
 positionOfSubCollection: subCollection ifAbsent: exceptionBlock = (
@@ -171,43 +232,55 @@ positionOfSubCollection: subCollection ifAbsent: exceptionBlock = (
 	^exceptionBlock value
 )
 
-positionOfSubCollection: subCollection = (
-	"Return a position such that that element at the new position equals the first element of sub, and the next elements equal the rest of the elements of sub. Begin the search at the current position.
-	If no such match is found, answer 0."
-	^self positionOfSubCollection: subCollection ifAbsent: [0]
-)
-
 reset = (
+	"Set the receiver's position to the beginning of the sequence of objects."
 	position := 0
 )
 
+resetContents = (
+	"Set the position and limits to 0."
+	position := 0.
+	readLimit := 0
+)
+
+setFrom: newStart to: newStop = (
+	position := newStart - 1.
+	readLimit := newStop
+)
+
 setToEnd = (
+	"Set the position of the receiver to the end of the sequence of objects."
 	position := readLimit
 )
 
 skip: anInteger = (
+	"Set the receiver's position to be the current position+anInteger. A
+	subclass might choose to be more helpful and select the minimum of the
+	receiver's size and position+anInteger, or the maximum of 1 and
+	position+anInteger for the repositioning."
 	self position: position + anInteger
 )
 
+skipSeparators = (
+	[self atEnd]
+		whileFalse:
+		[self next isSeparator ifFalse: [^ self position: self position-1]]
+)
+
 skipTo: anObject = (
+	"Set the access position of the receiver to be past the next occurrence of
+	anObject. Answer whether anObject is found."
 	[self atEnd]
 		whileFalse: [self next = anObject ifTrue: [^true]].
 	^false
 )
 
-through: anObject = (
-	| newStream element |
-	newStream := WriteStream on: (collection species new: 64).
-	[(self atEnd or: [(element := self next) = anObject]) or: [newStream size > 64000]]
-		whileFalse: [newStream nextPut: element].
-	self atEnd
-		ifFalse:	[newStream nextPut: element].
-	^newStream contents
-)
-
 upTo: anObject = (
+	"Answer a subcollection from the current access position to the
+	occurrence (if any, but not inclusive) of anObject in the receiver. If
+	anObject is not in the collection, answer the entire rest of the receiver."
 	| newStream element |
-	newStream := WriteStream on: (collection species new: 64).
+	newStream := WriteStream on: (self collectionSpecies new: 100).
 	[self atEnd or: [(element := self next) = anObject]]
 		whileFalse: [newStream nextPut: element].
 	^newStream contents
@@ -227,6 +300,23 @@ upToAll: aCollection = (
 			^ self upToEnd]
 )
 
+upToAnyOf: aCollection = (
+	"Answer a subcollection from the current access position to the
+	occurrence (if any, but not inclusive) of any object in the collection. If
+	no matching object is found, answer the entire rest of the receiver."
+	^self upToAnyOf: aCollection do: [:matchingObject | ]
+)
+
+upToAnyOf: subcollection do: aBlock = (
+	"Answer a subcollection from the current access position to the occurrence (if any, but not inclusive) of any object in the collection.
+	Evaluate aBlock with this occurence as argument.
+	If no matching object is found, don't evaluate aBlock and answer the entire rest of the receiver."
+	^self collectionSpecies new: 1000 streamContents: [ :stream |
+		| ch |
+		[ self atEnd or: [ (subcollection includes: (ch := self next)) and: [aBlock value: ch. true] ] ]
+			whileFalse: [ stream nextPut: ch ] ]
+)
+
 upToEnd = (
 	"Answer a subcollection from the current access position through the last element of the receiver."
 	| newStream |
@@ -235,63 +325,27 @@ upToEnd = (
 	^ newStream contents
 )
 
-upToAnyOf: aCollection = (
-	"Answer a subcollection from the current access position to the
-	occurrence (if any, but not inclusive) of any object in the collection. If
-	no matching object is found, answer the entire rest of the receiver."
-	^self upToAnyOf: aCollection do: [:matchingObject | ]
-)
-
-upToAnyOf: delimiters do: aBlock = (
-	| pos |
-	collection ifNotNil: [
-		(position < readLimit and: [
-			(pos := collection indexOfAnyOf: delimiters startingAt: position + 1) <= readLimit and: [
-				pos > 0 ] ]) ifTrue: [
-					| result |
-					result := collection copyFrom: position + 1 to: (position := pos) - 1 .
-					aBlock value: (collection at: position).
-					^result ] ].
-	^self collectionSpecies streamContents: [ :stream |
-		| buffer bytesRead |
-		buffer := collection
-			ifNil: [ self collectionSpecies new: 2000 ]
-			ifNotNil: [
-				position < readLimit ifTrue: [
-					stream next: readLimit - position putAll: collection startingAt: position + 1.
-					position := readLimit ].
-				collection ].
-		[
-			bytesRead := self readInto: buffer startingAt: 1 count: buffer size.
-			((pos := buffer indexOfAnyOf: delimiters startingAt: 1) = 0 or: [ pos > bytesRead ])
-				ifTrue: [
-					stream next: bytesRead putAll: buffer startingAt: 1.
-					bytesRead > 0 "Try again if we could read something last time." ]
-				ifFalse: [
-					stream next: pos - 1 putAll: buffer startingAt: 1.
-					collection
-						ifNil: [ self skip: pos - bytesRead ]
-						ifNotNil: [
-							position := pos.
-							readLimit := bytesRead ].
-					false "Found the delimiter." ] ] whileTrue.
-		bytesRead = 0 ifFalse: [
-			aBlock value: (buffer at: pos) ] ]
-)
-
 upToPosition: anInteger = (
 	"Answer a subcollection containing items starting from the current position and ending including the given position. Usefully different to #next: in that in the case of MultiByteFileStream, and perhaps others, positions measure in terms of encoded items, while #next: convention is to name a number of items, independent of their encoding in the underlying buffer."
 	^ self next: anInteger - position
 )
 
-----
+----------------------------
 
 on: aCollection = (
+	"Answer an instance of me, streaming over the elements of aCollection."
 	^self basicNew on: aCollection
 )
 
 on: aCollection from: firstIndex to: lastIndex = (
+	"Answer an instance of me, streaming over the elements of aCollection
+	starting with the element at firstIndex and ending with the one at
+	lastIndex."
 	^self basicNew on: (aCollection copyFrom: firstIndex to: lastIndex)
 )
+
+comment = (^'
+I represent an accessor for a sequence of objects (a collection) that are externally named by indices so that the point of access can be repositioned. I am abstract in that I do not implement the messages next and nextPut: which are inherited from my superclass Stream.
+')
 
 )

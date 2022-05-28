@@ -1,29 +1,41 @@
 CharacterSet = Set (
 
-species = (
-	^CharacterSet
+asString = (
+	"Convert the receiver into a String"
+	^String new: self size streamContents:[:s|
+		self do:[:ch| s nextPut: ch].
+	].
 )
 
-----
+includesCode: anInteger = (
+	^self includes: anInteger asCharacter
+)
+
+----------------------------
 
 | Ascii CrLf Separators |
 
 ascii = (
-	"Return a set containing all the ASCII characters"
+	"return a set containing all the ASCII characters"
 	^Ascii ifNil: [ Ascii := self newFrom: ((1 to: 127) collect: [:code | code asCharacter]) ]
 )
 
 crlf = (
-	^CrLf ifNil: [ CrLf := self newFrom: {Character cr. Character lf} ]
+	^CrLf ifNil: [ CrLf := self with: Character cr with: Character lf ]
 )
 
-isAbstract = (
-	^self = CharacterSet
+empty = (
+ 	"return an empty set of characters"
+	^self new
 )
 
 separators = (
-	"Return a set containing just the whitespace characters"
+	"return a set containing just the whitespace characters"
 	^Separators ifNil: [ Separators := self newFrom: Character separators ]
+)
+
+comment = (
+	^'A set of characters.'
 )
 
 )

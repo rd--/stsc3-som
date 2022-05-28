@@ -171,8 +171,24 @@ collect: aBlock as: aClass = (
 	^(aClass new: self size) fillFrom: self with: aBlock
 )
 
+collect: collectBlock thenDo: doBlock = (
+	"Utility method to improve readability."
+	^ (self collect: collectBlock) do: doBlock
+)
+
+collect: collectBlock thenSelect: selectBlock = (
+	"Utility method to improve readability."
+	^ (self collect: collectBlock) select: selectBlock
+)
+
 contains: aBlock = (
 	^self anySatisfy: aBlock
+)
+
+copyWithout: oldElement = (
+	"Answer a copy of the receiver that does not contain any
+	elements equal to oldElement."
+	^ self reject: [:each | each = oldElement]
 )
 
 degreeCos = (
@@ -365,6 +381,11 @@ minMax = (
 		min := min min: each.
 		max := max max: each ].
 	^ Array with: min with: max
+)
+
+notEmpty = (
+	"Answer whether the receiver contains any elements."
+	^ self isEmpty not
 )
 
 occurrencesOf: anObject = (

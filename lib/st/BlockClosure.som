@@ -48,25 +48,19 @@ valueWithArguments: anArray = (
 )
 
 whileFalse: aBlock = (
-	self value ifTrue: [ ^nil ].
-	aBlock value.
-	self whileFalse: aBlock.
-)
-
-whileTrue: aBlock = (
-	self value ifFalse: [ ^nil ].
-	aBlock value.
-	self whileTrue: aBlock.
+	^self value ifTrue: [ ^nil ] ifFalse: [aBlock value. self whileFalse: aBlock]
 )
 
 whileFalse = (
-	self value ifTrue: [ ^nil ].
-	self whileFalse
+	^ self whileFalse: []
+)
+
+whileTrue: aBlock = (
+	^ self value ifFalse: [ ^nil ] ifTrue: [aBlock value. self whileTrue: aBlock]
 )
 
 whileTrue = (
-	self value ifFalse: [ ^nil ].
-	self whileTrue
+	^ self whileTrue: []
 )
 
 )

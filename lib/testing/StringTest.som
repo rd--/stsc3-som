@@ -1,0 +1,326 @@
+StringTest = ClassTestCase (
+
+| string |
+
+setUp = (
+	string := 'Hi, I am a String'
+)
+
+testAsInteger = (
+	#(
+		'' nil nil nil
+		'1796exportFixes-tkMX' 1796 1796 1796
+		'donald' nil nil nil
+		'abc234def567' 234 234 234
+		'-94' -94 -94 94
+		'foo-bar-92' -92 -92 92
+	) groupsDo: [ :inputString :asIntegerExpectedValue :asSignedIntegerExpectedValue :asUnsignedIntegerExpectedValue |
+		self
+			assert: asIntegerExpectedValue equals: inputString asInteger;
+			assert: asSignedIntegerExpectedValue equals: inputString asSignedInteger;
+			assert: asUnsignedIntegerExpectedValue equals: inputString asUnsignedInteger ]
+)
+
+testAsIntegerSigned = (
+	#(
+		'' nil nil
+		'1796exportFixes-tkMX' 1796 1796
+		'donald' nil nil
+		'abc234def567' 234 234
+		'-94' -94 94
+		'foo-bar-92' -92 92
+		'1234567890' 1234567890 1234567890
+		'--1234567890--' -1234567890 1234567890
+		'--1234567890123456789012345678901234567890--' -1234567890123456789012345678901234567890 1234567890123456789012345678901234567890
+	) groupsDo: [ :inputString :expectedSignedValue :expectedUnsignedValue |
+		self
+			assert: expectedSignedValue equals: (inputString asIntegerSigned: true);
+			assert: expectedUnsignedValue equals: (inputString asIntegerSigned: false) ]
+)
+
+testAsSmalltalkComment = (
+	| exampleStrings  |
+	exampleStrings := #(
+		''
+		' '
+		'"'
+		'""'
+		'"""'
+		'abc"abc'
+		'abc""abc'
+		'abc"hello"abc'
+		'abc"'
+		'"abc' ).
+	"check that the result has the same non-quote characters as the original"
+	exampleStrings do: [ :s |
+		self assert: ( (s copyWithout: $") = (s asSmalltalkComment copyWithout: $"))].
+	"finnaly, test for some common kinds of inputs"
+	self assert: ( 'abc' asSmalltalkComment = '"abc"').
+	self assert: ( 'abc"abc' asSmalltalkComment = '"abc""abc"').
+	self assert: ('abc""abc' asSmalltalkComment = '"abc""abc"' ).
+)
+
+testAt = (
+	self assert: (string at: 1) = $H.
+)
+
+testBeginsWith = (
+	self assert: ('Elvis' beginsWith: 'Elv').
+	self assert: ('Elvis' beginsWith: 'Elvis').
+	self assert: ('Elvis' beginsWith: 'E').
+	self deny: ('Elvis' beginsWith: 'e').
+	self deny: ('Elvis' beginsWith: 'Elvis ').
+	self deny: ('' beginsWith: '').
+	self deny: ('abc' beginsWith: '')
+)
+
+testCapitalized = (
+	| uc lc empty |
+	uc := 'MElViN'.
+	lc := 'mElViN'.
+	empty := ' '.
+	self assert:  lc capitalized = uc.
+	self assert: uc capitalized = uc.
+	"the string gets copied"
+	self deny: uc capitalized == uc.
+	self deny: empty capitalized == empty.
+)
+
+testComparing = (
+	self assert: 'foo' < 'foo:'.
+	self assert: 'foo' < 'fooBar'.
+	self assert: 'foo' <= 'foo:'.
+	self assert: 'foo' <= 'fooBar'.
+	self assert: 'foo:' > 'foo'.
+	self assert: 'fooBar' > 'foo'.
+	self assert: 'foo:' >= 'foo'.
+	self assert: 'fooBar' >= 'foo'
+)
+
+testEmpty = (
+	self
+		assert: 0
+		equals: String empty size
+		description: 'The empty String should be empty indeed';
+		assert: String new species
+		equals: String empty species
+		description: 'The empty String should be a String';
+"
+		assert: String empty
+		identical: String empty
+		description: 'The empty String should be canonical';
+"
+		yourself
+)
+
+testEndsWith = (
+	self assert: ('Elvis' endsWith: 'vis').
+	self assert: ('Elvis' endsWith: 'Elvis').
+	self assert: ('Elvis' endsWith: 's').
+	self deny: ('Elvis' endsWith: 'S').
+	self deny: ('Elvis' endsWith: ' Elvis').
+	self deny: ('' endsWith: '').
+	self deny: ('abc' endsWith: '')
+)
+
+testFindLastOccurenceOfStringStartingAt = (
+	self assert: ('Smalltalk' findLastOccurrenceOfString: 'al' startingAt: 2) = 7.
+	self assert: ('aaa' findLastOccurrenceOfString: 'aa' startingAt: 1) = 2.
+)
+
+"
+testFormat = (
+	#(
+		'\{ \} \\ foo {1} bar {2}' #(12 'string') '{ } \ foo 12 bar string'
+		'\{ \} \\ foo {2} bar {1}' #('string' 12) '{ } \ foo 12 bar string'
+		'\{1}' #() '{1}'
+		'\{1}{1}' #($a) '{1}a'
+		'foo' #() 'foo'
+	) groupsDo: [ :receiver :argument :expectedResult |
+		self assert: expectedResult equals: (receiver format: argument) ].
+)
+"
+
+testIndexOf = (
+	"test for http://bugs.impara.de/view.php?id=3574"
+	self assert: ((String with: 803 asCharacter with: 811 asCharacter) indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: 812 asCharacter))) = 2.
+	self assert: ('abc' indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: 812 asCharacter))) = 0.
+	self assert: ('abc' indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: $c))) = 3.
+	self assert: ('ab bcd abc' copyWith: 811 asCharacter) substrings = {'ab'. 'bcd'. 'abc' copyWith: 811 asCharacter}.
+)
+
+testIsAllDigits = (
+	self assert: '0123456789' isAllDigits.
+	self assert: '1' isAllDigits.
+	self assert: '' isAllDigits.
+	self deny: '012345 6789' isAllDigits.
+	self deny: ('12345', String cr) isAllDigits.
+)
+
+testIsAllSeparators = (
+	self assert: ('', Character cr, Character tab, Character space) isAllSeparators.
+	self assert: '      ' isAllSeparators.
+	self assert: '' isAllSeparators.
+	self deny: '1 2'  isAllSeparators.
+	self deny: '  X  ' isAllSeparators.
+)
+
+testIsAsciiString = (
+	self assert: 'this is a string' isAsciiString.
+	self assert: '' isAsciiString.
+	self deny: ('this is', (Character value: 256), 'a string') isAsciiString.
+	self deny: ('this is', (Character value: 128), 'a string') isAsciiString.
+	self assert: ('this is', (Character value: 127), 'a string') isAsciiString.
+)
+
+testIsOctetString = (
+	self assert: 'this is a string' isOctetString.
+	self assert: '' isOctetString.
+	self deny: ('this is', (Character value: 256), 'a string') isOctetString.
+)
+
+testLineCorrespondingToIndex = (
+	| sampleCRString sampleLFString sampleCRLFString anIndex |
+	sampleCRString := 'Fred', String cr , 'the' , String cr , 'Bear'.
+	sampleLFString := 'Fred', String lf , 'the' , String lf , 'Bear'.
+	sampleCRLFString := 'Fred', String crlf , 'the' , String crlf , 'Bear'.
+	anIndex := sampleCRString indexOf: $h.
+	self assert: (sampleCRString lineCorrespondingToIndex: anIndex) = 'the'.
+	anIndex := sampleLFString indexOf: $h.
+	self assert: (sampleLFString lineCorrespondingToIndex: anIndex) = 'the'.
+	anIndex := sampleCRLFString indexOf: $h.
+	self assert: (sampleCRLFString lineCorrespondingToIndex: anIndex) = 'the'.
+	anIndex := sampleCRString indexOf: $B.
+	self assert: (sampleCRString lineCorrespondingToIndex: anIndex) = 'Bear'.
+	anIndex := sampleLFString indexOf: $B.
+	self assert: (sampleLFString lineCorrespondingToIndex: anIndex) = 'Bear'.
+	anIndex := sampleCRLFString indexOf: $B.
+	self assert: (sampleCRLFString lineCorrespondingToIndex: anIndex) = 'Bear'.
+	anIndex := sampleCRString indexOf: $d.
+	self assert: (sampleCRString lineCorrespondingToIndex: anIndex) = 'Fred'.
+	anIndex := sampleLFString indexOf: $d.
+	self assert: (sampleLFString lineCorrespondingToIndex: anIndex) = 'Fred'.
+	anIndex := sampleCRLFString indexOf: $d.
+	self assert: (sampleCRLFString lineCorrespondingToIndex: anIndex) = 'Fred'.
+)
+
+testLineCount = (
+	| sampleCRString sampleLFString sampleCRLFString |
+	sampleCRString := 'Fred', String cr , 'the' , String cr , 'Bear'.
+	sampleLFString := 'Fred', String lf , 'the' , String lf , 'Bear'.
+	sampleCRLFString := 'Fred', String crlf , 'the' , String crlf , 'Bear'.
+	self assert: sampleCRString lineCount = 3.
+	self assert: sampleLFString lineCount = 3.
+	self assert: sampleCRLFString lineCount = 3.
+)
+
+testLineNumber = (
+	| sampleCRString sampleLFString sampleCRLFString |
+	sampleCRString := 'Fred', String cr , 'the' , String cr , 'Bear'.
+	sampleLFString := 'Fred', String lf , 'the' , String lf , 'Bear'.
+	sampleCRLFString := 'Fred', String crlf , 'the' , String crlf , 'Bear'.
+	self assert: (sampleCRString lineNumber: 2) = 'the'.
+	self assert: (sampleLFString lineNumber: 2) = 'the'.
+	self assert: (sampleCRLFString lineNumber: 2) = 'the'.
+)
+
+testLinesDo = (
+	| sampleCRString sampleLFString sampleCRLFString lines |
+	sampleCRString := 'Fred', String cr , 'the' , String cr , 'Bear'.
+	sampleLFString := 'Fred', String lf , 'the' , String lf , 'Bear'.
+	sampleCRLFString := 'Fred', String crlf , 'the' , String crlf , 'Bear'.
+	lines := OrderedCollection new.
+	sampleCRString linesDo: [:aLine |
+		self deny: (aLine includes: Character cr).
+		self deny: (aLine includes: Character lf).
+		lines add: aLine].
+	self assert: lines asArray = #('Fred' 'the' 'Bear').
+	lines := OrderedCollection new.
+	sampleLFString linesDo: [:aLine |
+		self deny: (aLine includes: Character cr).
+		self deny: (aLine includes: Character lf).
+		lines add: aLine].
+	self assert: lines asArray = #('Fred' 'the' 'Bear').
+	lines := OrderedCollection new.
+	sampleCRLFString linesDo: [:aLine |
+		self deny: (aLine includes: Character cr).
+		self deny: (aLine includes: Character lf).
+		lines add: aLine].
+	self assert: lines asArray = #('Fred' 'the' 'Bear').
+)
+
+testMatch = (
+	#('**' 'f**'  'f**o' 'f*' '*f*' 'f#*' 'f##' '*oo' '#oo' '*o*' '#o#' '#o*' '*o#' 'fo*' 'fo#' '*foo*' '###' '*#'  'f*#' 'f*#o')
+		do: [ :each | self assert: (each match: 'foo') ].
+	#('bar' 'foo#' '#foo' '*foo#' '#foo*' '*bar*') do: [ :each |
+		self deny: (each match: 'foo') ]
+)
+
+testSpace = (
+	"self debug: #testSpace"
+	string := String new.
+	self assert: string size = 0. "instead of #isEmpty to be consistent with the following test"
+	string := String space.
+	self assert: string size = 1.
+	self assert: string = ' '
+)
+
+testSubStrings = (
+	#("receiver (argument expectedResult argument expectedResult ...) ..."
+		'' ('' () ($a) () 'a' () 'ab' () 'aaa' ())
+		'a' ('' ('a') ($a) () 'a' () 'ab' () 'aaa' () ($b) ('a') 'b' ('a') 'bc' ('a'))
+		'aa' ('' ('aa') ($a) () 'a' () 'ab' () 'aaa' () ($b) ('aa') 'b' ('aa') 'bc' ('aa'))
+		'ab' ('' ('ab') ($a) ('b') 'a' ('b') 'ab' () 'aaa' ('b') ($b) ('a') 'b' ('a') 'bc' ('a'))
+		'ababa' ('' ('ababa') ($a) ('b' 'b') 'a' ('b' 'b') 'ab' () 'aaa' ('b' 'b') ($b) ('a' 'a' 'a') 'b' ('a' 'a' 'a') 'bc' ('a' 'a' 'a'))
+		'abbccba' ('' ('abbccba') ($a) ('bbccb') 'a' ('bbccb') 'ab' ('cc') 'aaa' ('bbccb') ($b) ('a' 'cc' 'a') 'b' ('a' 'cc' 'a') 'bc' ('a' 'a')))
+		pairsDo: [ :receiver :argumentsAndExpectedResults |
+			argumentsAndExpectedResults pairsDo: [ :argument :expectedResult |
+				self assert: expectedResult equals: (
+					receiver subStrings: argument) ] ]
+)
+
+"
+testUpTo = (
+	self assert: #up:to: keywords = #(up: to:).
+	self assert: #copy:from:to: keywords = #(copy: from: to:).
+	self assert: #up keywords = #(up).
+	self assert: #at: keywords = #(at:).
+)
+"
+
+testWithBlanksTrimmed = (
+	| s |
+	self assert: ' abc  d   ' withBlanksTrimmed = 'abc  d'.
+	self assert: 'abc  d   ' withBlanksTrimmed = 'abc  d'.
+	self assert: ' abc  d' withBlanksTrimmed = 'abc  d'.
+	self assert: (((0 to: 255) collect: [ :each | each asCharacter ] thenSelect: [ :each | each isSeparator ]) as: String) withBlanksTrimmed = ''.
+	s := 'abcd'.
+	self assert: s withBlanksTrimmed = s.
+	self assert: s withBlanksTrimmed ~~ s.
+)
+
+testWithFirstCharacterDownshifted = (
+	| uc lc empty |
+	uc := 'MElViN'.
+	lc := 'mElViN'.
+	empty := ' '.
+	self assert:  uc withFirstCharacterDownshifted = lc.
+	self assert: lc withFirstCharacterDownshifted = lc.
+	"the string gets copied"
+	self deny: lc withFirstCharacterDownshifted == lc.
+	self deny: empty withFirstCharacterDownshifted == empty.
+)
+
+testWithoutQuoting = (
+	#(
+		'"foo"' 'foo'
+		'''foo''' 'foo'
+		'"foo''' '"foo'''
+		'''foo"' '''foo"'
+		'"foo' '"foo'
+		'foo"' 'foo"'
+		'foo' 'foo') pairsDo: [ :before :after |
+			self assert: before withoutQuoting = after ]
+)
+
+)

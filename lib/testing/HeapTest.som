@@ -1,0 +1,221 @@
+HeapTest = ClassTestCase (
+
+test1 = (
+	| data |
+	"The first element of each array is the sort value, and the second will be updated by the heap with the index of the element within the heap."
+	data :=  (1 to: 8) collect: [:i | {i*2. 0}].
+	"Repeat with different data ordering."
+	5 timesRepeat: [ | h |
+		h := Heap new sortBlock: [:e1 :e2 | e1 first < e2 first].
+		h indexUpdateBlock: [:array :index | array at: 2 put: index].
+		data shuffled do: [:d | h add: d].
+		data do: [:d | self should: (h at: d second) == d].
+	]
+)
+
+testAdd = (
+	| heap |
+	heap := Heap new.
+	self assert: heap size = 0.
+	heap add: 3.
+	self assert: heap size = 1.
+	self assert: heap isEmpty not.
+	self assert: heap first = 3.
+	self assert: (heap at: 1) = 3.
+	heap add: 2.
+	self assert: heap size = 2.
+	self assert: heap first = 2.
+	self assert: (heap at: 2) = 3.
+)
+
+testAddAndRemoveFirst = (
+	| heap validateHeap |
+	heap := Heap sortBlock: [ :a :b | a first >= b first ].
+	heap indexUpdateBlock: [ :element :newIndex | element at: 2 put: newIndex ].
+	validateHeap := [ heap isValidHeap and: [
+		heap do: [ :each | self assert: (heap at: each second) == each ] ] ].
+	validateHeap value.
+	self assert: 0 equals: heap size.
+	self assert: heap isEmpty.
+	1 to: 100 do: [ :index |
+		heap add: { Random next. nil }.
+		self assert: index equals: heap size.
+		validateHeap value ].
+	10 timesRepeat: [
+		| first |
+		first := heap removeFirst.
+		heap do: [ :each | self assert: (heap sortBlock value: first value: each) ].
+		heap add: { Random next. nil }.
+		validateHeap value ]
+)
+
+testAt = (
+	| heap |
+	heap := Heap new.
+	heap add: 3.
+	self assert: (heap at: 1) = 3.
+	"self should: [heap at: 2] raise: Error."
+	heap add: 4.
+	self assert: (heap at: 1) = 3.
+	self assert: (heap at: 2) = 4.
+)
+
+testCompact = (
+	| heap |
+	heap := Heap new.
+	1 to: 10 do: [ :index |
+		| copy |
+		copy := heap copy.
+		copy compact.
+		self
+			assert: copy = heap;
+			assert: copy capacity <= heap capacity;
+			assert: copy capacity = copy size.
+		heap add: index ].
+)
+
+testCopy = (
+	| heap |
+	heap := Heap new.
+	1 to: 10 do: [ :index |
+		| copy |
+		copy := heap copy.
+		self
+			assert: copy = heap;
+			assert: heap = copy;
+			deny: copy == heap;
+			assert: copy sortBlock = heap sortBlock;
+			deny: copy array == heap array.
+		heap add: index ].
+)
+
+testCopyEmpty = (
+	| heap |
+	heap := Heap new.
+	1 to: 100 do: [ :index |
+		| copy |
+		copy := heap copyEmpty.
+		self
+			assert: copy isHeap;
+			assert: copy isEmpty;
+			assert: copy sortBlock = heap sortBlock.
+		heap add: index ].
+)
+
+testDo = (
+	| heap coll |
+	heap := Heap withAll: #(1 3 5).
+	coll := OrderedCollection new.
+	heap do: [:each | coll add: each].
+	self assert: coll = #(1 3 5) asOrderedCollection.
+)
+
+testFirst = (
+	| heap |
+	heap := Heap new.
+	heap add: 5.
+	heap add: 12.
+	heap add: 1.
+	self assert: heap first = 1.
+	heap removeFirst.
+	self assert: heap first = 5.
+)
+
+testHeap = (
+	| heap |
+	heap := Heap new.
+	self assert: heap isHeap.
+	self assert: heap isEmpty.
+	heap add: 1.
+	self assert: heap isEmpty not
+)
+
+testIfEqualIsTransitive = (
+    | anArray heap1 heap2 |
+    anArray := #(1 2 3).
+    heap1 := Heap withAll: (1 to: 3) sortBlock: [:a :b | a < b].
+    heap2 := Heap withAll: (1 to: 3) sortBlock: [:a :b | b > a].
+    self
+		assert: (heap1 = anArray) & (heap2 = anArray) ==> (heap1 = heap2)
+		description: 'Heap equality should be transitive'
+)
+
+testIndexUpdateBlockWithFirstElementRemoval = (
+	| heap validateHeap |
+	heap := Heap sortBlock: [ :a :b | a first <= b first ].
+	heap indexUpdateBlock: [ :element :newIndex | element at: 2 put: newIndex ].
+	validateHeap := [
+		heap isHeap
+			and: [ heap isValidHeap
+			and: [ heap do: [ :each | self assert: (heap at: each second) == each ] ] ] ].
+	validateHeap value.
+	1 to: 10 do: [ :i |
+		heap add: { i. nil }.
+		validateHeap value ].
+	10 timesRepeat: [
+		heap removeAt: 1.
+		validateHeap value ]
+)
+
+testRemove = (
+	| heap |
+	heap := Heap new.
+	"self should: [heap removeFirst] raise: Error."
+	heap add: 5.
+	self assert: 5 equals: heap removeFirst.
+	self assert: heap size = 0.
+	heap add: 5.
+	"self should: [heap removeAt: 2] raise: Error."
+)
+
+"
+testSort = (
+	self testSortUsing: Heap new.
+	{
+		nil.
+		#<=.
+		[ :a :b | a <= b ].
+		[ :a :b | a >= b ]
+	} do: [ :each | self testSortUsing: (Heap sortBlock: each) ]
+)
+
+testSortBlock = (
+	| heap |
+	heap := Heap withAll: #(1 3 5).
+	self assert: heap asArray = #(1 3 5).
+	heap sortBlock: [ :e1 :e2 | e1 >= e2 ].
+	self assert: heap isValidHeap.
+	self assert: heap asArray = #(5 3 1)
+)
+
+testSortUsing: aHeap = (
+	self assert: aHeap isValidHeap.
+	10 timesRepeat: [
+		aHeap add: Random next.
+		self assert: aHeap isValidHeap ].
+	self deny: (aHeap asArray isSortedBy: aHeap sortBlock).
+	aHeap sort.
+	self assert: aHeap isValidHeap.
+	self assert: (aHeap asArray isSortedBy: aHeap sortBlock)
+)
+
+testSortWithIndexUpdateBlock = (
+	| heap validateHeap |
+	heap := Heap sortBlock: [ :a :b | a first <= b first ].
+	heap indexUpdateBlock: [ :element :newIndex | element at: 2 put: newIndex ].
+	validateHeap := [
+		heap isHeap
+			and: [ heap isValidHeap
+			and: [ heap do: [ :each | self assert: (heap at: each second) == each ] ] ] ].
+	validateHeap value.
+	1000 timesRepeat: [
+		heap add: { Random next. nil }.
+		validateHeap value ].
+	self deny: (heap asArray isSortedBy: heap sortBlock).
+	heap sort.
+	validateHeap value.
+	self assert: (heap asArray isSortedBy: heap sortBlock)
+)
+"
+
+)

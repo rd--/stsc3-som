@@ -118,13 +118,31 @@ printAsLiteralOn: aStream = (
 )
 
 printOn: aStream = (
-	aStream nextPut: $$.
-	aStream nextPut: self
+	| integerValue |
+	((integerValue := self asInteger) > 32 and: [integerValue ~= 127]) ifTrue:
+		[^self printAsLiteralOn: aStream].
+	(self class constantNameFor: self)
+		ifNotNil: [ :name | aStream nextPutAll: self class name; space; nextPutAll: name ]
+		ifNil: [ aStream nextPutAll: self class name; nextPutAll: ' value: '; print: integerValue ]
+)
+
+shouldBePrintedAsLiteral = (
+	| integerValue |
+	(integerValue := self asInteger) < 33 ifTrue: [ ^false ].
+	255 < integerValue ifTrue: [ ^false ].
+	^integerValue ~= 127
 )
 
 storeOn: aStream = (
-	aStream nextPut: $$.
-	aStream nextPut: self
+	"Common character literals are preceded by '$', however special need to be encoded differently: for some this might be done by using one of the shortcut constructor methods for the rest we have to create them by ascii-value."
+	self shouldBePrintedAsLiteral ifTrue:
+		[^self printAsLiteralOn: aStream].
+	(self class constantNameFor: self) ifNotNil: [ :name |
+		aStream nextPutAll: self class name; space; nextPutAll: name.
+		^self ].
+	aStream
+		nextPut: $(; nextPutAll: self class name;
+		nextPutAll: ' value: '; print: self asInteger; nextPut: $)
 )
 
 to: other = (
@@ -140,7 +158,12 @@ tokenish = (
 
 ----------------------------
 
-backSpace = (
+allByteCharacters = (
+	"Answer all the characters that can be encoded in a byte"
+	^ (0 to: 255) collect: [:v | Character value: v] as: String
+)
+
+backspace = (
 	^self value: 8
 )
 
@@ -153,8 +176,30 @@ codePoint: anInteger = (
 	^self value: anInteger
 )
 
+constantNames = (
+	^ #( backspace cr delete escape lf null newPage space tab ).
+)
+
+constantNameFor: aCharacter = (
+	^ self constantNames
+		detect: [ :each | (self perform: each) = aCharacter ]
+		ifNone: [ nil ].
+)
+
 cr = (
 	^self value: 13
+)
+
+delete = (
+	^ self value: 127
+)
+
+digitValue: x = (
+	"Answer the Character whose digit value is x. For example,
+	 answer $9 for x=9, $0 for x=0, $A for x=10, $Z for x=35."
+	| n |
+	n := x asInteger.
+	^self value: (n < 10 ifTrue: [n + 48] ifFalse: [n + 55])
 )
 
 esc = (
@@ -187,6 +232,10 @@ newPage = (
 
 nl = (
 	^self value: 10
+)
+
+null = (
+	^ self value: 0
 )
 
 separators = (

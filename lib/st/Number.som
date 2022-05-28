@@ -46,6 +46,28 @@ adaptToCollection: rcvr andSend: selector = (
 	^ rcvr collect: [:element | element perform: selector with: self]
 )
 
+adaptToFloat: rcvr andCompare: selector = (
+	rcvr isFinite
+		ifFalse: [
+			selector == #= ifTrue: [^false].
+			selector == #~= ifTrue: [^true].
+			rcvr isNaN ifTrue: [^ false].
+			(selector = #< or: [selector = #'<='])
+				ifTrue: [^ rcvr < 0.0].
+			(selector = #> or: [selector = #'>='])
+				ifTrue: [^ rcvr > 0.0].
+			^self error: 'unknow comparison selector'].
+	self isAnExactFloat ifTrue: [^rcvr perform: selector with: self asExactFloat].
+	selector == #= ifTrue: [^false].
+	selector == #~= ifTrue: [^true].
+	^ rcvr perform: selector with: self asFloat
+)
+
+adaptToFloat: rcvr andSend: selector = (
+	"If I am involved in arithmetic with a Float, convert me to a Float."
+	^ rcvr perform: selector with: self asFloat
+)
+
 adaptToFraction: rcvr andSend: selector = (
 	^ self subclassResponsibility
 )
@@ -76,6 +98,13 @@ arcTan = (
 
 arcTan: denominator = (
 	^(self asFloat) arcTan: denominator.
+)
+
+asExactFloat = (
+	"Convert this number asFloat with a priori knowledge that it is an exact Float.
+	Some subclass might exploit this knowledge for a faster implementation.
+	Only send this if self isAnExactFloat."
+	^self asFloat
 )
 
 asInteger = (

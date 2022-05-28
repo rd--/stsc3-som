@@ -1,20 +1,65 @@
 Stream = Object (
 
+<< items = (
+	items putOn: self.
+	^ self
+)
+
 any: numberOfElements = (
 	"See Collection protocol."
 	^ self next: numberOfElements
 )
 
 atEnd = (
+	"Answer whether the receiver can access any more objects."
 	self subclassResponsibility
 )
 
+basicNext = (
+	^ self next.
+)
+
+basicNext: anInteger = (
+	^self next: anInteger
+)
+
+basicNext: anInteger putAll: aCollection startingAt: startIndex = (
+	^self next: anInteger putAll: aCollection startingAt: startIndex
+)
+
+basicNextPut: anObject = (
+	^ self nextPut: anObject
+)
+
+basicNextPutAll: aCollection = (
+	^ self nextPutAll: aCollection.
+)
+
+binary = (
+)
+
+close = (
+)
+
+closed = (
+	^ false
+)
+
+collect: block = (
+	^ Generator on: [:g |
+		[self atEnd] whileFalse: [
+			g yield: (self next ifNotNil: [:object | block value: object])]]
+)
+
 contents = (
+	"Answer all of the contents of the receiver."
 	self subclassResponsibility
 )
 
 do: aBlock = (
-	[ self atEnd ] whileFalse: [ aBlock value: self next ]
+	"Evaluate aBlock for each of the objects accessible by receiver."
+	[self atEnd]
+		whileFalse: [aBlock value: self next]
 )
 
 flatten = (
@@ -26,25 +71,85 @@ flatten = (
 					ifTrue: [object flatten do: [:each | g yield: each]]]]]
 )
 
+flattened = (
+	"An alias for #flatten
+	This message's name is in line with messages like #sorted or #reversed
+	while #flatten's is in line with #reverse (as per ANSI, see comment there)"
+	^ self flatten
+)
+
+flush = (
+	"Do nothing by default"
+)
+
+gather: block = (
+	^ Generator on: [:g |
+		[self atEnd] whileFalse: [
+			self next
+				ifNil: [g yield: nil]
+				ifNotNil: [:object |
+					(block value: object) do: [:ea |
+						g yield: ea]]]]
+)
+
 isStream = (
 	"Return true if the receiver responds to the stream protocol"
 	^true
 )
 
+localName = (
+	^'a stream'
+)
+
 next = (
+	"Answer the next object accessible by the receiver."
 	self subclassResponsibility
 )
 
 next: anInteger = (
+	"Answer the next anInteger number of objects accessible by the receiver."
 	| aCollection |
 	aCollection := OrderedCollection new.
-	anInteger timesRepeat: [ aCollection addLast: self next ].
+	anInteger timesRepeat: [aCollection addLast: self next].
 	^aCollection
 )
 
+next: n into: aCollection = (
+	"Read n objects into the given collection.
+	Return aCollection or a partial copy if less than
+	n elements have been read."
+	^self next: n into: aCollection startingAt: 1
+)
+
+next: n into: aCollection startingAt: startIndex = (
+	"Read n objects into the given collection.
+	Return aCollection or a partial copy if less than n elements have been read."
+	| count |
+	count := self readInto: aCollection startingAt: startIndex count: n.
+	count = n
+		ifTrue:[ ^aCollection ]
+		ifFalse:[ ^aCollection copyFrom: 1 to: startIndex + count - 1 ]
+)
+
 next: anInteger put: anObject = (
-	anInteger timesRepeat: [ self nextPut: anObject ] .
+	"Make anObject be the next anInteger number of objects accessible by the
+	receiver. Answer anObject."
+	anInteger timesRepeat: [self nextPut: anObject].
 	^anObject
+)
+
+nextInto: aCollection = (
+	"Read the next elements of the receiver into aCollection.
+	Return aCollection or a partial copy if less than aCollection
+	size elements have been read."
+	^self next: aCollection size into: aCollection startingAt: 1.
+)
+
+nextInto: aCollection startingAt: startIndex = (
+	"Read the next elements of the receiver into aCollection.
+	Return aCollection or a partial copy if less than aCollection
+	size elements have been read."
+	^self next: (aCollection size - startIndex+1) into: aCollection startingAt: startIndex.
 )
 
 nextMatchAll: aColl = (
@@ -61,21 +166,55 @@ nextMatchAll: aColl = (
 )
 
 nextMatchFor: anObject = (
+	"Gobble the next object and answer whether it is equal to the argument,
+	anObject."
 	^anObject = self next
 )
 
 nextPut: anObject = (
+	"Insert the argument, anObject, as the next object accessible by the
+	receiver. Answer anObject."
 	self subclassResponsibility
 )
 
 nextPutAll: aCollection = (
-	aCollection do: [ :v | self nextPut: v ] .
+	"Append the elements of aCollection to the sequence of objects accessible
+	by the receiver. Answer aCollection."
+	aCollection do: [:v | self nextPut: v].
 	^aCollection
 )
 
 nextSatisfy: aBlock = (
 	self do: [:each | (aBlock value: each) ifTrue: [^ each]].
 	self error: 'No object could satisfy the block'.
+)
+
+openReadOnly = (
+	^self
+)
+
+print: anObject = (
+	"Have anObject print itself on the receiver."
+	anObject printOn: self
+)
+
+print: anObject maxDecimalPlaces: placesDesired = (
+	"Have anObject print itself on the receiver, with at most the given number of decimal places desired."
+	anObject printOn: self maxDecimalPlaces: placesDesired
+)
+
+printHtml: anObject = (
+	anObject printHtmlOn: self
+)
+
+printOn: stream = (
+	super printOn: stream.
+"
+	stream space.
+	self contents printOn: stream.
+	NOTE: some subclasses actually read from the stream to return its contents.
+	To not modify the state we must *not* send contents here.
+"
 )
 
 readInto: aCollection startingAt: startIndex count: n = (
@@ -86,6 +225,10 @@ readInto: aCollection startingAt: startIndex count: n = (
 		obj := self next ifNil: [ ^i ].
 		aCollection at: startIndex + i put: obj].
 	^n
+)
+
+readOnly = (
+	^self
 )
 
 reject: aBlock = (
@@ -102,6 +245,10 @@ select: block = (
 						ifTrue: [g yield: object]]]]
 )
 
+select: block thenCollect: anotherBlock = (
+	^ (self select: block) collect: anotherBlock
+)
+
 take: maxNumberOfElements = (
 	"See Collection protocol."
 	^ self any: maxNumberOfElements
@@ -116,10 +263,25 @@ upToEnd = (
 	^ elements
 )
 
+write: encodedObject = (
+	^encodedObject putOn:self.
+)
+
+
 ----------------------------
 
 new = (
 	self error: 'Streams are created with on: and with:'
 )
+
+toolIcon = (
+	^ #stream
+)
+
+
+comment = (^'
+I am an abstract class that represents an accessor for a sequence of objects. This sequence is referred to as my "contents".
+')
+
 
 )
