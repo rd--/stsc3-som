@@ -1,5 +1,64 @@
-This follows Squeak rather than St-80.
+A minimal Smalltalk library.
 
-Squeak is more complicated.
+It follows Squeak rather than St-80 where these diverge.
 
 It might be nice to also have an St-80 with just the adaptTo protocols added in.
+
+The St-80 class hierarchy is followed, even though there's only one Integer type (SmallInteger) and one floating point type (Double).
+
+- Object
+  - Behavior
+    - ClassDescription*
+      - Class
+      - Metaclass
+  - BlockClosure
+  - Boolean
+    - False
+    - True
+  - Collection
+    - Bag
+      - IdentityBag
+    - HashedCollection
+      - Set
+        - CharacterSet
+        - IdentitySet
+      - Dictionary
+        - IdentityDictionary
+    - Heap
+    - Matrix
+    - SequenceableCollection
+      - ArrayedCollection
+        - Array
+        - String
+          - Symbol
+      - Interval
+      - OrderedCollection
+        - SortedCollection
+  - InstructionStream*
+    - Context*
+  - Magnitude
+    - Character
+    - LookupKey
+      - Association
+    - Number
+      - Float
+        - Double
+      - Integer
+        - SmallInteger
+    - Time*
+  - Message*
+  - Method
+  - NumberParser
+    - FortranNumberParser
+    - SmalltalkNumberParser
+  - Point
+  - Random
+  - SetElement
+  - SmalltalkImage
+  - Stream
+    - PositionableStream
+      - ReadStream
+      - WriteStream
+        - ReadWriteStream
+  - Transcript
+  - UndefinedObject
