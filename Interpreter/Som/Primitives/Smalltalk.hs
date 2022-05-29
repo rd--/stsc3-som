@@ -93,9 +93,21 @@ prPrintString (Object _ obj) = do
   let wr str = liftIO (unicodeStringWrite str) >> return nilObject
   mapMM wr (objectDataAsString obj)
 
+prAllInstVarNames :: St.ClassDefinition -> Vm (Maybe Object)
+prAllInstVarNames cd = do
+  nm <- classAllVariableNamesFor cd False
+  fmap Just (arrayFromList (map symObject nm))
+
+prAllClassVarNames :: St.ClassDefinition -> Vm (Maybe Object)
+prAllClassVarNames cd = do
+  nm <- classAllVariableNamesFor cd True
+  fmap Just (arrayFromList (map symObject nm))
+
 stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
+    ("allInstVarNames", DataClass (cd, False) _ _, []) -> prAllInstVarNames cd
+    ("allClassVarNames", DataClass (cd, False) _ _, []) -> prAllClassVarNames cd
     ("asString", DataDouble x, []) -> fmap Just (mutableStringObject False (show x))
     ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
@@ -128,6 +140,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("signature", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("signature", DataPrimitive _ x, []) -> return (Just (symObject x))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
+    ("utcOffset", DataSystem, []) -> fmap (Just . intObject) getSystemTimezoneInSeconds
+    ("utcTime", DataSystem, []) -> fmap (Just . intObject . secondsToMicroseconds) getSystemTimeInSeconds
     _ -> return Nothing
 
 prIntegerDivisionExact :: SmallInteger -> SmallInteger -> Maybe Object

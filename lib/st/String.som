@@ -33,6 +33,21 @@ String = ArrayedCollection (
 		  with: anObject asString
 )
 
+asDate = (
+	"Many allowed forms, see Date>>#readFrom:"
+	^ Date fromString: self
+)
+
+asDateAndTime = (
+	"Convert from UTC format"
+	^ DateAndTime fromString: self
+)
+
+asDuration = (
+	"convert from [nnnd]hh:mm:ss[.nanos] format. [] implies optional elements"
+	^ Duration fromString: self
+)
+
 asInteger = (
 	^self asIntegerSigned: true
 )
@@ -107,6 +122,11 @@ asString = (
 asSymbol = (
 	<primitive: -1>
 	self primitiveFailed
+)
+
+asTime = (
+	"Many allowed forms, see Time>>readFrom:"
+	^ Time fromString: self.
 )
 
 asUnsignedInteger = (
@@ -429,6 +449,32 @@ match: text = (
 	'*foo#zort'	match: 'afoo3zortthenfoo3zort' true
 	'*foo*zort'	match: 'afoodezortorfoo3zort' true
 "
+)
+
+padded: leftOrRight to: length with: aCharacter = (
+	| result paddingLength |
+	(paddingLength := length - self size) <= 0 ifTrue: [ ^self ].
+	result := self species new: length.
+	leftOrRight = #left ifTrue: [
+		^result
+			from: 1
+				to: paddingLength
+				put: aCharacter;
+			replaceFrom: paddingLength + 1
+				to: length
+				with: self
+				startingAt: 1;
+			yourself ].
+	leftOrRight = #right ifTrue: [
+		^result
+			replaceFrom: 1
+				to: self size
+				with: self
+				startingAt: 1;
+			from: self size + 1
+				to: length
+				put: aCharacter;
+			yourself ]
 )
 
 print = (

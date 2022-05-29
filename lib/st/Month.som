@@ -1,0 +1,101 @@
+Month = Timespan (
+
+asMonth = (
+	^self
+)
+
+daysInMonth = (
+	^ self duration days
+)
+
+index = (
+	^ self monthIndex
+)
+
+name = (
+	^ self monthName
+)
+
+previous = (
+	^ self class starting: (self start - 1)
+)
+
+printOn: aStream = (
+	aStream nextPutAll: self monthName, ' ', self year printString
+)
+
+----------------------------
+
+daysInMonth: indexOrName forYear: yearInteger = (
+	| index |
+	index := indexOrName isInteger
+				ifTrue: [indexOrName]
+				ifFalse: [self indexOfMonth: indexOrName].
+	^ (Time daysInMonth at: index)
+			+ ((index = 2
+					and: [Year isLeapYear: yearInteger])
+						ifTrue: [1] ifFalse: [0])
+)
+
+indexOfMonth: aMonthName = (
+	1 to: 12 do: [ :i |  (aMonthName, '*' match: (Time monthNames at: i)) ifTrue: [^i] ].
+	self error: aMonthName , ' is not a recognized month name'
+)
+
+month: month year: year = (
+	"Create a Month for the given <year> and <month>.
+	<month> may be a number or a String with the
+	name of the month. <year> should be with 4 digits."
+	^ self starting:
+		(DateAndTime
+			year: year
+			month: month
+			day: 1
+			hour: 0
+			minute: 0
+			second: 0
+			offset: self defaultOffset)
+)
+
+nameOfMonth: anIndex = (
+	^ Time monthNames at: anIndex
+)
+
+readFrom: aStream = (
+	| m y |
+	aStream skipSeparators.
+	m := aStream upToAnyOf: CharacterSet separators.
+	aStream skipSeparators.
+	y := aStream upToEnd.
+	^ self
+		month: m
+		year: y asInteger
+)
+
+starting: aDateAndTime duration: aDuration = (
+	"Override - a each month has a defined duration"
+	| start adjusted days |
+	start := aDateAndTime asDateAndTime.
+	adjusted := DateAndTime
+		year: start year
+		month: start month
+		day: 1
+		hour: 0
+		minute: 0
+		second: 0
+		offset: start offset.
+	days := self
+		daysInMonth: adjusted month
+		forYear: adjusted year.
+	^ super
+		starting: adjusted
+		duration: (Duration days: days)
+)
+
+
+comment = (^'
+I represent a month.For example, to get the number of days this month, you can evaluate the following expression:Month current daysInMonth
+')
+
+
+)

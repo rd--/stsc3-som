@@ -119,6 +119,18 @@ resolve: aSymbol = (
 	self error: 'Tried loading <<' , aSymbol , '>> as a class, but failed.' "quote..."
 )
 
+utcOffset = (
+	"Timezone offset in seconds from GMT"
+	<primitive: -1>
+	self primitiveFailed
+)
+
+utcTime = (
+	"Current UTC time in microseconds"
+	<primitive: -1>
+	self primitiveFailed
+)
+
 ----
 
 new = (

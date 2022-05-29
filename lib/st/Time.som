@@ -1,0 +1,550 @@
+Time = Magnitude (
+
+| seconds nanos |
+
+< aTime = (
+	^ self asDuration < aTime asDuration
+)
+
+= aTime = (
+	^ (self class = aTime class) and: (self asNanoSeconds = aTime asNanoSeconds)
+)
+
+addSeconds: nSeconds = (
+	"Answer a Time that is nSeconds after the receiver."
+	^ self class seconds: self asSeconds + nSeconds
+)
+
+addTime: timeAmount = (
+	"Answer a Time that is timeInterval after the receiver. timeInterval is an
+	instance of Date or Time."
+	^ self class seconds: self asSeconds + timeAmount asSeconds
+)
+
+asDate = (
+	^ Date today
+)
+
+asDateAndTime = (
+	^ DateAndTime today + self
+)
+
+asDuration = (
+	"Answer the duration since midnight"
+	^ Duration seconds: seconds nanoSeconds: nanos
+)
+
+asMonth = (
+	^ self asDateAndTime asMonth
+)
+
+asNanoSeconds = (
+	"Answer the number of nanoseconds since midnight"
+	^ self asDuration asNanoSeconds
+)
+
+asSeconds = (
+	"Answer the number of seconds since midnight of the receiver."
+	^ seconds
+)
+
+asTime = (
+	^ self
+)
+
+asTimeStamp = (
+	^ self asDateAndTime asTimeStamp
+)
+
+asWeek = (
+	^ self asDateAndTime asWeek
+)
+
+asYear = (
+	^ self asDateAndTime asYear
+)
+
+duration = (
+	^ Duration zero
+)
+
+hash = (
+	^ self asNanoSeconds hash
+)
+
+hhmm24 = (
+	"Return a string of the form 1123 (for 11:23 am), 2154 (for 9:54 pm), of exactly 4 digits"
+	^(String streamContents:
+		[ :aStream | self print24: true showSeconds: false on: aStream ])
+			copyWithout: $:
+)
+
+hour = (
+	^ self hour24
+)
+
+hour12 = (
+	"Answer an <integer> between 1 and 12, inclusive, representing the hour
+	of the day in the 12-hour clock of the local time of the receiver."
+	^ self hour24 - 1 \\ 12 + 1
+)
+
+hour24 = (
+	^ self asDuration hours
+)
+
+hours = (
+	^ self hour
+)
+
+intervalString = (
+	"Treat the time as a difference.  Give it in hours and minutes with two digits of accuracy."
+	| d |
+	d := self asDuration.
+	^ String streamContents: [ :s |
+		d hours > 0 ifTrue: [s print: d hours; nextPutAll: ' hours'].
+		d minutes > 0 ifTrue: [s space; print: d minutes; nextPutAll: ' minutes'].
+		d seconds > 0 ifTrue: [s space; print: d seconds; nextPutAll: ' seconds'] ]
+)
+
+meridianAbbreviation = (
+	^ self hour < 12 ifTrue: ['AM'] ifFalse: ['PM']
+)
+
+minute = (
+	^ self asDuration minutes
+)
+
+minutes = (
+	^ self asDuration minutes
+)
+
+nanoSecond = (
+	^ nanos
+)
+
+print24 = (
+	"Return as 8-digit string 'hh:mm:ss', with leading zeros if needed"
+	^String streamContents:
+		[ :aStream | self print24: true on: aStream ]
+)
+
+print24: hr24 on: aStream = (
+	"Format is 'hh:mm:ss' or 'h:mm:ss am' "
+	self print24: hr24 showSeconds: true on: aStream
+)
+
+print24: hr24 showSeconds: showSeconds on: aStream = (
+	"Format is 'hh:mm:ss' or 'h:mm:ss am'  or, if showSeconds is false, 'hh:mm' or 'h:mm am'"
+	^self print24: hr24 showSeconds: showSeconds showSubseconds: false on: aStream
+)
+
+print24: hr24 showSeconds: showSeconds showSubseconds: showSubseconds on: aStream = (
+	"Format is 'hh:mm:ss' or 'h:mm:ss am'  or, if showSeconds is false, 'hh:mm' or 'h:mm am'.
+	If showSubseconds is true and our nanoSeconds are not zero, a decimal point and subseconds are added"
+	| h m s |
+	h := self hour. m := self minute. s := self second.
+	hr24
+		ifTrue:
+			[ h < 10 ifTrue: [ aStream nextPutAll: '0' ].
+			h printOn: aStream ]
+		ifFalse:
+			[ h > 12
+				ifTrue: [h - 12 printOn: aStream]
+				ifFalse:
+					[h < 1
+						ifTrue: [ 12 printOn: aStream ]
+						ifFalse: [ h printOn: aStream ]]].
+	aStream nextPutAll: (m < 10 ifTrue: [':0'] ifFalse: [':']).
+	m printOn: aStream.
+	showSeconds ifTrue:
+		[ aStream nextPutAll: (s < 10 ifTrue: [':0'] ifFalse: [':']).
+		(showSubseconds not or: [self nanoSecond = 0])
+			ifTrue: [s asInteger printOn: aStream]
+			ifFalse: [s asInteger * Time nanosecondsInSecond + self nanoSecond asInteger
+				printOn: aStream asFixedPoint: Time nanosecondsInSecond]].
+	hr24 ifFalse:
+		[ aStream nextPutAll: (h < 12 ifTrue: [' am'] ifFalse: [' pm']) ].
+)
+
+printMinutes = (
+	"Return as string 'hh:mm pm'  "
+	^String streamContents:
+		[ :aStream | self print24: false showSeconds: false on: aStream ]
+)
+
+printOn: aStream = (
+	self print24: false
+		showSeconds: (self seconds ~= 0
+				or: [self nanoSecond ~= 0])
+		showSubseconds: self nanoSecond ~= 0
+		on: aStream
+)
+
+second = (
+	^ self asDuration seconds
+)
+
+seconds = (
+	^ self second
+)
+
+seconds: secondCount = (
+	"Private - only used by Time class."
+	seconds := secondCount.
+	nanos := 0
+)
+
+seconds: secondCount nanoSeconds: nanoCount = (
+	"Private - only used by Time class."
+	seconds := secondCount.
+	nanos := nanoCount
+)
+
+storeOn: aStream = (
+	aStream print: self printString; nextPutAll: ' asTime'
+)
+
+subtractTime: timeAmount = (
+	"Answer a Time that is timeInterval before the receiver. timeInterval is
+	an instance of Date or Time."
+	^ self class seconds: self asSeconds - timeAmount asSeconds
+)
+
+ticks = (
+	"Answer an Array: { seconds. nanoSeconds }"
+	^ Array with: 0 with: seconds with: nanos.
+)
+
+ticks: anArray = (
+	"ticks is an Array: { days. seconds. nanoSeconds }"
+	seconds := anArray at: 2.
+	nanos := anArray at: 3
+)
+
+to: anEnd = (
+	"Answer a Timespan. anEnd must respond to #asDateAndTime"
+	^ self asDateAndTime to: anEnd
+)
+
+
+----------------------------
+
+condenseBunches: aCollectionOfSeconds = (
+	| secArray now out pause prev bunchEnd |
+	"Identify the major intervals in a bunch of numbers.
+	Each number is a seconds since 1901 that represents a date and time.
+	We want the last event in a bunch.  Return array of seconds for:
+	Every event in the last half hour.
+		Every bunch separated by 30 min in the last 24 hours.
+	Every bunch separated by two hours before that."
+	"Time condenseBunches:
+		(#(20 400 401  20000 20200 20300 40000 45000  200000 201000 202000)
+			collect: [ :tt | self totalSeconds - tt])
+"
+	secArray := aCollectionOfSeconds asSortedCollection.
+	pause := 1.
+	now := self totalSeconds.
+	out := OrderedCollection new.
+	prev := 0.
+	bunchEnd := nil.
+	secArray reverseDo: [:secs | | ago | "descending"
+		ago := now - secs.
+		ago > (60*30) ifTrue: [pause := "60*30" 1800].
+		ago > (60*60*24) ifTrue: [pause := "60*120" 7200].
+		ago - prev >= pause ifTrue: [out add: bunchEnd.  bunchEnd := secs].
+		prev := ago].
+	out add: bunchEnd.
+	out removeFirst.
+	^ out
+)
+
+current = (
+	^ self now
+)
+
+dateAndTimeFromSeconds: secondCount = (
+	^ Array
+		with: (Date fromSeconds: secondCount)
+		with: (Time fromSeconds: secondCount \\ 86400)
+)
+
+dateAndTimeNow = (
+	"Answer a two-element Array of (Date today, Time now)."
+	^ self dateAndTimeFromSeconds: self totalSeconds
+)
+
+durationToRun: timedBlock = (
+	"Answer a duration timedBlock takes to return its value"
+	^(self nanosecondsToRun: timedBlock) nanoSeconds
+)
+
+fromSeconds: secondCount = (
+	"Answer an instance of me that is secondCount number of seconds since midnight."
+	| integerSeconds nanos |
+	integerSeconds := secondCount truncated.
+	integerSeconds = secondCount
+		ifTrue: [nanos := 0]
+		ifFalse: [nanos := (secondCount - integerSeconds * Time nanosecondsInSecond) asInteger].
+	^ self seconds: integerSeconds nanoSeconds: nanos
+)
+
+fromString: aString = (
+	^ self readFrom: (ReadStream on: aString).
+)
+
+hour: hour minute: minute second: second = (
+	"Answer a Time"
+	^ self hour: hour minute: minute second: second nanoSecond: 0
+)
+
+hour: hour minute: minute second: second nanoSecond: nanoCount = (
+	"Answer a Time - only second precision for now"
+	^ self
+		seconds: (hour * Time secondsInHour) + (minute * Time secondsInMinute) + second
+		nanoSeconds: nanoCount
+)
+
+humanWordsForSecondsAgo: secs = (
+	| date today |
+	"Return natural language for this date and time in the past."
+	secs <= 1 ifTrue: [^ 'a second ago'].
+	secs < 45 ifTrue: [^ secs printString, ' seconds ago'].
+	secs < 90 ifTrue: [^ 'a minute ago'].
+	secs < "45*60" 2700 ifTrue: [^ (secs//60) printString, ' minutes ago'].
+	secs < "90*60" 5400 ifTrue: [^ 'an hour ago'].
+	secs < "18*60*60" 64800 ifTrue: [^ (secs//3600) printString, ' hours ago'].
+	date := Date fromSeconds: self totalSeconds - secs.		"now work with dates"
+	today := Date today.
+	date > (today subtractDays: 2) ifTrue: [^ 'yesterday'].
+	date > (today subtractDays: 8) ifTrue: [^ 'last ', date dayOfWeekName].
+	date > (today subtractDays: 13) ifTrue: [^ 'a week ago'].
+	date > (today subtractDays: 28) ifTrue: [
+		^ ((today subtractDate: date)//7) printString, ' weeks ago'].
+	date > (today subtractDays: 45) ifTrue: [^ 'a month ago'].
+	date > (today subtractDays: 300) ifTrue: [^ 'last ', date monthName].
+	^ date monthName, ', ', date year printString
+"Example
+#(0.5 30 62 130 4000 10000 60000 90000 345600 864000 1728000 3456000 17280000 34560000 345600000)
+		collect: [:ss | Time humanWordsForSecondsAgo: ss].
+"
+)
+
+localMicrosecondClock = (
+	"Answer the local microseconds since the Smalltalk epoch (January 1st 1901, the start of the 20th century).
+	 The value is derived from the current UTC wallclock time and the image's current notion of time zone."
+	^self utcMicrosecondClock + (DateAndTime localOffset asSeconds * 1000000)
+)
+
+localMicrosecondClockWithOffset = (
+	"Answer an array with local microseconds since the Smalltalk epoch and the
+	current seconds offset from GMT in the local time zone."
+	| result |
+	result := self posixMicrosecondClockWithOffset.
+	"DateAndTime unixEpoch asSeconds"
+	result at: 1 put: result first + ((2177452800 + result second) * 1000000).
+	^result
+)
+
+microsecondsToRun: timedBlock = (
+	"Answer the number of microseconds timedBlock takes to return its value."
+	| startUsecs |
+	startUsecs := self utcMicrosecondClock.
+	timedBlock value.
+	^self utcMicrosecondClock - startUsecs
+)
+
+midnight = (
+	^ self seconds: 0
+)
+
+milliSecondsSinceMidnight = (
+	^self localMicrosecondClock // 1000 \\ 86400000 "24 * 60 * 60 * 1000"
+)
+
+millisecondClockValue = (
+	"Answer the value of the millisecond clock."
+	^self utcMicrosecondClock // 1000
+)
+
+milliseconds: currentTime since: lastTime = (
+	"Answer the elapsed time since last recorded in milliseconds (i.e. of millisecondClockValue).
+	 Since the time basis is now a 61-bit or greater UTC microsecond clock, rollover is no longer an issue."
+	^currentTime - lastTime
+)
+
+millisecondsSince: lastTime = (
+	"Answer the elapsed time since last recorded in milliseconds.
+	Compensate for rollover."
+	^self milliseconds: self millisecondClockValue since: lastTime
+)
+
+millisecondsToRun: timedBlock = (
+	"Answer the number of milliseconds timedBlock takes to return its value."
+	^(self microsecondsToRun: timedBlock) + 500 // 1000
+)
+
+namesForTimes: arrayOfSeconds = (
+	| simpleEnglish final prev |
+	"Return English descriptions of the times in the array.  They are each seconds since 1901.  If two names are the same, append the date and time to distinguish them."
+	simpleEnglish := arrayOfSeconds collect: [:secsAgo |
+		self humanWordsForSecondsAgo: self totalSeconds - secsAgo].
+	prev := ''.
+	final := simpleEnglish copy.
+	simpleEnglish withIndexDo: [:eng :ind | | prevPair myPair |
+		eng = prev ifFalse: [eng]
+			ifTrue: ["both say 'a month ago'"
+				prevPair := self dateAndTimeFromSeconds:
+						(arrayOfSeconds at: ind-1).
+				myPair := self dateAndTimeFromSeconds:
+						(arrayOfSeconds at: ind).
+				(final at: ind-1) = prev ifTrue: ["only has 'a month ago'"
+					final at: ind-1 put:
+							(final at: ind-1), ', ', prevPair first mmddyyyy].
+				final at: ind put:
+							(final at: ind), ', ', myPair first mmddyyyy.
+				prevPair first = myPair first
+					ifTrue: [
+						(final at: ind-1) last == $m ifFalse: ["date but no time"
+							final at: ind-1 put:
+								(final at: ind-1), ', ', prevPair second printMinutes].
+						final at: ind put:
+							(final at: ind), ', ', myPair second printMinutes]].
+		prev := eng].
+	^ final
+)
+
+new = (
+	"Answer a Time representing midnight"
+	^ self midnight
+)
+
+noon = (
+	^ self seconds: (Time secondsInDay / 2)
+)
+
+now = (
+	"Answer a Time representing the time right now - this is a 24 hour clock."
+	| localUsecs localUsecsToday |
+	localUsecs := self localMicrosecondClock.
+	localUsecsToday := localUsecs \\ Time microsecondsInDay.
+	^ self
+		seconds: localUsecsToday // 1000000
+		nanoSeconds: localUsecsToday \\ 1000000 * 1000
+)
+
+posixEpochJulianDays = (
+	^ 2440588
+)
+
+posixMicrosecondClockWithOffset = (
+	"Answer an array with local microseconds since the Posix epoch and the
+	current seconds offset from GMT in the local time zone."
+	^self primPosixMicrosecondClockWithOffset
+)
+
+posixMicrosecondClockWithOffset: aDateAndTime = (
+	"Initialize aDateAndTime initialized with local microseconds since the Posix
+	epoch and the current seconds offset from GMT in the local time zone."
+	| utcValue |
+	self primPosixMicrosecondClockWithOffset: aDateAndTime.
+	^aDateAndTime
+)
+
+primPosixMicrosecondClockWithOffset = (
+	"Answer an array with UTC microseconds since the Posix epoch and the
+	current seconds offset from GMT in the local time zone. If the primitive is
+	not available, then answer the time and offset of Posix epoch GMT. This enables
+	the image to continue running in the absence of #primitiveUtcWithOffset, thus
+	avoiding the need to fallback code based on the earlier local microsecond clock
+	mechanism."
+	^{Smalltalk utcTime. Smalltalk utcOffset}
+)
+
+readFrom: aStream = (
+	"Read a Time from the stream in the form:
+		<hour>:<minute>:<second> <am/pm>
+	<minute>, <second> or <am/pm> may be omitted.  e.g. 1:59:30 pm; 8AM; 15:30"
+	| hourMinuteSecondNano |
+	hourMinuteSecondNano := self readHourMinuteSecondNanoFrom: aStream.
+	^ self
+		hour: hourMinuteSecondNano first
+		minute: hourMinuteSecondNano second
+		second: hourMinuteSecondNano third
+		nanoSecond: hourMinuteSecondNano fourth
+	"Time readFrom: (ReadStream on: '2:23:09 pm')"
+)
+
+readHourMinuteSecondNanoFrom: aStream = (
+	"Read a Time from the stream in the form:
+		<hour>:<minute>:<second> <am/pm>
+	<minute>, <second> or <am/pm> may be omitted.  e.g. 1:59:30 pm; 8AM; 15:30"
+	| hour minute second ampm nanos nanosBuffer |
+	hour := Integer readFrom: aStream.
+	minute := 0.
+	second := 0.
+	nanosBuffer := '000000000' copy.
+	nanos := WriteStream on: nanosBuffer.
+	(aStream peekFor: $:)
+		ifTrue: [
+			minute := Integer readFrom: aStream.
+			(aStream peekFor: $:)
+				ifTrue: [
+					second := Integer readFrom: aStream.
+					(aStream peekFor: $.)
+						ifTrue: [
+							[aStream atEnd not and: [aStream peek isDigit]]
+								whileTrue: [nanos nextPut: aStream next]]]].
+	aStream skipSeparators.
+	(aStream atEnd not and: ['PApa' includes: aStream peek]) ifTrue:
+		[ampm := aStream next asLowercase.
+		(ampm = $p and: [hour < 12]) ifTrue: [hour := hour + 12].
+		(ampm = $a and: [hour = 12]) ifTrue: [hour := 0].
+		(aStream peekFor: $m) ifFalse: [aStream peekFor: $M ]].
+	^ { hour . minute . second . nanosBuffer asInteger }
+	"Time readFrom: (ReadStream on: '2:23:09 pm')"
+)
+
+seconds: seconds = (
+	"Answer a Time from midnight."
+	^ self basicNew ticks: (Duration seconds: seconds) ticks
+)
+
+seconds: seconds nanoSeconds: nanoCount = (
+	"Answer a Time from midnight."
+	^ self basicNew
+		ticks: (Duration seconds: seconds nanoSeconds: nanoCount) ticks
+)
+
+totalSeconds = (
+	"Answer the total seconds since the Squeak epoch: 1 January 1901, in local time."
+	^self localMicrosecondClock // 1000000
+)
+
+utcMicrosecondClock = (
+	"Answer the UTC microseconds since the Smalltalk epoch (January 1st 1901, the start of the 20th century).
+	 The value is derived from the Posix epoch with a constant offset corresponding to elapsed microseconds
+	 between the two epochs according to RFC 868."
+	^ Smalltalk utcTime
+)
+
+squeakEpoch = ( ^ 2415386 ) "Julian day number of 1 Jan 1901"
+secondsInDay = ( ^ 86400 ) "24 * 60 * 60"
+secondsInHour = ( ^ 3600 ) "60 * 60"
+secondsInMinute = ( ^ 60 )
+microsecondsInDay = ( ^ 86400000000 ) "24 * 60 * 60 * 1000000"
+millisecondsInDay = ( ^ 86400000 ) "24 * 60 * 60 * 1000"
+nanosecondsInSecond = ( ^ 1000000000 ) "10 raisedTo: 9"
+nanosecondsInMillisecond = ( ^ 1000000 ) "10 raisedTo: 6"
+dayNames = ( ^ #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday) )
+monthNames = ( ^ #(January February March April May June July August September October November December) )
+daysInMonth = ( ^ #(31 28 31 30 31 30 31 31 30 31 30 31) )
+
+comment = (^'
+This represents a particular point in time during any given day.  For example, ''5:19:45 pm''.
+
+If you need a point in time on a particular day, use DateAndTime.  If you need a duration of time, use Duration.
+')
+
+
+)

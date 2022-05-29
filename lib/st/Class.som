@@ -1,5 +1,10 @@
 Class = Behavior (
 
+allClassVarNames = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 asString = (
 	^self name asString
 )

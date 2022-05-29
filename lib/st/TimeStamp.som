@@ -1,0 +1,100 @@
+TimeStamp = DateAndTime (
+
+asDateAndTime = (
+	"Answer the receiver as an instance of DateAndTime."
+	^ DateAndTime utcMicroseconds: utcMicroseconds offset: localOffsetSeconds
+)
+
+asTimeStamp = (
+	"Answer the receiver as an instance of TimeStamp."
+	^ self
+)
+
+date = (
+	"Answer the date of the receiver."
+	^ self asDate
+)
+
+dateAndTime = (
+	"Answer a two element Array containing the receiver's date and time."
+	^ Array with: self date with: self time
+)
+
+minusDays: anInteger = (
+	"Answer a TimeStamp which is anInteger days before the receiver."
+	^ self - (anInteger days)
+)
+
+minusSeconds: anInteger = (
+	"Answer a TimeStamp which is anInteger number of seconds before the receiver."
+	^ self - (anInteger seconds)
+)
+
+plusDays: anInteger = (
+	"Answer a TimeStamp which is anInteger days after the receiver."
+	^ self + (anInteger days)
+)
+
+plusSeconds: anInteger = (
+	"Answer a TimeStamp which is anInteger number of seconds after the receiver."
+	^ self + (anInteger seconds)
+)
+
+printOn: aStream = (
+	"Print receiver's date and time on aStream."
+	aStream
+		nextPutAll: self date printString;
+		space;
+		nextPutAll: self time printString.
+)
+
+storeOn: aStream = (
+	aStream
+		print: self printString;
+		nextPutAll: ' asTimeStamp'
+)
+
+time = (
+	"Answer the time of the receiver."
+	^ self asTime
+)
+
+
+----------------------------
+
+current = (
+	^self now
+)
+
+fromMethodTimeStamp: aString = (
+	| stream |
+	stream := ReadStream on: aString.
+	stream skipSeparators.
+	stream skipTo: Character space.
+	^self readFrom: stream.
+)
+
+fromString: aString = (
+	"Answer a new instance for the value given by aString.
+	 TimeStamp fromString: '1-10-2000 11:55:00 am'.
+	"
+	^self readFrom: (ReadStream on: aString).
+)
+
+readFrom: stream = (
+	| date time |
+	stream skipSeparators.
+	date := Date readFrom: stream.
+	stream skipSeparators.
+	time := Time readFrom: stream.
+	^self
+		date: date
+		time: time
+)
+
+
+comment = (^'
+This represents a duration of 0 length that marks a particular point in time.
+')
+
+)

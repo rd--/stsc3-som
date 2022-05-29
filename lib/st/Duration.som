@@ -1,0 +1,378 @@
+Duration = Magnitude (
+
+| nanos seconds |
+
+* operand = (
+	"operand is a Number"
+	^ self class nanoSeconds: ( (self asNanoSeconds * operand) asInteger)
+)
+
++ operand = (
+	"operand is a Duration"
+	^ self class nanoSeconds: (self asNanoSeconds + operand asNanoSeconds)
+)
+
+- operand = (
+	"operand is a Duration"
+	^ self + operand negated
+)
+
+/ operand = (
+	"operand is a Duration or a Number"
+	^ operand isNumber
+		ifTrue: [ self class nanoSeconds: (self asNanoSeconds / operand) asInteger ]
+		ifFalse: [ self asNanoSeconds / operand asDuration asNanoSeconds ]
+)
+
+// operand = (
+	"operand is a Duration or a Number"
+	^ operand isNumber
+		ifTrue: [ self class nanoSeconds: (self asNanoSeconds // operand) asInteger ]
+		ifFalse: [ self asNanoSeconds // operand asDuration asNanoSeconds ]
+)
+
+< comparand = (
+	^ self asNanoSeconds < comparand asNanoSeconds
+)
+
+= comparand = (
+	"Answer whether the argument is a <Duration> representing the same
+	period of time as the receiver."
+	^ self == comparand
+		ifTrue: [true]
+		ifFalse:
+			[self species = comparand species
+				ifTrue: [self asNanoSeconds = comparand asNanoSeconds]
+				ifFalse: [false] ]
+)
+
+\\ operand = (
+	"modulo. Remainder defined in terms of //. Answer a Duration with the
+	same sign as aDuration. operand is a Duration or a Number."
+	^ operand isNumber
+		ifTrue: [ self class nanoSeconds: (self asNanoSeconds \\ operand) ]
+		ifFalse: [ self - (operand * (self // operand)) ]
+)
+
+abs = (
+	^ self class seconds: seconds abs nanoSeconds: nanos abs
+)
+
+ago = (
+	"Answer the DateAndTime which was the receiver's duration ago.
+	e.g., 5 minutes ago.  2 days ago."
+	^ DateAndTime now - self
+)
+
+asDelay = (
+	^ Delay forDuration: self
+)
+
+asDuration = (
+	^ self
+)
+
+asMicroSeconds = (
+	nanos = 0 ifTrue: [ ^ seconds * 1e6 ].
+	^ (seconds * 1e6) + (nanos // 1000)
+)
+
+asMilliSeconds = (
+	nanos = 0 ifTrue: [ ^seconds * 1000 ].
+	^nanos // 1000000 + (seconds * 1000)
+)
+
+asNanoSeconds = (
+	^seconds * Time nanosecondsInSecond + nanos
+)
+
+asSeconds = (
+	^ seconds
+)
+
+days = (
+	"Answer the number of days the receiver represents."
+	^ seconds quo: Time secondsInDay
+)
+
+fromNow = (
+	"Answer the DateAndTime which which occurs the receiver's duration from now.
+	e.g., 5 minutes fromNow.  2 days fromNow."
+	^ DateAndTime now + self
+)
+
+fullSeconds: secondCount = (
+	"Private - only used by Duration class"
+	seconds := secondCount.
+	nanos := 0.
+)
+
+hash = (
+ 	^seconds bitXor: nanos
+)
+
+hours = (
+	"Answer the number of hours the receiver represents."
+	^ (seconds rem: Time secondsInDay) quo: Time secondsInHour
+)
+
+initialize = (
+	self seconds: 0 nanoSeconds: 0.
+)
+
+isZero = (
+	^ seconds = 0 and: [ nanos = 0 ]
+)
+
+minutes = (
+	"Answer the number of minutes the receiver represents."
+	^ (seconds rem: Time secondsInHour) quo: Time secondsInMinute
+)
+
+nanoSeconds = (
+	^ nanos
+)
+
+negated = (
+	^ self class seconds: seconds negated nanoSeconds: nanos negated
+)
+
+negative = (
+	^ self positive not
+)
+
+positive = (
+	^ seconds = 0 ifTrue: [ nanos positive ] ifFalse: [ seconds positive ]
+)
+
+printOn: aStream = (
+	"Format as per ANSI 5.8.2.16: [-]D:HH:MM:SS[.S]" 	| d h m s n |
+	d := self days abs.
+	h := self hours abs.
+	m := self minutes abs.
+ 	s := self seconds abs truncated.
+	n := self nanoSeconds abs. 	self negative ifTrue: [ aStream nextPut: $- ].
+	d printOn: aStream. aStream nextPut: $:.
+	h < 10 ifTrue: [ aStream nextPut: $0. ].
+	h printOn: aStream. aStream nextPut: $:.
+	m < 10 ifTrue: [ aStream nextPut: $0. ].
+	m printOn: aStream. aStream nextPut: $:.
+	s < 10 ifTrue: [ aStream nextPut: $0. ].
+	s printOn: aStream.
+	n = 0 ifFalse:
+		[ | z ps |
+		aStream nextPut: $..
+		ps := n printString padded: #left to: 9 with: $0.
+		z := ps findLast: [ :c | c asciiValue > $0 asciiValue ].
+		ps from: 1 to: z + 2 // 3 * 3 do: [ :c | aStream nextPut: c ] ]
+)
+
+roundTo: aDuration = (
+	"e.g. if the receiver is 5 minutes, 37 seconds, and aDuration is 2 minutes, answer 6 minutes."
+	^ self class nanoSeconds: (self asNanoSeconds roundTo: aDuration asNanoSeconds)
+)
+
+seconds = (
+	"Answer the number of seconds the receiver represents."
+	^seconds rem: Time secondsInMinute
+)
+
+seconds: secondCount nanoSeconds: nanoCount = (
+	"Private - only used by Duration class"
+	seconds := secondCount.
+	nanos := nanoCount rounded.
+	"normalize if signs do not match"
+	[ nanos < 0 and: [ seconds > 0 ] ]
+		whileTrue: [ seconds := seconds - 1.
+			nanos := nanos + Time nanosecondsInSecond ].
+	[ seconds < 0 and: [ nanos > 0 ] ]
+		whileTrue: [ seconds := seconds + 1.
+			nanos := nanos - Time nanosecondsInSecond ]
+)
+
+storeOn: aStream = (
+	aStream
+		nextPut: $(;
+		nextPutAll: self className;
+		nextPutAll: ' seconds: ';
+		print: seconds;
+		nextPutAll: ' nanoSeconds: ';
+		print: nanos;
+		nextPut: $)
+)
+
+ticks = (
+	"Answer an array {days. seconds. nanoSeconds}. Used by DateAndTime and Time."
+	| days |
+	days := self days.
+	^ Array
+		with: days
+		with: seconds - (days * Time secondsInDay)
+		with: nanos
+)
+
+truncateTo: aDuration = (
+	"e.g. if the receiver is 5 minutes, 37 seconds, and aDuration is 2 minutes, answer 4 minutes."
+	^ self class
+		nanoSeconds: (self asNanoSeconds truncateTo: aDuration asNanoSeconds)
+)
+
+wait = (
+	"Convert this duration in a delay and wait once. Return the created delay so that the client can wait on it again if needed.
+	Do-it: 3 minutes wait"
+	| delay |
+	delay := self asDelay.
+	delay wait.
+	^ delay
+)
+
+
+----------------------------
+
+| OneDay Zero |
+
+days: aNumber = (
+	^ self seconds: aNumber * Time secondsInDay nanoSeconds: 0
+)
+
+days: days hours: hours minutes: minutes seconds: seconds = (
+	^ self days: days hours: hours minutes: minutes seconds: seconds nanoSeconds: 0
+)
+
+days: days hours: hours minutes: minutes seconds: seconds nanoSeconds: nanos = (
+ 	^self
+		seconds: seconds
+			+ (minutes * Time secondsInMinute)
+			+ (hours * Time secondsInHour)
+			+ (days * Time secondsInDay)
+		nanoSeconds: nanos
+)
+
+days: days seconds: seconds = (
+	^ self basicNew seconds: days * Time secondsInDay + seconds nanoSeconds: 0
+)
+
+fromString: aString = (
+	^ self readFrom: (ReadStream on: aString)
+)
+
+hours: aNumber = (
+	^ self seconds: aNumber * Time secondsInHour nanoSeconds: 0
+)
+
+microSeconds: anInteger = (
+	^ self
+		seconds: (anInteger quo: 1e6)
+		nanoSeconds: (anInteger rem: 1e6) * 1000
+)
+
+milliSeconds: milliCount = (
+	^self
+		seconds: (milliCount quo: 1000)
+		nanoSeconds: (milliCount rem: 1000) * Time nanosecondsInMillisecond
+)
+
+minutes: aNumber = (
+	^ self seconds: aNumber * Time secondsInMinute nanoSeconds: 0
+)
+
+month: aMonth = (
+	"aMonth is an Integer or a String"
+	^ (Month month: aMonth year: Year current year) duration
+)
+
+nanoSeconds: nanos = (
+	"This method is slow. If you have nanos less than 10^6 you should use #seconds:nanoSeconds: instead."
+	| quo |
+	quo := nanos quo: Time nanosecondsInSecond.
+	^ self basicNew
+		seconds: quo
+		nanoSeconds: nanos - (quo * Time nanosecondsInSecond)
+)
+
+oneDay = (
+	"Answer the canonicalized Duration representing length of 1 day.  Used by Dates."
+	OneDay ifNil: [ OneDay := 1 day ].
+	^OneDay
+)
+
+readDayHourMinuteSecondNanaFrom: aStream = (
+	"Formatted as per ANSI 5.8.2.16: [-]D:HH:MM:SS[.S]"
+	| sign days hours minutes seconds nanos nanosBuffer |
+	sign := (aStream peekFor: $-) ifTrue: [-1] ifFalse: [1].
+	days := (aStream upTo: $:) asInteger sign: sign.
+	hours := (aStream upTo: $:) asInteger sign: sign.
+	minutes := (aStream upTo: $:) asInteger sign: sign.
+	seconds := (aStream upTo: $.) asInteger sign: sign.
+	nanosBuffer := '000000000' copy.
+	nanos := WriteStream on: nanosBuffer.
+	[aStream atEnd not and: [aStream peek isDigit]]
+		whileTrue: [nanos nextPut: aStream next].
+	^ { days . hours . minutes . seconds .nanosBuffer asInteger sign: sign }
+	"	'0:00:00:00' asDuration
+		'0:00:00:00.000000001' asDuration
+		'0:00:00:00.999999999' asDuration
+		'0:00:00:00.100000000' asDuration
+		'0:00:00:00.001 ' asDuration
+		'0:00:00:00.1' asDuration
+		'0:00:00:01 ' asDuration
+		'0:12:45:45' asDuration
+		'1:00:00:00' asDuration
+		'365:00:00:00' asDuration
+		'-7:09:12:06.10' asDuration
+		'+0:01:02:3' asDuration
+ 	"
+)
+
+readFrom: aStream = (
+	"Formatted as per ANSI 5.8.2.16: [-]D:HH:MM:SS[.S]"
+	| dayHourMinuteSecondNano |
+	dayHourMinuteSecondNano := self readDayHourMinuteSecondNanaFrom: aStream.
+	^ self
+		days: dayHourMinuteSecondNano first
+		hours: dayHourMinuteSecondNano second
+		minutes: dayHourMinuteSecondNano third
+		seconds: dayHourMinuteSecondNano fourth
+		nanoSeconds: dayHourMinuteSecondNano fifth
+	"	'0:00:00:00' asDuration
+		'0:00:00:00.000000001' asDuration
+		'0:00:00:00.999999999' asDuration
+		'0:00:00:00.100000000' asDuration
+		'0:00:00:00.001 ' asDuration
+		'0:00:00:00.1' asDuration
+		'0:00:00:01 ' asDuration
+		'0:12:45:45' asDuration
+		'1:00:00:00' asDuration
+		'365:00:00:00' asDuration
+		'-7:09:12:06.10' asDuration
+		'+0:01:02:3' asDuration
+ 	"
+)
+
+seconds: seconds = (
+	seconds isInteger
+		ifTrue: [ ^ self basicNew fullSeconds: seconds ]
+		ifFalse: [ ^ self seconds: seconds nanoSeconds: 0 ]
+)
+
+seconds: seconds nanoSeconds: nanos = (
+	^ self basicNew
+		seconds: seconds truncated
+		nanoSeconds: seconds fractionPart * Time nanosecondsInSecond + nanos
+)
+
+weeks: aNumber = (
+	^ self days: (aNumber * 7) seconds: 0
+)
+
+zero = (
+	"Answer the canonicalized instance of Duration zero."
+	Zero ifNil: [ Zero := self basicNew seconds: 0 nanoSeconds: 0 ].
+	^Zero
+)
+
+comment = (^'
+I represent a duration of time. I have nanosecond precision
+')
+
+)

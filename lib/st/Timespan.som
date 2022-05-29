@@ -1,0 +1,349 @@
+Timespan = Magnitude (
+| start duration |
+
++ operand = (
+	"operand conforms to protocol Duration"
+	^ self class starting: (self start + operand) duration: self duration
+)
+
+- operand = (
+	"operand conforms to protocol DateAndTime or protocol Duration"
+	^ (operand respondsTo: #asDateAndTime)
+	 	ifTrue: [ self start - operand ]
+	ifFalse: [ self + (operand negated) ]
+)
+
+< comparand = (
+	^ self start < comparand
+)
+
+= comparand = (
+	^ self class = comparand class
+		and: [ self start = comparand start
+		and: [ self duration = comparand duration ] ]
+.
+)
+
+asDate = (
+	^ start asDate
+)
+
+asDateAndTime = (
+	^ start
+)
+
+asDuration = (
+	^ self duration
+)
+
+asMonth = (
+	^ start asMonth
+)
+
+asTime = (
+	^ start asTime
+)
+
+asTimeStamp = (
+	^ start asTimeStamp
+)
+
+asWeek = (
+	^ start asWeek
+)
+
+asYear = (
+	^ start asYear
+)
+
+beCanonical = (
+	"Chronology preserves Timespans that are extracted from DateAndTime's, making Dates, Months and Years in Squeak able to represent a true Timespan of those durations starting at a specific local DateAndTime.  In case a canonical version is needed, make the receiver independent of any Timezone by removing it."
+	start makeUTC
+)
+
+dates = (
+	| dates |
+	dates := OrderedCollection new.
+	self datesDo: [ :m | dates add: m ].
+	^ dates asArray
+)
+
+datesDo: aBlock = (
+	self do: aBlock with: start asDate
+)
+
+day = (
+	"Answer the day of the year represented by the receiver."
+	^ self dayOfYear
+)
+
+dayOfLocalWeek = (
+	"Answer the day of the week represented by the receiver."
+	^ start dayOfLocalWeek
+)
+
+dayOfMonth = (
+	"Answer the day of the month represented by the receiver."
+	^ start dayOfMonth
+)
+
+dayOfWeek = (
+	"Answer the day of the week represented by the receiver."
+	^ start dayOfWeek
+)
+
+dayOfWeekName = (
+	"Answer the day of the week represented by the receiver."
+	^ start dayOfWeekName
+)
+
+dayOfYear = (
+	"Answer the day of the year represented by the receiver."
+	^ start dayOfYear
+)
+
+daysInMonth = (
+	^ start daysInMonth
+)
+
+daysInYear = (
+	"Answer the number of days in the month represented by the receiver."
+	^ start daysInYear
+)
+
+daysLeftInYear = (
+	^ start daysLeftInYear
+)
+
+do: aBlock with: aFirstElement = (
+	self do: aBlock with: aFirstElement when: [ :t | true ]
+)
+
+do: aBlock with: aFirstElement when: aConditionBlock = (
+	| element end |
+	element := aFirstElement.
+	end := self end.
+	[ element start <= end ] whileTrue:
+	[(aConditionBlock value: element)
+			ifTrue: [ aBlock value: element ].
+		element := element next. ]
+)
+
+duration = (
+	"Answer the Duration of this timespan"
+	^ duration
+)
+
+duration: aDuration = (
+	"Set the Duration of this timespan"
+	duration := aDuration
+)
+
+end = (
+	^ self duration asNanoSeconds = 0
+		ifTrue: [ self start ]
+		ifFalse: [ self next start - DateAndTime clockPrecision ]
+)
+
+every: aDuration do: aBlock = (
+	| element end |
+	element := self start.
+	end := self end.
+	[ element <= end ] whileTrue:
+	[ aBlock value: element.
+		element := element + aDuration. ]
+)
+
+firstDayOfMonth = (
+	^ start firstDayOfMonth
+)
+
+hash = (
+	^ start hash + duration hash
+)
+
+includes: aDateAndTime = (
+	^ (aDateAndTime isKindOf: Timespan)
+			ifTrue: [ (self includes: aDateAndTime start)
+						and: [ self includes: aDateAndTime end ] ]
+			ifFalse: [ aDateAndTime asDateAndTime between: start and: self end ]
+)
+
+includesAllOf: aCollection = (
+	"Answer whether all the elements of aCollection are in the receiver."
+	aCollection do: [:elem | (self includes: elem) ifFalse: [^ false]].
+	^ true
+)
+
+includesAnyOf: aCollection = (
+	"Answer whether any element of aCollection is included in the receiver"
+	aCollection do: [ :elem | (self includes: elem) ifTrue: [^ true]].
+	^false
+)
+
+intersection: aTimespan = (
+	 "Return the Timespan both have in common, or nil"
+	 | aBegin anEnd |
+	 aBegin := self start max: aTimespan start.
+	 anEnd := self end min: aTimespan end.
+	 anEnd < aBegin ifTrue: [^nil].
+	 ^ self class starting: aBegin ending: anEnd
+)
+
+isLeapYear = (
+	^ start isLeapYear
+)
+
+julianDayNumber = (
+	^ start julianDayNumber
+)
+
+makeUTC = (
+	"Change the receiver's timezone to UTC, which affords substantially better hashing performance."
+	start makeUTC
+)
+
+month = (
+	^ start month
+)
+
+monthAbbreviation = (
+	^ start monthAbbreviation
+)
+
+monthIndex = (
+	^ self month
+)
+
+monthName = (
+	^ start monthName
+)
+
+months = (
+	| months |
+	months := OrderedCollection new: 12.
+	self monthsDo: [ :m | months add: m ].
+	^ months asArray.
+)
+
+monthsDo: aBlock = (
+	self do: aBlock with: start asMonth
+)
+
+next = (
+	^ self class starting: (start + duration) duration: duration
+)
+
+previous = (
+	^ self class starting: (start - duration) duration: duration
+)
+
+printOn: aStream = (
+	super printOn: aStream.
+	aStream
+		nextPut: $(;
+		print: start;
+		nextPut: $D;
+		print: duration;
+		nextPut: $)
+)
+
+start = (
+	"Answer the start DateAndTime of this timespan"
+	^ start
+)
+
+start: aDateAndTime = (
+	"Store the start DateAndTime of this timespan"
+	start := aDateAndTime asDateAndTime
+)
+
+to: anEnd = (
+	"Answer an Timespan. anEnd must be aDateAndTime or a Timespan"
+	^ Timespan starting: (self start) ending: (anEnd asDateAndTime)
+)
+
+union: aTimespan = (
+	 "Return the Timespan spanned by both"
+	| aBegin anEnd |
+	aBegin := self start min: aTimespan start.
+	anEnd := self end max: aTimespan end.
+	^ Timespan starting: aBegin ending: (anEnd + DateAndTime clockPrecision)
+)
+
+weeks = (
+	| weeks |
+	weeks := OrderedCollection new.
+	self weeksDo: [ :m | weeks add: m ].
+	^ weeks asArray
+)
+
+weeksDo: aBlock = (
+	self do: aBlock with: self asWeek.
+)
+
+workDatesDo: aBlock = (
+	"Exclude Saturday and Sunday"
+	self do: aBlock with: start asDate when: [ :d | d dayOfWeek < 6 ]
+)
+
+year = (
+	^ start year
+)
+
+years = (
+	| years |
+	years := OrderedCollection new.
+	self yearsDo: [ :m | years add: m ].
+	^ years asArray
+)
+
+yearsDo: aBlock = (
+	self do: aBlock with: start asYear.
+)
+
+
+----------------------------
+
+current = (
+	^ self starting: (DateAndTime now offset: self defaultOffset)
+)
+
+defaultOffset = (
+	"Timespans created in the context of an offset will start in that offset.  When no context is available, the defaultOffset for Timespans must be zero.  For example, two ways to make a Date for today:
+	Date today.  'start is midnight at offset zero.  Will compare successfully to other Date today results.'
+	DateAndTime now asDate.  'In this case, the start is midnight of the local time-zone.  It can only compare equally to Dates of its time-zone.'"
+	^ Duration zero
+)
+
+new = (
+	"Answer a Timespan starting on the Squeak epoch: 1 January 1901"
+	^ self starting: (DateAndTime new offset: self defaultOffset)
+)
+
+starting: aDateAndTime = (
+	^ self starting: aDateAndTime duration: Duration zero
+)
+
+starting: aDateAndTime duration: aDuration = (
+	^ self basicNew
+ 		start: aDateAndTime asDateAndTime;
+		duration: aDuration;
+		yourself
+)
+
+starting: startDateAndTime ending: endDateAndTime = (
+	^ self
+		starting: startDateAndTime
+		duration: (endDateAndTime asDateAndTime - startDateAndTime)
+)
+
+
+comment = (^'
+I represent a duration starting on a specific DateAndTime.
+
+If my start has an offset identical to my #defaultOffset then comparisons ignore timezone offset.
+')
+
+
+)

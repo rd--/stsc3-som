@@ -15,6 +15,7 @@ import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
 import qualified Data.Time.Clock.System as Time {- time -}
+import qualified Data.Time.LocalTime as Time {- time -}
 
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
@@ -169,17 +170,39 @@ vmStateInit globalDictionary = do
 vmStartTime :: Vm Double
 vmStartTime = State.get >>= \(startTime,_,_,_,_) -> return startTime
 
--- | Get system time in seconds (floating point).
+{- | Get system time in seconds (floating point).
+This is elapsed time since the UTC epoch of 1970-01-01.
+
+> tm <- getSystemTimeInSeconds
+> secondsInYear = 365 * 24 * 60 * 60
+> tm / secondsInYear
+
+70 * 365 * 24 * 60 * 60
+2207520000
+2177452800
+(3831283062664445 / 1e6) / secondsInYear
+-}
 getSystemTimeInSeconds :: MonadIO m => m Double
 getSystemTimeInSeconds = do
   tm <- liftIO Time.getSystemTime
   return (fromIntegral (Time.systemSeconds tm) + (fromIntegral (Time.systemNanoseconds tm) * 1.0e-9))
 
-vmElapsedTimeInMicroseconds :: Vm Int
-vmElapsedTimeInMicroseconds = do
+getSystemTimezoneInSeconds :: MonadIO m => m Int
+getSystemTimezoneInSeconds = do
+  tz <- liftIO Time.getCurrentTimeZone
+  return (Time.timeZoneMinutes tz * 60)
+
+vmElapsedTimeInSeconds :: Vm Double
+vmElapsedTimeInSeconds = do
   startTime <- vmStartTime
   currentTime <- getSystemTimeInSeconds
-  return (round ((currentTime - startTime) * 1.0e6))
+  return (currentTime - startTime)
+
+secondsToMicroseconds :: Double -> Int
+secondsToMicroseconds = round . (* 1.0e6)
+
+vmElapsedTimeInMicroseconds :: Vm Int
+vmElapsedTimeInMicroseconds = fmap secondsToMicroseconds vmElapsedTimeInSeconds
 
 -- | Fetch program counter.
 vmProgramCounter :: Vm Int

@@ -13,8 +13,17 @@ CharacterTest suite run printOn: Transcript
 CollectionTest testSelectors do: [ :each | Transcript show: each; cr. CollectionTest run: each ]
 CollectionTest suite run printOn: Transcript
 
+DateAndTimeTest testSelectors do: [ :each | Transcript show: each; cr. DateAndTimeTest run: each ]
+DateAndTimeTest suite run printOn: Transcript
+
+DateTest testSelectors do: [ :each | Transcript show: each; cr. DateTest run: each ]
+DateTest suite run printOn: Transcript
+
 DictionaryTest testSelectors do: [ :each | Transcript show: each; cr. DictionaryTest run: each ]
 DictionaryTest suite run printOn: Transcript
+
+DurationTest testSelectors do: [ :each | Transcript show: each; cr. DurationTest run: each ]
+DurationTest suite run printOn: Transcript
 
 FalseTest testSelectors do: [ :each | Transcript show: each; cr. FalseTest run: each ]
 FalseTest suite run printOn: Transcript
@@ -39,6 +48,9 @@ IntervalTest suite run printOn: Transcript
 
 MatrixTest testSelectors do: [ :each | Transcript show: each; cr. MatrixTest run: each ]
 MatrixTest suite run printOn: Transcript
+
+MonthTest testSelectors do: [ :each | Transcript show: each; cr. MonthTest run: each ]
+MonthTest suite run printOn: Transcript
 
 NumberTest testSelectors do: [ :each | Transcript show: each; cr. NumberTest run: each ]
 NumberTest suite run printOn: Transcript
@@ -71,14 +83,33 @@ StringTest suite run printOn: Transcript
 SymbolTest testSelectors do: [ :each | Transcript show: each; cr. SymbolTest run: each ]
 SymbolTest suite run printOn: Transcript
 
+TimeTest testSelectors do: [ :each | Transcript show: each; cr. TimeTest run: each ]
+TimeTest suite run printOn: Transcript
+
+TimespanTest testSelectors do: [ :each | Transcript show: each; cr. TimespanTest run: each ]
+TimespanTest suite run printOn: Transcript
+
+TimeStampTest testSelectors do: [ :each | Transcript show: each; cr. TimeStampTest run: each ]
+TimeStampTest suite run printOn: Transcript
+
 TrueTest testSelectors do: [ :each | Transcript show: each; cr. TrueTest run: each ]
 TrueTest suite run printOn: Transcript
 
 UndefinedObjectTest testSelectors do: [ :each | Transcript show: each; cr. UndefinedObjectTest run: each ]
 UndefinedObjectTest suite run printOn: Transcript
 
+WeekTest testSelectors do: [ :each | Transcript show: each; cr. WeekTest run: each ]
+WeekTest suite run printOn: Transcript
+
 WriteStreamTest testSelectors do: [ :each | Transcript show: each; cr. WriteStreamTest run: each ]
 WriteStreamTest suite run printOn: Transcript
+
+YearTest testSelectors do: [ :each | Transcript show: each; cr. YearTest run: each ]
+YearTest suite run printOn: Transcript
+
+Smalltalk utcTime
+Smalltalk utcOffset
+{Smalltalk utcTime. Smalltalk utcOffset}
 
 "Emacs"
 (setq stsc3-interpreter (list "stsc3-st"))

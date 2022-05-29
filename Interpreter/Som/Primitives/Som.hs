@@ -255,14 +255,7 @@ somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
 This is Behaviour>>allInstVarNames and Class>>allClassVarNames in Smalltalk, which are not primitive.
 -}
 prClassFields :: St.ClassDefinition -> Bool -> Vm Object
-prClassFields cd isMeta =
-  case isMeta of
-    False -> do
-      fld <- classAllVariableNames St.classInstanceVariableNames cd
-      arrayFromList (map symObject fld)
-    True -> do
-      fld <- classAllVariableNames St.classVariableNames cd
-      arrayFromList (map symObject fld)
+prClassFields cd isMeta = arrayFromList . map symObject =<< classAllVariableNamesFor cd isMeta
 
 prMethodInvokeOnWith :: CoreOpt -> ObjectData -> Object -> Object -> Vm Object
 prMethodInvokeOnWith opt obj receiver argumentsArray = do

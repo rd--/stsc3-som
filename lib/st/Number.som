@@ -100,6 +100,10 @@ arcTan: denominator = (
 	^(self asFloat) arcTan: denominator.
 )
 
+asDuration = (
+	^ Duration nanoSeconds: self asInteger
+)
+
 asExactFloat = (
 	"Convert this number asFloat with a priori knowledge that it is an exact Float.
 	Some subclass might exploit this knowledge for a faster implementation.
@@ -140,6 +144,14 @@ copySignTo: aNumber = (
 
 cos = (
 	^self asFloat cos
+)
+
+day = (
+	^ self sign days
+)
+
+days = (
+	^ Duration days: self
 )
 
 degreeCos = (
@@ -205,6 +217,14 @@ fractionPart = (
 	^self - self integerPart
 )
 
+hour = (
+	^ self sign hours
+)
+
+hours = (
+	^ Duration hours: self
+)
+
 integerPart = (
 	^self truncated
 )
@@ -241,6 +261,30 @@ log2 = (
 
 ln = (
 	^self asFloat ln
+)
+
+milliSecond = (
+	^ self sign milliSeconds
+)
+
+milliSeconds = (
+	^ Duration milliSeconds: self
+)
+
+minute = (
+	^ self sign minutes
+)
+
+minutes = (
+	^ Duration minutes: self
+)
+
+nanoSecond = (
+	^ self sign nanoSeconds
+)
+
+nanoSeconds = (
+	^ Duration nanoSeconds: self
 )
 
 negated = (
@@ -386,6 +430,14 @@ roundTo: quantum = (
 	^(self / quantum) rounded * quantum
 )
 
+second = (
+	^ self sign seconds
+)
+
+seconds = (
+	^ Duration seconds: self
+)
+
 sign = (
 	self > 0 ifTrue: [^1].
 	self < 0 ifTrue: [^-1].
@@ -473,6 +525,14 @@ truncated = (
 truncateTo: aNumber = (
 	"Answer the next multiple of aNumber toward zero that is nearest the receiver."
 	^(self quo: aNumber) * aNumber
+)
+
+week = (
+	^ self sign weeks
+)
+
+weeks = (
+	^ Duration weeks: self
 )
 
 ----

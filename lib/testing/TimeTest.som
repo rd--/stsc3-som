@@ -1,0 +1,336 @@
+TimeTest = ClassTestCase (
+
+| time aTime localTimeZoneToRestore timeWithNanos localTimeZonePreferenceToRestore |
+
+timeClass = (
+	^ Time
+)
+
+selectorsToBeIgnored = (
+	 | deprecated private special primitives timing benchmarks |
+	deprecated := #().
+	private := #( #print24:on: #print24:showSeconds:on: ).
+	special := #( #< #= #new #printOn: #storeOn: ).
+	primitives := #( #primMillisecondClock #primSecondsClock ).
+	timing := #( #millisecondClockValue #milliseconds:since: #millisecondsSince: ).
+	benchmarks := #( #benchmarkMillisecondClock #benchmarkPrimitiveResponseDelay ).
+	^ super selectorsToBeIgnored, deprecated, private, special, primitives, timing, benchmarks.
+)
+
+setUp = (
+	time := Time readFromString: '4:02:47 am'.
+	aTime := Time readFrom: '12:34:56 pm' readStream.
+	timeWithNanos :=  Time readFromString: '4:02:47.42 am'
+)
+
+tearDown = (
+)
+
+testAccessing = (
+	self
+		assert: time hours = 4;
+		assert: time minutes = 2;
+		assert: time seconds = 47;
+		assert: time asSeconds = 14567.
+)
+
+testAddSeconds = (
+	self assert: (aTime addSeconds: 1) = (Time readFromString: '12:34:57').
+	self assert: (aTime addSeconds: 60) = (Time readFromString: '12:35:56').
+	self assert: (aTime addSeconds: 3600) = (Time readFromString: '13:34:56').
+	self assert: (aTime addSeconds: 24*60*60) = (Time readFromString: '12:34:56').
+)
+
+testAddTime = (
+	self assert: (aTime addTime: aTime) = (Time readFromString: '01:09:52').
+)
+
+testArithmetic = (
+	| t1 t2 t3 |
+	t1 := time addSeconds: 70.		"4:03:57 am"
+	self
+		assert: t1 hours = 4;
+		assert: t1 minutes = 3;
+		assert: t1 seconds = 57.
+	t2 := t1 addTime: (Time fromSeconds: (60*60*5)).
+	self
+		assert: t2 hours = 9;
+		assert: t2 minutes = 3;
+		assert: t2 seconds = 57.
+	t3 := t2 subtractTime: (Time fromSeconds: (60*60*5) + 70).
+	self
+		assert: t3 = time.
+)
+
+testAsDate = (
+	self assert: (aTime asDate) = (Date current)
+)
+
+testAsDateAndTime = (
+	self assert: (aTime asDateAndTime) = (DateAndTime current midnight + aTime)
+)
+
+testAsDuration = (
+	self assert: (aTime asDuration) = (Duration days: 0 hours: 12 minutes: 34 seconds: 56)
+)
+
+testAsNanoSeconds = (
+	self assert: (aTime asNanoSeconds) = 45296000000000
+)
+
+testAsSeconds = (
+	self assert: (aTime asSeconds) = 45296
+)
+
+testAsTime = (
+	self assert: (aTime asTime) = aTime
+)
+
+testAsTimeStamp = (
+	self assert: (aTime asTimeStamp) = (DateAndTime current midnight + aTime) asTimeStamp
+)
+
+testAsWeek = (
+	self assert: aTime asWeek = (DateAndTime current midnight + aTime) asWeek
+)
+
+testAsYear = (
+	self assert: aTime asYear = (DateAndTime current midnight + aTime) asYear
+)
+
+testComparing = (
+	| t1 t2 t3 |
+	t1 := Time fromSeconds: 14567.		"4:02:47 am"
+	t2 := Time fromSeconds: 5000.		"1:23:20 am"
+	t3 := Time fromSeconds: 80000.		"10:13:20 pm"
+	self
+		assert: time = t1;
+		assert: time hash = t1 hash;
+		assert: time = time copy.
+	self
+		deny: t1 < t2;
+		assert: t1 < t3.
+)
+
+testConverting = (
+	self
+		assert: time asSeconds = 14567.
+)
+
+testDuration = (
+	self assert: aTime duration = 0 seconds
+)
+
+testEqual = (
+	self assert: aTime = (Time readFromString: '12:34:56').
+)
+
+testFromSeconds = (
+	| t |
+	t := Time fromSeconds: 14567.
+	self
+		assert: t = time
+)
+
+testGeneralInquiries = (
+	| now d t dt epsilon |
+	"vm clocks seem to work differently across platforms, so an epsilon is required"
+	epsilon := 1. "second"
+	now  := Time dateAndTimeNow.
+	self
+		assert: now size = 2;
+		assert: (now last asSeconds - Time now asSeconds) abs <= epsilon.
+	"self should: [ Time timeWords ] raise: MessageNotUnderstood."
+	d := '2 June 1973' asDate.
+	t := '4:02:47 am' asTime.
+	dt := Time dateAndTimeFromSeconds: (2285280000 + 14567).
+	self
+		assert: dt = {d. t.}.
+)
+
+"
+testHash = (
+	self assert: aTime hash = (Character instSize > 0 ifTrue: [607004] ifFalse: [101409191])
+)
+"
+
+testHhmm24 = (
+	self assert: aTime hhmm24 = '1234'
+)
+
+testHour = (
+	self assert: aTime hour =  12.
+	self assert: aTime hour12 =  12.
+	self assert: aTime hour24 =  12.
+	self assert: aTime hours =  12.
+)
+
+"
+testHumanWordsForSecondsAgo = (
+	self assert: (Time humanWordsForSecondsAgo: 0.999999999)
+			= 'a second ago'.
+	self assert: (Time humanWordsForSecondsAgo: 44.99999999)
+			= '44.99999999 seconds ago'.
+	self assert: (Time humanWordsForSecondsAgo: 89.999999999)
+			= 'a minute ago'.
+	self assert: (Time humanWordsForSecondsAgo: 2699.999999999)
+			= '44 minutes ago'.
+	self assert: (Time humanWordsForSecondsAgo: 5399.999999999)
+			= 'an hour ago'.
+	self assert: (Time humanWordsForSecondsAgo: 64799.999999999)
+			= '17 hours ago'.
+)
+
+testHumanWordsForSecondsAgoWithDays = (
+	self assert: (Time humanWordsForSecondsAgo: 18 * 60 * 60)
+					= 'yesterday'.
+	self assert: (Time humanWordsForSecondsAgo: 24 * 60 * 60)
+					= 'yesterday'.
+)
+"
+
+testLessThan = (
+	self assert: aTime < (Time readFromString: '12:34:57').
+)
+
+testMeridianAbbreviation = (
+	self assert: aTime meridianAbbreviation =  'PM'.
+)
+
+testMinute = (
+	self assert: aTime minute =  34.
+	self assert: aTime minutes =  34
+)
+
+testNanoSecond = (
+	self assert: aTime nanoSecond = 0
+	"Right now all times all seconds"
+)
+
+testNew = (
+	self assert: Time new asSeconds = 0
+)
+
+testPrint24 = (
+	self assert: aTime print24 = '12:34:56'
+)
+
+testPrint24On = (
+	| referenceString printed |
+	referenceString := '12:34:56'.
+	printed := WriteStream on: ''.
+	aTime print24: true on: printed.
+	self assert: printed contents = referenceString
+)
+
+testPrint24OnWithPM = (
+	| referenceString printed |
+	referenceString := '12:34:56 pm'.
+	printed := WriteStream on: ''.
+	aTime print24: false on: printed.
+	^ self assert: printed contents = referenceString
+)
+
+testPrint24OnWithoutSeconds = (
+	| referenceString printed |
+	referenceString := '12:34'.
+	printed := WriteStream on: ''.
+	aTime print24: true showSeconds: false on: printed.
+	self assert: printed contents = referenceString
+)
+
+testPrintMinutes = (
+	self assert: aTime printMinutes = '12:34 pm'
+)
+
+testPrintOn = (
+	| referenceString printed |
+	referenceString := '12:34:56 pm'.
+	printed := WriteStream on: ''.
+	aTime printOn: printed.
+	self assert: printed contents = referenceString
+)
+
+testPrinting = (
+	self
+		assert: time printString = '4:02:47 am';
+		assert: time intervalString =  '4 hours 2 minutes 47 seconds';
+		assert: time print24 = '04:02:47';
+		assert: time printMinutes = '4:02 am';
+		assert: time hhmm24 = '0402'.
+)
+
+"
+testPrintingNanos = (
+	self
+		assert: timeWithNanos printString = '4:02:47.42 am';
+		assert: timeWithNanos intervalString =  '4 hours 2 minutes 47 seconds';
+		assert: timeWithNanos print24 = '04:02:47';
+		assert: timeWithNanos printMinutes = '4:02 am';
+		assert: timeWithNanos hhmm24 = '0402'.
+)
+"
+
+testReadFrom = (
+	| t1 t2 |
+	t1 := Time readFrom: '4:02:47 am' readStream.
+	t2 := Time readFrom: '4:02:47.000 am' readStream.
+	self
+		assert: time = t1;
+		assert: time = t2
+)
+
+testSecond = (
+	self assert: aTime second =  56.
+	self assert: aTime seconds =  56
+)
+
+"
+testSqueakInquiries = (
+	| timewords totalseconds condensed corrected |
+	self assert:
+		(Time namesForTimes: #(2 10000023 10000026))
+			= #('January, 1901' 'April, 1901, 4/26/1901, 5:47 pm' 'April, 1901, 4/26/1901, 5:47 pm').
+	timewords := #(0.5 30 62 130 4000 10000 60000 86401)
+		collect: [ :ss | Time humanWordsForSecondsAgo: ss ].
+	self assert:
+		timewords = #('a second ago' '30 seconds ago' 'a minute ago' '2 minutes ago'
+			'an hour ago' '2 hours ago' '16 hours ago' 'yesterday').
+	totalseconds :=  Time totalSeconds.
+	condensed := Time condenseBunches:
+		(#(20 400 401  20000 20200 20300 40000 45000  200000 201000 202000)
+			collect: [:tt | totalseconds - tt]).
+	corrected := condensed collect: [ :e | totalseconds - e ].
+	self
+		assert: (corrected includesAllOf: #(20 400 401 20000 40000 45000 200000)).
+)
+"
+
+testStoreOn = (
+	| referenceString stored |
+	referenceString := '''12:34:56 pm'' asTime'.
+	stored := WriteStream on: ''.
+	aTime storeOn: stored.
+	self assert: stored contents = referenceString
+)
+
+testStoring = (
+	self
+		assert: time storeString = '''4:02:47 am'' asTime';
+		assert: time = ('4:02:47 am' asTime).
+)
+
+testSubtractTime = (
+	self assert: (aTime subtractTime: aTime) = (Time readFrom: (ReadStream on: '00:00:00'))
+)
+
+testTicks = (
+	self assert: aTime ticks = #(0 45296 0).
+	self assert: aTime  = (Time new ticks: #(0 45296 0))
+)
+
+testTimeStamp = (
+	self assert: aTime = aTime asTimeStamp asTime
+)
+
+)

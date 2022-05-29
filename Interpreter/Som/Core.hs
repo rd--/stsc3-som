@@ -496,6 +496,12 @@ classAllVariableNames fn cd = do
            _ -> vmError "classAllVariableNames"
     Nothing -> return (fn cd)
 
+classAllVariableNamesFor :: St.ClassDefinition -> Bool -> Vm [Symbol]
+classAllVariableNamesFor cd isMeta =
+  case isMeta of
+    False -> classAllVariableNames St.classInstanceVariableNames cd
+    True -> classAllVariableNames St.classVariableNames cd
+
 {- | Create instance of a non-indexable non-immediate class.
      Allocate reference for instance variables and initialize to nil.
      The instance variables of an object are:

@@ -1,5 +1,10 @@
 Behavior = Object (
 
+allInstVarNames = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 allSelectors = (
     "Answer all selectors understood by instances of the receiver"
     ^(Array streamContents: [ :stream |
@@ -70,6 +75,11 @@ inheritsFrom: aClass = (
 			[aSuperclass == aClass ifTrue: [^true].
 			aSuperclass := aSuperclass superclass].
 	^false
+)
+
+instVarIndexFor: instVarName ifAbsent: aBlock = (
+	"Answer the index of the named instance variable."
+	^self allInstVarNames indexOf: instVarName ifAbsent: aBlock
 )
 
 isVariable = (

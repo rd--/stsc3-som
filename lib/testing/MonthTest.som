@@ -1,0 +1,91 @@
+MonthTest = ClassTestCase (
+
+| month |
+
+classToBeTested = (
+	^ Month
+)
+
+selectorsToBeIgnored = (
+	| deprecated private special |
+	deprecated := #().
+	private := #( #printOn: ).
+	special := #( #next ).
+	^ super selectorsToBeIgnored, deprecated, private, special.
+)
+
+setUp = (
+	super setUp.
+	month := Month month: 7 year: 1998.
+)
+
+tearDown = (
+	super tearDown.
+	month := nil.
+)
+
+testConverting = (
+	self assert: month asDate = '1 July 1998' asDate
+)
+
+testEnumerating = (
+	| weeks |
+	weeks := OrderedCollection new.
+	month weeksDo: [ :w | weeks add: w start ].
+	0 to: 4 do: [ :i | weeks remove: (Week starting:  ('29 June 1998' asDate addDays: i * 7)) start ].
+	self assert: weeks isEmpty
+)
+
+testIndexOfMonth = (
+	| m |
+	m := #(#January #February #March #April #May #June #July #August #September #October #November #December).
+	m withIndexDo: [:item :index | self assert: (Month indexOfMonth: item) = index].
+)
+
+testInquiries = (
+	self
+		assert: month index = 7;
+		assert: month name = #July;
+		assert: month duration = (31 days).
+)
+
+testInstanceCreation = (
+	| m1 m2 |
+	m1 := Month starting:  '4 July 1998' asDate.
+	m2 := Month month: #July year: 1998.
+	self
+		assert: month = m1;
+		assert: month = m2
+)
+
+testNameOfMonth = (
+	| m |
+	m := #(#January #February #March #April #May #June #July #August #September #October #November #December).
+	m withIndexDo: [:item :index | self assert: (Month nameOfMonth: index) = item].
+)
+
+testPreviousNext = (
+	| n p |
+	n := month next.
+	p := month previous.
+	self
+		assert: n year = 1998;
+		assert: n index = 8;
+		assert: p year = 1998;
+		assert: p index = 6.
+)
+
+testPrinting = (
+	self
+		assert: month printString = 'July 1998'.
+)
+
+testReadFrom = (
+	| m |
+	m := Month readFrom: 'July 1998' readStream.
+	self
+		assert: m = month
+)
+
+
+)

@@ -167,6 +167,11 @@ do: elementBlock separatedBy: separatorBlock = (
 		elementBlock value: (self at: index)]
 )
 
+doWithIndex: elementAndIndexBlock = (
+	"Use the new version with consistent naming"
+	^ self withIndexDo: elementAndIndexBlock
+)
+
 endsWith: sequence = (
 	"Answer true if the receiver ends with the argument collection."
 	| sequenceSize offset |
@@ -179,6 +184,33 @@ endsWith: sequence = (
 endsWithAnyOf: aCollection = (
 	"Return true if the receiver ends with any of the elements in aCollection."
 	^aCollection anySatisfy:[:suffix| self endsWith: suffix]
+)
+
+findFirst: aBlock = (
+	"Return the index of my first element for which aBlock evaluates as true."
+	| index |
+	index := 0.
+	[(index := index + 1) <= self size] whileTrue:
+		[(aBlock value: (self at: index)) ifTrue: [^index]].
+	^ 0
+)
+
+findLast: aBlock = (
+	"Return the index of my last element for which aBlock evaluates as true."
+	| index |
+	index := self size + 1.
+	[(index := index - 1) >= 1] whileTrue:
+		[(aBlock value: (self at: index)) ifTrue: [^index]].
+	^ 0
+)
+
+findLast: aBlock startingAt: i = (
+	"Return the index of my last element with index >= i for which aBlock evaluates as true."
+	| index |
+	index := self size + 1.
+	[(index := index - 1) >= i] whileTrue:
+		[(aBlock value: (self at: index)) ifTrue: [^index]].
+	^ 0
 )
 
 fifth = (
@@ -465,6 +497,11 @@ lastIndexOfNoneOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = 
 	| index |
 	(index := self lastIndexOfNoneOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
+)
+
+middle = (
+	"Answer the middle element of the receiver."
+	^ self at: self size // 2 + 1
 )
 
 overlappingPairsCollect: aBlock = (

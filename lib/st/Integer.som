@@ -78,6 +78,28 @@ benchFib  "Handy send-heavy benchmark" = (
 		ifFalse: [(self-1) benchFib + (self-2) benchFib + 1]
 )
 
+benchmark = (
+	"Handy bytecode-heavy benchmark"
+	"(500000 // time to run) = approx bytecodes per second"
+	"5000000 // (Time millisecondsToRun: [10 benchmark]) * 1000"
+	"3059000 on a Mac 8100/100"
+    | size flags prime k count |
+    size := 8190.
+    1 to: self do:
+        [:iter |
+        count := 0.
+        flags := (Array new: size) atAllPut: true.
+        1 to: size do:
+            [:i | (flags at: i) ifTrue:
+                [prime := i+1.
+                k := i + prime.
+                [k <= size] whileTrue:
+                    [flags at: k put: false.
+                    k := k + prime].
+                count := count + 1]]].
+    ^ count
+)
+
 bitAt: anInteger = (
 	"Answer 1 if the bit at position anInteger is set to 1, 0 otherwise.
 	self is considered an infinite sequence of bits, so anInteger can be any strictly positive integer.
@@ -238,6 +260,11 @@ lcm: n = (
 noMask: mask = (
 	"Treat the argument as a bit mask. Answer whether none of the bits that are 1 in the argument are 1 in the receiver."
 	^0 = (self bitAnd: mask)
+)
+
+normalize = (
+	"SmallInts OK; LgInts override"
+	^ self
 )
 
 numberOfDigitsInBase: b = (
