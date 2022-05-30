@@ -274,9 +274,31 @@ dateAndTimeNow = (
 	^ self dateAndTimeFromSeconds: self totalSeconds
 )
 
+daysFromSmalltalkEpochToPosixEpoch = (
+	^ 25202 "52 * 365 + (17 * 366)"
+)
+
+daysInMonth = (
+	^ #(31 28 31 30 31 30 31 31 30 31 30 31)
+)
+
+dayNames = (
+	^ #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday)
+)
+
+epochOffset = (
+	"Elaspsed seconds from the Smalltalk epoch to the Posix epoch"
+	^2177452800 "Time daysFromSmalltalkEpochToPosixEpoch * Time secondsInDay"
+)
+
+epochOffsetMicros = (
+	"Elaspsed microseconds from the Smalltalk epoch to the Posix epoch"
+	^Time epochOffset * 1000000
+)
+
 durationToRun: timedBlock = (
 	"Answer a duration timedBlock takes to return its value"
-	^(self nanosecondsToRun: timedBlock) nanoSeconds
+	^(self microsecondsToRun: timedBlock) microSeconds
 )
 
 fromSeconds: secondCount = (
@@ -346,6 +368,10 @@ localMicrosecondClockWithOffset = (
 	^result
 )
 
+microsecondsInDay = (
+	^ 86400000000 "24 * 60 * 60 * 1000000"
+)
+
 microsecondsToRun: timedBlock = (
 	"Answer the number of microseconds timedBlock takes to return its value."
 	| startUsecs |
@@ -382,6 +408,22 @@ millisecondsSince: lastTime = (
 millisecondsToRun: timedBlock = (
 	"Answer the number of milliseconds timedBlock takes to return its value."
 	^(self microsecondsToRun: timedBlock) + 500 // 1000
+)
+
+millisecondsInDay = (
+	^ 86400000 "24 * 60 * 60 * 1000"
+)
+
+monthNames = (
+	^ #(January February March April May June July August September October November December)
+)
+
+nanosecondsInSecond = (
+	^ 1000000000 "10 raisedTo: 9"
+)
+
+nanosecondsInMillisecond = (
+	^ 1000000 "10 raisedTo: 6"
 )
 
 namesForTimes: arrayOfSeconds = (
@@ -516,8 +558,25 @@ seconds: seconds nanoSeconds: nanoCount = (
 		ticks: (Duration seconds: seconds nanoSeconds: nanoCount) ticks
 )
 
+secondsInDay = (
+	^ 86400 "24 * 60 * 60"
+)
+
+secondsInHour = (
+	^ 3600 "60 * 60"
+)
+
+secondsInMinute = (
+	^ 60
+)
+
+smalltalkEpoch = (
+	"Julian day number of 1 Jan 1901"
+	^ 2415386
+)
+
 totalSeconds = (
-	"Answer the total seconds since the Squeak epoch: 1 January 1901, in local time."
+	"Answer the total seconds since the Smalltalk epoch: 1 January 1901, in local time."
 	^self localMicrosecondClock // 1000000
 )
 
@@ -525,26 +584,13 @@ utcMicrosecondClock = (
 	"Answer the UTC microseconds since the Smalltalk epoch (January 1st 1901, the start of the 20th century).
 	 The value is derived from the Posix epoch with a constant offset corresponding to elapsed microseconds
 	 between the two epochs according to RFC 868."
-	^ Smalltalk utcTime
+	^ Smalltalk utcTime + 2177452800000000
 )
-
-squeakEpoch = ( ^ 2415386 ) "Julian day number of 1 Jan 1901"
-secondsInDay = ( ^ 86400 ) "24 * 60 * 60"
-secondsInHour = ( ^ 3600 ) "60 * 60"
-secondsInMinute = ( ^ 60 )
-microsecondsInDay = ( ^ 86400000000 ) "24 * 60 * 60 * 1000000"
-millisecondsInDay = ( ^ 86400000 ) "24 * 60 * 60 * 1000"
-nanosecondsInSecond = ( ^ 1000000000 ) "10 raisedTo: 9"
-nanosecondsInMillisecond = ( ^ 1000000 ) "10 raisedTo: 6"
-dayNames = ( ^ #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday) )
-monthNames = ( ^ #(January February March April May June July August September October November December) )
-daysInMonth = ( ^ #(31 28 31 30 31 30 31 31 30 31 30 31) )
 
 comment = (^'
 This represents a particular point in time during any given day.  For example, ''5:19:45 pm''.
 
 If you need a point in time on a particular day, use DateAndTime.  If you need a duration of time, use Duration.
 ')
-
 
 )

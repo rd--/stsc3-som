@@ -46,6 +46,11 @@ canUnderstand: selector = (
 	^ self superclass canUnderstand: selector
 )
 
+deepCopy = (
+	"Behavior are shared rather than copied."
+	^ self
+)
+
 flushCache = (
 	<primitive: 89>
 	self primitiveFailed
@@ -77,6 +82,14 @@ inheritsFrom: aClass = (
 	^false
 )
 
+instSize = (
+	"Answer the number of named instance variables
+	(as opposed to indexed variables) of the receiver.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>"
+	^self allInstVarNames size
+)
+
 instVarIndexFor: instVarName ifAbsent: aBlock = (
 	"Answer the index of the named instance variable."
 	^self allInstVarNames indexOf: instVarName ifAbsent: aBlock
@@ -96,10 +109,13 @@ methodArray = (
 )
 
 new = (
+	"Answer a new initialized instance of the receiver (which is a class) with no indexable variables. Fail if the class is indexable."
 	^ self basicNew initialize
 )
 
 new: sizeRequested = (
+	"Answer an initialized instance of this class with the number of indexable
+	variables specified by the argument, sizeRequested."
 	^ (self basicNew: sizeRequested) initialize
 )
 

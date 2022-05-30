@@ -28,11 +28,6 @@ global: name put: value = (
 	self primitiveFailed
 )
 
-halt = (
-	<primitive: -1>
-	self primitiveFailed
-)
-
 hasGlobal: name = (
 	<primitive: -1>
 	self primitiveFailed

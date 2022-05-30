@@ -53,6 +53,11 @@ isCharacter = (
 	^ true
 )
 
+deepCopy = (
+	"Answer the receiver, because Characters are unique."
+	^self
+)
+
 digitValue = (
 	self asciiValue <= $9 asciiValue
 		ifTrue: [^self asciiValue - $0 asciiValue].

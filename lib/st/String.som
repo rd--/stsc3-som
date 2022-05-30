@@ -129,6 +129,11 @@ asTime = (
 	^ Time fromString: self.
 )
 
+asTimeStamp = (
+	"Convert from obsolete TimeStamp format"
+	^ TimeStamp fromString: self
+)
+
 asUnsignedInteger = (
 	"Returns the first unsigned integer I can find or nil."
 	^self asIntegerSigned: false
@@ -138,22 +143,18 @@ at: index = (
 	"Answer the Character stored in the field of the receiver indexed by the
 	argument.  Fail if the index argument is not an Integer or is out of bounds.
 	Essential.  See Object documentation whatIsAPrimitive."
-
 	<primitive: 63>
 	^Character value: (super at: index)
-
 )
 
 at: index put: aCharacter = (
 	"Store the Character in the field of the receiver indicated by the index.  Fail if the
 	index is not an Integer or is out of bounds, or if the argument is not a Character.
 	Essential.  See Object documentation whatIsAPrimitive."
-
 	<primitive: 64>
 	(aCharacter isKindOf: Character)
 		ifTrue: [self errorNonIntegerIndex]
 		ifFalse: [self error: 'Strings only store Characters']
-
 )
 
 basicAt: index = (
@@ -226,6 +227,12 @@ compare: s withNormalisingBlock: aBlock = (
 							ifTrue: [1]
 							ifFalse: [3]]]].
 	^endResult
+)
+
+deepCopy = (
+	"DeepCopy would otherwise mean make a copy of the character;  since
+	characters are unique, just return a shallowCopy."
+	^self shallowCopy
 )
 
 findAnySubStr: delimiters startingAt: start = (

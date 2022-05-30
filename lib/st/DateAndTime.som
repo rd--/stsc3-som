@@ -61,7 +61,7 @@ asExactSeconds = (
 	This implementation differs from earlier Squeak in that it uses seconds relative
 	to the Smalltalk epoch (not local time), and represents seconds as an arbitrary
 	precision number rather than an integer."
-	^ utcMicroseconds / 1000000 + self class epochOffset
+	^ utcMicroseconds / 1000000 + Time epochOffset
 )
 
 asLocal = (
@@ -117,7 +117,7 @@ asSeconds = (
 	This implementation differs from earlier Squeak in that it uses seconds relative
 	to the Smalltalk epoch (not local time), and represents seconds as an arbitrary
 	precision number rather than an integer."
-	^ utcMicroseconds // 1000000 + self class epochOffset
+	^ utcMicroseconds // 1000000 + Time epochOffset
 )
 
 asTime = (
@@ -590,7 +590,6 @@ year = (
 		dayMonthYearDo: [ :d :m :y | y ]
 )
 
-
 ----------------------------
 
 | LocalTimeZone |
@@ -620,23 +619,9 @@ date: aDate time: aTime = (
 		offset: aDate start offset
 )
 
-daysFromSmalltalkEpochToPosixEpoch = (
-	^52 * 365 + (17 * 366)
-)
-
 epoch = (
 	"Answer a DateAndTime representing the Squeak epoch: 1 January 1901"
-	^ self utcMicroseconds: self epochOffsetMicros negated offset: 0
-)
-
-epochOffset = (
-	"Elaspsed seconds from the Smalltalk epoch to the Posix epoch"
-	^self daysFromSmalltalkEpochToPosixEpoch * Time secondsInDay
-)
-
-epochOffsetMicros = (
-	"Elaspsed microseconds from the Smalltalk epoch to the Posix epoch"
-	^self epochOffset * 1000000
+	^ self utcMicroseconds: Time epochOffsetMicros negated offset: 0
 )
 
 fromSeconds: seconds = (
@@ -651,7 +636,7 @@ fromSeconds: seconds = (
 	precision number rather than an integer."
 	| s uSec offset |
 	offset := self localOffsetSeconds.
-	s := seconds - self epochOffset.
+	s := seconds - Time epochOffset.
 	uSec := s * 1000000.
 	^ self utcMicroseconds: uSec offset: offset
 )
@@ -706,7 +691,7 @@ millisecondClockValue = (
 
 new = (
 	"Answer a DateAndTime representing the Squeak epoch: 1 January 1901"
-	^ self utcMicroseconds: self epochOffsetMicros negated offset: 0
+	^ self utcMicroseconds: Time epochOffsetMicros negated offset: 0
 )
 
 noon = (
@@ -726,15 +711,6 @@ nowAtOffset: offsetDuration = (
 	"local time Chicago (CST)"
 	"DateAndTime nowAtOffset: -6 hours"
 	^ self utcMicroseconds: Time posixMicrosecondClockWithOffset first offset: offsetDuration asSeconds
-)
-
-nowWithOffset: aDuration = (
-	"Answer time now as reported by #primitiveUtcWithOffset. If the primitive is not
-	available, answer the Posix epoch with time zone offset aDuration."
-	| timeArray |
-	self deprecated: 'This is just for backwards compatibility. Use DateAndTime class >> #now, which already contains correct offset information.'.
-	timeArray := Time posixMicrosecondClockWithOffset.
-	^ self utcMicroseconds: timeArray first offset: aDuration asSeconds
 )
 
 readFrom: aStream = (

@@ -1,9 +1,6 @@
 TimeStampTest = ClassTestCase (
-| timestamp aTimeStamp |
 
-classToBeTested = (
-	^ self timestampClass
-)
+| timestamp aTimeStamp |
 
 selectorsToBeIgnored = (
 	| deprecated private special |
@@ -14,7 +11,7 @@ selectorsToBeIgnored = (
 )
 
 setUp = (
-	timestamp := self timestampClass date: ('1-10-2000' asDate) time: ('11:55:00 am' asTime).
+	timestamp := TimeStamp date: ('1-10-2000' asDate) time: ('11:55:00 am' asTime).
 	aTimeStamp := TimeStamp readFrom: '1-02-2004 12:34:56 am' readStream
 )
 
@@ -50,17 +47,17 @@ testArithmeticAcrossDateBoundary = (
 
 testComparing = (
 	| ts1 ts2 ts3 c1 c2 le |
-	ts1 := self timestampClass date: ('01-10-2000' asDate) time: ('11:55:00 am' asTime).
-	ts2 := self timestampClass date: ('07-26-2003' asDate) time: ('22:09:45 am' asTime).
-	ts3 := self timestampClass date: ('05-28-1972' asDate) time: ('04:31:14 pm' asTime).
+	ts1 := TimeStamp date: ('01-10-2000' asDate) time: ('11:55:00 am' asTime).
+	ts2 := TimeStamp date: ('07-26-2003' asDate) time: ('22:09:45 am' asTime).
+	ts3 := TimeStamp date: ('05-28-1972' asDate) time: ('04:31:14 pm' asTime).
 	self
 		assert: ts1 = timestamp;
 		assert: ts1 hash = timestamp hash;
 		assert: timestamp = timestamp copy;
 		assert: ts1 < ts2;
 		deny: ts1 < ts3.
-	c1 := self timestampClass current.
-	c2 := self timestampClass current.
+	c1 := TimeStamp current.
+	c2 := TimeStamp current.
 	le := (c1 <= c2).
 	self assert: le.
 )
@@ -88,18 +85,18 @@ testDateAndTime = (
 
 testFromSeconds = (
 	self
-		assert: (self timestampClass fromSeconds: 3124958100) = timestamp.
+		assert: (TimeStamp fromSeconds: 3124958100) = timestamp.
 )
 
 testFromString = (
 	"This should signal an exception in 3.6beta as Time>>fromString: does not exist."
-	self should: [ timestamp = (self timestampClass fromString: '1-10-2000 11:55:00 am') ]
+	self should: [ timestamp = (TimeStamp fromString: '1-10-2000 11:55:00 am') ]
 )
 
 testInstanceCreation = (
 	self
-		should: [ self timestampClass midnight asDuration = (0 hours) ];
-		should: [ self timestampClass noon asDuration = (12 hours) ].
+		should: [ TimeStamp midnight asDuration = (0 hours) ];
+		should: [ TimeStamp noon asDuration = (12 hours) ].
 )
 
 testMinusDays = (
@@ -158,10 +155,10 @@ testReadFromA1 = (
 
 testSorting = (
 	| c1 c2 |
-	c1 := self timestampClass current.
-	c2 := self timestampClass current.
+	c1 := TimeStamp current.
+	c2 := TimeStamp current.
 	self
-		assert: (self timestampClass current) <= (self timestampClass current);
+		assert: (TimeStamp current) <= (TimeStamp current);
 		assert: (c1 <= c2).
 )
 
@@ -180,10 +177,5 @@ testTime = (
 testTimeStamp = (
 	self assert: aTimeStamp = aTimeStamp asTimeStamp
 )
-
-timestampClass = (
-	^ TimeStamp
-)
-
 
 )

@@ -148,6 +148,11 @@ decimalDigitLength = (
 	^19 "(1 << 60 - 1) asString size"
 )
 
+deepCopy = (
+	"Answer the receiver, because SmallIntegers are unique."
+	^self
+)
+
 digitAt: n = (
 	"Answer the value of an apparent byte-indexable field in the receiver,
 	 analogous to the large integers, which are organized as bytes."

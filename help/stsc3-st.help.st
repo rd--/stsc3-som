@@ -61,7 +61,6 @@ OrderedCollectionTest suite run printOn: Transcript
 ReadStreamTest testSelectors do: [ :each | Transcript show: each; cr. ReadStreamTest run: each ]
 ReadStreamTest suite run printOn: Transcript
 
-"ReadWriteStream>>on:from:to: works, but on: and with: fail"
 ReadWriteStreamTest testSelectors do: [ :each | Transcript show: each; cr. ReadWriteStreamTest run: each ]
 ReadWriteStreamTest suite run printOn: Transcript
 

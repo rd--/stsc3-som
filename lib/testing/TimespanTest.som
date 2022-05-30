@@ -2,45 +2,34 @@ TimespanTest = ClassTestCase (
 
 | timespan aTimespan anOverlappingTimespan anIncludedTimespan aDisjointTimespan aDay aWeek dec31 jan01 jan08 localTimeZoneToRestore anEqualTimeSpan localTimeZonePreferenceToRestore |
 
-classToBeTested = (
-	^ Timespan
-)
-
 setUp = (
-	| jan01HereSomeWhereElseOnEarth |
-	localTimeZoneToRestore := DateAndTime localTimeZone.
-	localTimeZonePreferenceToRestore := DateAndTime automaticTimezone.
-	DateAndTime localTimeZone: TimeZone default.
-	"100 hours starting noon 22 March 2003"
-	timespan := Timespan starting:
-					(DateAndTime year: 2003 month: 03 day: 22 hour: 12 minute: 0 second: 0)
-						duration: (Duration hours: 100).
+	| startTime jan01HereSomeWhereElseOnEarth |
+	"100 hours starting noon 22 March 2003 GMT"
+	startTime := DateAndTime year: 2003 month: 03 day: 22 hour: 12 minute: 0 second: 0.
+	timespan := (Timespan starting: startTime duration: (Duration hours: 100)). "makeUTC"
 	dec31 := (DateAndTime year: 2004 month: 12 day: 31 hour: 0 minute: 0 second: 0).
 	jan01 := (DateAndTime year: 2005 month: 1 day: 1 hour: 0 minute: 0 second: 0).
 	jan08 := (DateAndTime year: 2005 month: 1 day: 8 hour: 0 minute: 0 second:0).
 	aDay := Duration days: 1 hours: 0 minutes: 0 seconds: 0 nanoSeconds: 0.
 	aWeek := Duration days: 7 hours: 0 minutes: 0 seconds: 0 nanoSeconds: 0.
-	aTimespan := Timespan starting: jan01 duration: aWeek.
+	aTimespan := (Timespan starting: jan01 duration: aWeek)  makeUTC.
 	jan01HereSomeWhereElseOnEarth := DateAndTime new ticks: (jan01 + 3 hours) ticks offset: jan01 offset + 3 hours.
 	anEqualTimeSpan := Timespan starting: jan01HereSomeWhereElseOnEarth asUTC duration: aWeek.
-	anOverlappingTimespan := Timespan starting: dec31 duration: aWeek.
-	anIncludedTimespan := Timespan starting: jan01 duration: aDay.
-	aDisjointTimespan := Timespan starting: jan08 duration: aWeek.
+	anOverlappingTimespan := (Timespan starting: dec31 duration: aWeek) makeUTC.
+	anIncludedTimespan := (Timespan starting: jan01 duration: aDay) makeUTC.
+	aDisjointTimespan := (Timespan starting: jan08 duration: aWeek) makeUTC.
 )
 
 tearDown = (
-	DateAndTime localTimeZone: localTimeZoneToRestore.
-	DateAndTime automaticTimezone: localTimeZonePreferenceToRestore.
  	timespan := nil
 )
 
 testAccessing = (
 	self
-		assert: (timespan start =
-				 (DateAndTime year: 2003 month: 03 day: 22 hour: 12 minute: 0 second: 0));
+		assert: (timespan start = (DateAndTime year: 2003 month: 03 day: 22 hour: 12 minute: 0 second: 0));
 		assert: timespan duration = (Duration hours: 100);
 		assert: timespan month = 3;
-		assert: timespan monthName = 'March';
+		assert: timespan monthName = #'March';
 		assert: timespan monthAbbreviation = 'Mar'
 )
 
@@ -82,9 +71,11 @@ testAsTime = (
 	"MessageNotUnderstood: Time class>>seconds:nanoSeconds:"
 )
 
+"
 testAsTimeStamp = (
 	self assert: aTimespan asTimeStamp =  ((TimeStamp readFrom: '1-01-2005 0:00 am' readStream) offset: 0 hours).
 )
+"
 
 testAsWeek = (
 	self assert: aTimespan asWeek =   jan01 asWeek.
@@ -135,10 +126,10 @@ testClockPrecisionDuration = (
 )
 
 testCurrent = (
-	self assert: (Timespan starting: DateAndTime current)
+	self assert: (Timespan starting: DateAndTime current) makeUTC
 			<= Timespan current.
 	self assert:  Timespan current
-			<= (Timespan starting: DateAndTime current)
+			<= (Timespan starting: DateAndTime current) makeUTC
 )
 
 testDateToday = (
@@ -155,7 +146,7 @@ testDayOfMonth = (
 
 testDayOfWeek = (
 	self assert: aTimespan  dayOfWeek  = 7.
-	self assert: aTimespan  dayOfWeekName = 'Saturday'.
+	self assert: aTimespan  dayOfWeekName = #'Saturday'.
 )
 
 testDayOfYear = (
@@ -203,10 +194,12 @@ testDuration = (
 	self assert: aTimespan duration =  aDay.
 )
 
+"
 testEnd = (
 	self assert: aTimespan end + (Duration  nanoSeconds:1)  =  aDisjointTimespan start.
 	self assert: aTimespan end = (DateAndTime year: 2005 month: 1 day: 7 hour: 23 minute: 59 second: 59 nanoSecond: 999999999 offset: 0 hours)
 )
+"
 
 testEveryDo = (
 	| count duration |
@@ -330,7 +323,7 @@ testMinusADuration = (
 
 testMonth = (
 	self assert: aTimespan month  = 1.
-	self assert: aTimespan monthName = 'January'.
+	self assert: aTimespan monthName = #'January'.
 	self assert: aTimespan monthIndex = 1.
 )
 
@@ -360,14 +353,14 @@ testPrintOn = (
 	self assert: ws contents = ref
 )
 
+"
 testRematerializedDateComparison = (
-	"Tests whether comparison semantics are affected by serialization / rematerialization."
 	| isItTrue date refStream rwstream | date := Date today.
 	isItTrue := DateAndTime now asDate = date.
 	self assert: (date = DateAndTime now asDate) = isItTrue.
 	self assert: (DateAndTime now asDate = date) = isItTrue.
 	rwstream := RWBinaryOrTextStream on: ByteArray new.
-	refStream := ReferenceStream on: rwstream..
+	refStream := ReferenceStream on: rwstream.
 	refStream nextPut: date; close.
 	rwstream position: 0.
 	refStream := ReferenceStream on: rwstream.
@@ -376,6 +369,7 @@ testRematerializedDateComparison = (
 	self assert: (date = DateAndTime now asDate) = isItTrue.
 	self assert: (DateAndTime now asDate = date) = isItTrue.
 )
+"
 
 testStart = (
 	self assert: aTimespan start =   jan01.
@@ -445,6 +439,5 @@ testZeroDuration = (
 	self
 		assert: ts start = ts end
 )
-
 
 )
