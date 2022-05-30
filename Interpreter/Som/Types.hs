@@ -47,14 +47,15 @@ stringLiteralId = -1
 
 {- | Method contexts store:
        1. a context identifier to receive non-local returns
-       2. the method selector (signature) for back traces
-       3. the receiver
+       2. the class the method was defined in (for super message send)
+       3. the method selector (signature) for back traces
+       4. the receiver
      Block contexts store:
        1. the Block object to report cases of escaped blocks.
      In addition both store local variables (arguments and temporaries) as a Dict.
 -}
 data ContextNode =
-    MethodContext Id Symbol Object ObjectDictionary
+    MethodContext Id ((Symbol, Bool), Symbol) Object ObjectDictionary
   | BlockContext Object ObjectDictionary
   | NilContext
   deriving (Eq)
@@ -75,6 +76,12 @@ data ContextNode =
                   4. workspace.
 -}
 data Context = Context { contextNode :: ContextNode, contextParent :: Maybe Context } deriving (Eq)
+
+contextMethodContext :: Context -> Maybe ContextNode
+contextMethodContext (Context node parent) =
+  case node of
+    MethodContext {} -> Just node
+    _ -> maybe Nothing contextMethodContext parent
 
 contextIdSequence :: Context -> [Id]
 contextIdSequence ctx =
@@ -399,8 +406,8 @@ objectInspect = objectExamine vmInspect objectInspect -- todo: recursion depth
 contextNodeInspect :: ContextNode -> Vm String
 contextNodeInspect ctx =
   case ctx of
-    MethodContext ctxId sel rcv dict -> do
-      let hdr = printf "<pc:%d> '%s'" ctxId sel
+    MethodContext ctxId ((cl, _), sel) rcv dict -> do
+      let hdr = printf "<pc:%d> '%s.%s'" ctxId cl sel
       rcv' <- objectInspect rcv
       dict' <- objectDictionaryInspect dict
       return (unlines ["MethodContext:", hdr, rcv', dict'])
@@ -627,9 +634,9 @@ isNil = (==) nilObject
 localVariablesDict :: MonadIO m => ObjectAssociationList -> [Symbol] -> m ObjectDictionary
 localVariablesDict args tmp = dictRefFromList (args ++ zip tmp (repeat nilObject))
 
-methodContextNode :: MonadIO m => Id -> Symbol -> Object -> ObjectAssociationList -> St.Temporaries -> m ContextNode
-methodContextNode pc sel rcv arg (St.Temporaries tmp) =
-  fmap (MethodContext pc sel rcv) (localVariablesDict arg (map toSymbol tmp))
+methodContextNode :: MonadIO m => Id -> ((Symbol, Bool), Symbol) -> Object -> ObjectAssociationList -> St.Temporaries -> m ContextNode
+methodContextNode pc cs rcv arg (St.Temporaries tmp) =
+  fmap (MethodContext pc cs rcv) (localVariablesDict arg (map toSymbol tmp))
 
 -- | The empty context.  It is ordinarily an error to encounter this.
 nilContext :: Context

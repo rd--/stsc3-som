@@ -203,12 +203,16 @@ contextAddBlockContext blockObject arguments = do
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
   return (contextAdd blockContext (BlockContext blockObject localVariables))
 
+contextLookupOrUnknown :: CoreOpt -> Context -> Symbol -> Vm Object
+contextLookupOrUnknown opt ctx k = do
+  res <- contextLookup ctx k
+  maybe (vmUnknownGlobal opt ctx k) return res
+
 -- | Lookup value in current context.
 vmContextLookup :: CoreOpt -> Symbol -> Vm Object
 vmContextLookup opt k = do
   ctx <- vmContext
-  res <- contextLookup ctx k
-  maybe (vmUnknownGlobal opt ctx k) return res
+  contextLookupOrUnknown opt ctx k
 
 -- | Assign value in current context
 vmContextAssign :: Symbol -> Object -> Vm Object
@@ -330,22 +334,23 @@ The home context is the method the block was defined in.
 -}
 evalMethod :: CoreOpt -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
 evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
-  --printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") [receiver]
+  --printTrace ("evalMethod: " ++ St.methodSignature methodDefinition ++ " <= ") (receiver : arguments)
   let requiredArguments = length methodArguments
       providedArguments = length arguments
+      className = St.methodClass methodDefinition
       selector = St.methodSignature methodDefinition
       arityError = printf "evalMethod: wrong number of arguments: %s %d" selector providedArguments
   when (requiredArguments /= providedArguments) (vmError arityError)
   pc <- vmProgramCounterIncrement
-  vmContextAdd =<< methodContextNode pc selector receiver (zip methodArguments arguments) methodTemporaries
+  vmContextAdd =<< methodContextNode pc (className, selector) receiver (zip methodArguments arguments) methodTemporaries
   result <- evalStatements opt methodStatements
   _ <- vmContextDelete
   case result of
     (Object "Return" (DataReturn ctxId _ x)) ->
       if ctxId == pc
-      then --printTrace ("Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result] >>
+      then --printTrace ("evalMethod: Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result] >>
            return x
-      else --(vmContextIdSequence >>= \sq -> printTrace ("Return: ctxId not at pc: " ++ show (ctxId, pc, sq)) [receiver, result]) >>
+      else --(vmContextIdSequence >>= \sq -> printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc, sq)) [receiver, result]) >>
            return result
     _ -> return receiver
 
@@ -402,14 +407,26 @@ findMethodMaybe o sel =
             Nothing -> classSuperclassOf o >>= \sc -> findMethodMaybe sc sel
          _ -> vmError "findMethodMaybe"
 
--- | Evaluate message send.
+lookupClassForSuper :: CoreOpt -> Vm Object
+lookupClassForSuper opt = do
+  ctx <- vmContext
+  case contextMethodContext ctx of
+    Just (MethodContext _ ((className, isMeta), _) _ _) -> do
+             obj <- contextLookupOrUnknown opt ctx (if isMeta then St.metaclassNameClassName className else className)
+             classSuperclassOf =<< if isMeta then classMetaclass obj else return obj
+    _ -> vmError "lookupClassForSuper: no method context?"
+
+{- | Evaluate message send.
+
+Lookup for super message sends begins in the superclass of the class where the method was defined.
+-}
 evalMessageSend :: CoreOpt -> Bool -> Object -> St.Selector -> [Object] -> Vm Object
 evalMessageSend opt isSuper receiver selector arguments = do
   receiverClass <- objectClass receiver
-  methodClass <- if isSuper
-                 then classSuperclassOf receiverClass
+  lookupClass <- if isSuper
+                 then lookupClassForSuper opt
                  else return receiverClass
-  findAndEvalMethodOrPrimitive opt receiver methodClass selector arguments
+  findAndEvalMethodOrPrimitive opt receiver lookupClass selector arguments
 
 -- | Som/St.  Som has distinct numbered Block classes.
 closureClass :: SystemType -> Int -> String
@@ -620,7 +637,7 @@ systemLoadAndAssignClassesAbove x = do
   case existing of
       Just _ -> return existing
       Nothing -> do
-        -- printTrace ("systemLoadAndAssignClassesAbove: " ++ x) []
+        --printTrace ("systemLoadAndAssignClassesAbove: " ++ x) []
         maybeCd <- liftIO (somLoadClassFile x) -- todo: this should also read .st and .stc files
         case maybeCd of
           Just cd -> do
