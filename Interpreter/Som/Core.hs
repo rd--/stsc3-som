@@ -153,7 +153,7 @@ contextLookup (Context c p) k =
                            ,objectLookupInstanceVariable rcv
                            ,objectLookupClassVariable rcv
                            ,vmGlobalResolveMaybe] k
-    BlockContext _ localVariables ->
+    BlockContext _ _ localVariables ->
       mLookupSequence [dictRefLookup localVariables
                       ,maybe (\_ -> return Nothing) (\c' -> contextLookup c') p
                       ,vmGlobalResolveMaybe
@@ -183,7 +183,7 @@ contextAssign (Context c p) k v =
                       ,objectAssignInstanceVariable rcv
                       ,objectAssignClassVariable rcv
                       ,vmGlobalAssignMaybe] k v
-    BlockContext _ localVariables ->
+    BlockContext _ _ localVariables ->
       mAssignSequence [dictRefAssignMaybe localVariables
                       ,maybe (\_ _ -> return Nothing) (\c' -> contextAssign c') p
                       ,vmGlobalAssignMaybe
@@ -202,7 +202,8 @@ contextAddBlockContext blockObject arguments = do
     (length blockArguments /= length arguments)
     (vmErrorWithBacktrace "contextAddBlockContext: arity error" (blockObject : arguments))
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
-  return (contextAdd blockContext (BlockContext blockObject localVariables))
+  pc <- vmProgramCounterIncrement
+  return (contextAdd blockContext (BlockContext pc blockObject localVariables))
 
 contextLookupOrUnknown :: CoreOpt -> Context -> Symbol -> Vm Object
 contextLookupOrUnknown opt ctx k = do
@@ -241,7 +242,7 @@ vmDoesNotUnderstand opt receiver k argsArray = do
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
 vmUnknownGlobal :: CoreOpt -> Context -> String -> Vm Object
 vmUnknownGlobal opt ctx k =
-  case contextReceiverMaybe ctx of
+  case contextReceiver ctx of
     Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [coreSymbolObject opt k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
@@ -257,7 +258,7 @@ vmEscapedBlock opt maybeBlock =
     Just block ->
       case block of
         Object _ (DataBlockClosure _ context _) ->
-          case contextReceiverMaybe context of
+          case contextReceiver context of
             Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "escapedBlock:") [block]
             Nothing -> vmError "escaped context: no receiver"
         _ -> vmError "escaped context: bad block"
@@ -317,7 +318,7 @@ evalBlock opt blockObject arguments = do
   _ <- vmContextReplace currentContext
   case result of
     Object _ (DataReturn pc maybeBlock _) ->
-      if contextHasId pc currentContext
+      if contextHasMethodWithId pc currentContext
       then return result
       else vmEscapedBlock opt maybeBlock
     _ -> return result
@@ -351,7 +352,7 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
       if ctxId == pc
       then --printTrace ("evalMethod: Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result] >>
            return x
-      else --(vmContextIdSequence >>= \sq -> printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc, sq)) [receiver, result]) >>
+      else --printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc)) [receiver, result]) >>
            return result
     _ -> return receiver
 
@@ -411,8 +412,8 @@ findMethodMaybe o sel =
 lookupClassForSuper :: CoreOpt -> Vm Object
 lookupClassForSuper opt = do
   ctx <- vmContext
-  case contextMethodContext ctx of
-    Just (MethodContext _ ((className, isMeta), _) _ _) -> do
+  case contextNearestMethod ctx of
+    Just (Context (MethodContext _ ((className, isMeta), _) _ _) _) -> do
              obj <- contextLookupOrUnknown opt ctx (if isMeta then St.metaclassNameClassName className else className)
              classSuperclassOf =<< if isMeta then classMetaclass obj else return obj
     _ -> vmError "lookupClassForSuper: no method context?"
@@ -467,9 +468,9 @@ evalExpr opt expr =
       result <- evalExpr opt x
       if isReturnObject result
       then return result
-      else do pc <- vmContextId
+      else do ctx <- vmContextNearestMethod
               blk <- vmContextCurrentBlock
-              returnObject pc blk result
+              returnObject (contextId ctx) blk result
     Expr.Send e (Expr.Message selector exprList) -> do
       receiver <- evalExpr opt e
       if (isReturnObject receiver)

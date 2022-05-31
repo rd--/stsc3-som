@@ -29,6 +29,10 @@ descending = (
 	^self asSortFunction reversed
 )
 
+isBlock = (
+	^ true
+)
+
 numArgs = (
 	<primitive: -1>
 	self primitiveFailed

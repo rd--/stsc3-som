@@ -57,9 +57,33 @@ stringLiteralId = -1
 -}
 data ContextNode =
     MethodContext Id ((Symbol, Bool), Symbol) Object ObjectDictionary
-  | BlockContext Object ObjectDictionary
+  | BlockContext Id Object ObjectDictionary
   | NilContext
   deriving (Eq)
+
+contextNodeIsMethod :: ContextNode -> Bool
+contextNodeIsMethod node =
+  case node of
+    MethodContext {} -> True
+    _ -> False
+contextNodeId :: ContextNode -> Id
+contextNodeId node =
+  case node of
+    MethodContext k _ _ _ -> k
+    BlockContext k _ _ -> k
+    NilContext -> error "contextNodeId"
+
+contextId :: Context -> Id
+contextId = contextNodeId . contextNode
+
+contextNodeSelector :: ContextNode -> Symbol
+contextNodeSelector node =
+  case node of
+    MethodContext _ (_,sel) _ _ -> sel
+    _ -> error "contextNodeSelector"
+
+contextSelector :: Context -> Symbol
+contextSelector = contextNodeSelector . contextNode
 
 {- | A Context is the environment a Smalltalk expression is evaluated in.
      The Name lookup rules are:
@@ -77,19 +101,6 @@ data ContextNode =
                   4. workspace.
 -}
 data Context = Context { contextNode :: ContextNode, contextParent :: Maybe Context } deriving (Eq)
-
-contextMethodContext :: Context -> Maybe ContextNode
-contextMethodContext (Context node parent) =
-  case node of
-    MethodContext {} -> Just node
-    _ -> maybe Nothing contextMethodContext parent
-
-contextIdSequence :: Context -> [Id]
-contextIdSequence ctx =
-  case ctx of
-    Context (MethodContext ctxId _ _ _) next -> ctxId : maybe [] contextIdSequence next
-    Context _ (Just next) -> contextIdSequence next
-    Context _ Nothing -> []
 
 -- | Smalltalk expression
 type StExpr = Expr.Expr
@@ -227,16 +238,11 @@ vmProgramCounterIncrement = State.get >>= \(tm,pc,ctx,glb,usr) -> State.put (tm,
 vmContext :: Vm Context
 vmContext = State.get >>= \(_,_,ctx,_,_) -> return ctx
 
--- | Fetch Id of Method context, else error.
-vmContextId :: Vm Id
-vmContextId = vmContext >>= \ctx -> maybe (vmError "vmContextId: lookup failed") return (contextIdMaybe ctx)
-
-vmContextIdSequence :: Vm [Id]
-vmContextIdSequence = fmap contextIdSequence vmContext
-
--- | Fetch current block, else Nothing
 vmContextCurrentBlock :: Vm (Maybe Object)
 vmContextCurrentBlock = fmap contextCurrentBlock vmContext
+
+vmContextNearestMethod :: Vm Context
+vmContextNearestMethod =  maybe (vmError "vmContextNearestMethod") return . contextNearestMethod =<< vmContext
 
 -- | Apply /f/ at the context and store the result.
 vmContextModify :: (Context -> Vm Context) -> Vm Object
@@ -339,16 +345,11 @@ objectToString (Object nm obj) =
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
-    DataContext _ -> "thisContext"
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
-    DataBlockClosure {} -> "instance of " ++ fromSymbol nm
     DataReturn _ _ o -> "Return: " ++ objectToString o
-    DataSystem -> "instance of " ++ fromSymbol nm
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
-    DataIndexable {} -> "instance of " ++ fromSymbol nm
-    DataNonIndexable {} -> "instance of " ++ fromSymbol nm
-    DataCharacterArray {} -> "instance of " ++ fromSymbol nm
+    _ -> "instance of " ++ fromSymbol nm
 
 instance Show Object where show = objectToString
 
@@ -416,10 +417,10 @@ contextNodeInspect ctx =
       rcv' <- objectInspect rcv
       dict' <- objectDictionaryInspect dict
       return (unlines ["MethodContext:", hdr, rcv', dict'])
-    BlockContext blk dict -> do
+    BlockContext ctxId blk dict -> do
       blk' <- objectInspect blk
       dict' <- objectDictionaryInspect dict
-      return (unlines ["BlockContext:", blk', dict'])
+      return (unlines [printf "BlockContext: <pc:%d>" ctxId, blk', dict'])
     NilContext -> return "NilContext\n"
 
 vmContextPrint :: Context -> Vm ()
@@ -655,35 +656,35 @@ methodContextNode pc cs rcv arg (St.Temporaries tmp) =
 nilContext :: Context
 nilContext = Context NilContext Nothing
 
--- | Traverse context to innermost MethodContext and get receiver.
-contextReceiverMaybe :: Context -> Maybe Object
-contextReceiverMaybe (Context c p) =
-  case c of
-    BlockContext _ _ -> maybe Nothing contextReceiverMaybe p
-    MethodContext _ _ rcv _ -> Just rcv
+contextNearestMethod :: Context -> Maybe Context
+contextNearestMethod ctx =
+  case contextNode ctx of
+    BlockContext {} -> maybe Nothing contextNearestMethod (contextParent ctx)
+    MethodContext {} -> Just ctx
     NilContext -> Nothing
 
--- | Traverse context to innermost MethodContext and get Id.
-contextIdMaybe :: Context -> Maybe Id
-contextIdMaybe (Context c p) =
-  case c of
-    BlockContext _ _ -> maybe Nothing contextIdMaybe p
-    MethodContext pc _ _ _ -> Just pc
-    NilContext -> Nothing
+contextSender :: Context -> Maybe Context
+contextSender = maybe (error "contextSender?") contextNearestMethod . contextParent
+
+contextReceiver :: Context -> Maybe Object
+contextReceiver ctx =
+  case contextNearestMethod ctx of
+    Just (Context (MethodContext _ _ rcv _) _ ) -> Just rcv
+    _ -> Nothing
 
 -- | Does Context have a Method with Id?
-contextHasId :: Id -> Context -> Bool
-contextHasId k (Context c p) =
+contextHasMethodWithId :: Id -> Context -> Bool
+contextHasMethodWithId k (Context c p) =
   case c of
-    BlockContext _ _ -> maybe False (contextHasId k) p
-    MethodContext pc _ _ _ -> pc == k || maybe False (contextHasId k) p
+    BlockContext _ _ _ -> maybe False (contextHasMethodWithId k) p
+    MethodContext pc _ _ _ -> pc == k || maybe False (contextHasMethodWithId k) p
     NilContext -> False
 
 -- | Get the blockObject from the current frame.
 contextCurrentBlock :: Context -> Maybe Object
 contextCurrentBlock (Context c _x) =
   case c of
-    BlockContext blockObject _ -> Just blockObject
+    BlockContext _ blockObject _ -> Just blockObject
     _ -> Nothing
 
 -- | Add a node to the start of the Context.

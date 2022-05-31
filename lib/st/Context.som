@@ -1,7 +1,13 @@
 Context = (
 
+selector = (
+	<primitive: -1>
+	^ self primitiveFailed
+)
+
 sender = (
-	self error: 'sender'
+	<primitive: -1>
+	^ nil
 )
 
 swapSender: coroutine = (

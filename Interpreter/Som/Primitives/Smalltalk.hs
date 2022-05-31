@@ -121,7 +121,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
         "Double class" -> return (Just (maybe nanObject doubleObject (unicodeStringReadDouble x)))
         "SmallInteger class" -> return (fmap intObject (unicodeStringReadSmallInteger x))
         _ -> return Nothing
-    ("garbageCollect", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return nilObject
+    ("garbageCollect", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just nilObject)
     ("global:", DataSystem, [Object "Symbol" str]) -> mapMMM vmGlobalLookupMaybe (objectDataAsString str)
     ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssign sym e) (objectDataAsString str)
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
@@ -140,6 +140,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
+    ("sender", DataContext ctx, []) -> return (fmap (Object "Context" . DataContext) (contextSender ctx))
+    ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelector) (contextNearestMethod ctx))
     ("signature", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("signature", DataPrimitive _ x, []) -> return (Just (symObject x))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)

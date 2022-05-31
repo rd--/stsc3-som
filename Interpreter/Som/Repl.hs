@@ -35,10 +35,10 @@ replContinue opt vmState = do
 
 stStandardClassList :: [St.Identifier]
 stStandardClassList =
-    ["Collection", "SequenceableCollection", "ArrayedCollection", "Array", "String","Symbol", "Set", "Dictionary"
-    ,"BlockClosure"
+    ["Collection", "SequenceableCollection", "ArrayedCollection", "Array", "String", "Symbol", "Set", "Dictionary"
+    ,"BlockClosure", "Context"
     ,"Boolean", "True", "False"
-    ,"Class", "Metaclass"
+    ,"Behavior", "Class", "Metaclass"
     ,"Magnitude", "Number", "Integer", "SmallInteger", "Float", "Double", "Character"
     ,"Method"
     ,"Object", "UndefinedObject", "Nil"

@@ -288,7 +288,7 @@ haltIf: condition = (
 	debugging.  Param can be a block or expression, halt if true.
 	If the Block has one arg, the receiver is bound to that.
  	If the condition is a selector, we look up in the callchain. Halt if
-      any method's selector equals selector."
+	any method's selector equals selector."
 	| cntxt |
 	condition isSymbol ifTrue:[
 		"only halt if a method with selector symbol is in callchain"
@@ -363,6 +363,10 @@ instVarNamed: aString put: aValue = (
 
 isArray = (
 	^false
+)
+
+isBlock = (
+	^ false
 )
 
 isCollection = (

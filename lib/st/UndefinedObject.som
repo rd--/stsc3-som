@@ -55,6 +55,10 @@ ifNotNil: ifNotNilBlock ifNil: nilBlock = (
 	^ nilBlock value
 )
 
+printAsLiteralOn: aStream = (
+	^self printOn: aStream
+)
+
 printOn: aStream = (
 	aStream nextPutAll: 'nil'
 )
