@@ -1,5 +1,10 @@
 UndefinedObject = Object (
 
+addDependent: ignored = (
+	"Refer to the comment in Object|dependents."
+	self error: 'Nil should not have dependents'
+)
+
 asString = (
 	^'nil'
 )
@@ -11,6 +16,10 @@ asSetElement = (
 deepCopy = (
 	"Only one instance of UndefinedObject should ever be made, so answer
 	with self."
+)
+
+haltIfNil = (
+	self halt
 )
 
 isEmptyOrNil = (

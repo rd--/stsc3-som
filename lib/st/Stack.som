@@ -1,0 +1,59 @@
+Stack = Object (
+| linkedList |
+
+errorEmptyStack = (
+	self error: 'this stack is empty'
+)
+
+initialize = (
+	super initialize.
+	linkedList := LinkedList new
+)
+
+isEmpty = (
+	^ self linkedList isEmpty
+)
+
+linkedList = (
+	"The stack is implemented with a LinkedList. Do NOT call this function, it
+	is for private use !"
+	^ linkedList
+)
+
+notEmptyCheck = (
+	"Ensure the stack is not empty."
+	self isEmpty
+		ifTrue: [self errorEmptyStack]
+)
+
+pop = (
+	"Returns the first element and remove it from the stack."
+	self notEmptyCheck.
+	^self linkedList removeFirst element
+)
+
+postCopy = (
+	super postCopy.
+	linkedList := linkedList copy
+)
+
+push: anObject = (
+	"Adds a new object of any kind on top of the stack."
+	self linkedList
+		addFirst: (StackLink with: anObject).
+	^ anObject.
+)
+
+size = (
+	"How many objects in me ?"
+	^ self linkedList size
+)
+
+top = (
+	"Answer the first element of the stack without removing it."
+	self notEmptyCheck.
+	^ self linkedList first element
+)
+
+
+)

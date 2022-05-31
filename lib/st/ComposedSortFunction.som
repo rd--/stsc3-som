@@ -1,0 +1,42 @@
+ComposedSortFunction = SortFunction (
+
+| baseSortFunction |
+
+= aSortFunction = (
+	self == aSortFunction ifTrue: [ ^true ].
+	^self class = aSortFunction class and: [ baseSortFunction = aSortFunction baseSortFunction ]
+)
+
+baseSortFunction = (
+	^baseSortFunction
+)
+
+baseSortFunction: aSortFunction = (
+	baseSortFunction := aSortFunction
+)
+
+hash = (
+	^baseSortFunction hash hashMultiply
+)
+
+initialize = (
+	super initialize.
+	baseSortFunction := self class default
+)
+
+----------------------------
+
+on: aSortFunction = (
+	^self new baseSortFunction: aSortFunction
+)
+
+comment = (^'
+A ComposedSortFunction is an abstract class wrapping over another SortFunction for the sake of composition.
+
+Subclasses have to define the composition behavior via collate:with: message.
+
+Instances variables:
+	baseSortFunction		<SortFunction>	the wrapped sort function
+')
+
+)

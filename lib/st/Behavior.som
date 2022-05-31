@@ -66,6 +66,10 @@ hasMethods = (
 	^self methodArray size > 0
 )
 
+includesBehavior: aClass = (
+	^self == aClass or:[self inheritsFrom: aClass]
+)
+
 includesSelector: aSymbol = (
 	"Answer whether the message whose selector is the argument is in the
 	method dictionary of the receiver's class."

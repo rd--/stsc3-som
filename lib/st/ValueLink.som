@@ -1,0 +1,46 @@
+ValueLink = Link (
+| value |
+
+= anotherObject = (
+	^self species == anotherObject species
+	and: [self value = anotherObject value
+	and: [self nextLink == anotherObject nextLink]]
+)
+
+hash = (
+	^self value hash bitXor: self nextLink identityHash
+)
+
+printOn: aStream = (
+	super printOn: aStream.
+	aStream nextPut: $(.
+	value printOn: aStream.
+	aStream nextPut: $)
+)
+
+value = (
+	^ value
+)
+
+value: anObject = (
+	value := anObject.
+)
+
+
+----------------------------
+
+value: aValue = (
+	^self new value: aValue
+)
+
+
+comment = (^'
+A ValueLink is a Link containing a Value.
+Adding an object to a LinkedList which is not a Link will create a ValueLink containing that object.
+
+
+value - The object this link points to.
+')
+
+
+)

@@ -1,5 +1,17 @@
 Symbol = String (
 
+ascending = (
+	"Return a SortFunction around the receiver, where the receiver will be used as a unary message to send to both a and b during sorting, and then the result of said send will be collated in ascending order using the <=> method."
+	"#('abc' 'de' 'fghi') sorted: #size ascending >>> #('de' 'abc' 'fghi')"
+	^self asSortFunction
+)
+
+asSortFunction = (
+	"Return a SortFunction around the receiver, where the receiver will be used as a unary message to send to both a and b during sorting, and then the result of said send will be collated in ascending order using the <=> method."
+	"#('abc' 'de' 'fghi') sorted: #size ascending >>> #('de' 'abc' 'fghi')"
+	^PropertySortFunction property: self
+)
+
 asString = (
 	| newString |
 	newString := self species new: self size.
@@ -21,12 +33,24 @@ classPart = (
 	^(self copyFrom: 1 to: i-1) asSymbol
 )
 
+collatedBy: aSortFunction = (
+	"Return a SortFunction around the receiver, where the receiver will be used as a unary message to send to both a and b during sorting, and then the result of said send will be collated iusing aSortFunction."
+	"#('abc' 'de' 'fghi') sorted: (#size collatedWith: [:e|e bitAnd: 1]) , #size >>> #( 'de' 'fghi' 'abc')"
+	^PropertySortFunction property: self collatedWith: aSortFunction asSortFunction
+)
+
 copy = (
 	"Answer with the receiver, because Symbols are unique."
 )
 
 cull: anObject  = (
 	^anObject perform: self
+)
+
+descending = (
+	"Return a SortFunction around the receiver, where the receiver will be used as a unary message to send to both a and b during sorting, and then the result of said send will be collated in descending order using the <=> method."
+	"#('abc' 'de' 'fghi') sorted: #size ascending >>> #('fghi' 'abc' 'de')"
+	^self asSortFunction reversed
 )
 
 isBinary = (

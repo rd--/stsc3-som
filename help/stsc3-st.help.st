@@ -7,6 +7,9 @@ ArrayTest suite run printOn: Transcript
 BagTest testSelectors do: [ :each | Transcript show: each; cr. BagTest run: each ]
 BagTest suite run printOn: Transcript
 
+ChainedSortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. ChainedSortFunctionTest run: each ]
+ChainedSortFunctionTest suite run printOn: Transcript
+
 CharacterTest testSelectors do: [ :each | Transcript show: each; cr. CharacterTest run: each ]
 CharacterTest suite run printOn: Transcript
 
@@ -46,6 +49,9 @@ IntegerTest suite run printOn: Transcript
 IntervalTest testSelectors do: [ :each | Transcript show: each; cr. IntervalTest run: each ]
 IntervalTest suite run printOn: Transcript
 
+LinkedListTest testSelectors do: [ :each | Transcript show: each; cr. LinkedListTest run: each ]
+LinkedListTest suite run printOn: Transcript
+
 MatrixTest testSelectors do: [ :each | Transcript show: each; cr. MatrixTest run: each ]
 MatrixTest suite run printOn: Transcript
 
@@ -54,6 +60,9 @@ MonthTest suite run printOn: Transcript
 
 NumberTest testSelectors do: [ :each | Transcript show: each; cr. NumberTest run: each ]
 NumberTest suite run printOn: Transcript
+
+ObjectTest testSelectors do: [ :each | Transcript show: each; cr. ObjectTest run: each ]
+ObjectTest suite run printOn: Transcript
 
 OrderedCollectionTest testSelectors do: [ :each | Transcript show: each; cr. OrderedCollectionTest run: each ]
 OrderedCollectionTest suite run printOn: Transcript
@@ -73,8 +82,17 @@ SetTest suite run printOn: Transcript
 SmallIntegerTest testSelectors do: [ :each | Transcript show: each; cr. SmallIntegerTest run: each ]
 SmallIntegerTest suite run printOn: Transcript
 
+SortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. SortFunctionTest run: each ]
+SortFunctionTest suite run printOn: Transcript
+
 SortedCollectionTest testSelectors do: [ :each | Transcript show: each; cr. SortedCollectionTest run: each ]
 SortedCollectionTest suite run printOn: Transcript
+
+SpaceshipOperatorTest testSelectors do: [ :each | Transcript show: each; cr. SpaceshipOperatorTest run: each ]
+SpaceshipOperatorTest suite run printOn: Transcript
+
+StackTest testSelectors do: [ :each | Transcript show: each; cr. StackTest run: each ]
+StackTest suite run printOn: Transcript
 
 StringTest testSelectors do: [ :each | Transcript show: each; cr. StringTest run: each ]
 StringTest suite run printOn: Transcript

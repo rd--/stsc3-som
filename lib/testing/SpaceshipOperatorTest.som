@@ -1,0 +1,35 @@
+SpaceshipOperatorTest = TestCase (
+testFloats = (
+	| a b c d |
+	a := 13.1.
+	b := 18.9.
+	c := 18.9.
+	d := -7.2.
+	self assert: (b <=> c) isZero.
+	self assert: a <=> b = -1.
+	self assert: b <=> a = 1.
+	self assert: a <=> d = 1.
+	self assert: d <=> a = -1
+)
+
+testIntegers = (
+	self assert: (42 <=> 42) equals: 0.
+	self assert: (1 <=> 42) equals: -1.
+	self assert: (100 <=> 42) equals: 1
+)
+
+testStrings = (
+	| a b c d |
+	a := 'xc'.
+	b := 'xd'.
+	c := 'xd'.
+	d := 'xa'.
+	self assert: (b <=> c) isZero.
+	self assert: a <=> b = -1.
+	self assert: b <=> a = 1.
+	self assert: a <=> d = 1.
+	self assert: d <=> a = -1
+)
+
+
+)

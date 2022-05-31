@@ -1,0 +1,21 @@
+ReverseSortFunction = ComposedSortFunction (
+collate: anObject with: another = (
+	^(baseSortFunction collate: anObject with: another) negated
+)
+
+reversed = (
+	^baseSortFunction
+)
+
+undefinedFirst = (
+	"apply on the original"
+	^baseSortFunction undefinedLast reversed
+)
+
+undefinedLast = (
+	"apply on the original"
+	^baseSortFunction undefinedFirst reversed
+)
+
+
+)

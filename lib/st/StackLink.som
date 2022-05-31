@@ -1,0 +1,30 @@
+StackLink = Link (
+
+| element |
+
+element = (
+	^element
+)
+
+element: anObject = (
+	"Any kind of Object."
+	element := anObject
+)
+
+printOn: aStream = (
+	aStream nextPutAll: self class printString;
+		 nextPutAll: ' with: ';
+		 nextPutAll: self element printString
+)
+
+----------------------------
+
+with: anObject = (
+	^ self new element: anObject
+)
+
+comment = (^'
+I implement an element of a stack. I''m a container for any type of object, saved into the ''element'' variable. My superclass Link allows me to be part of a LinkedList.
+')
+
+)

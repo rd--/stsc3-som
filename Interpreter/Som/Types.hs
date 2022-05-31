@@ -14,6 +14,7 @@ import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
+import qualified Data.Map as Map {- containers -}
 import qualified Data.Time.Clock.System as Time {- time -}
 import qualified Data.Time.LocalTime as Time {- time -}
 
@@ -98,6 +99,8 @@ type StExpr = Expr.Expr
 -- | (intObject, strObject, symObject)
 type LiteralConstructors = (LargeInteger -> Object, String -> Object, String -> Object)
 
+type MethodCache = Map.Map St.Selector Object
+
 {- | Data associated with an object.
 
      Som:
@@ -113,10 +116,11 @@ data ObjectData
   | DataDouble Double
   | DataCharacter Char -- ^ Not in Som
   | DataImmutableString UnicodeString
-  | DataClass (St.ClassDefinition, Bool) ObjectTable (Vec Object,Vec Object) -- ^ Class definition and level, class variables, method caches
+  | DataClass (St.ClassDefinition, Bool) ObjectTable (MethodCache,MethodCache) -- ^ Class definition and level, class variables, method caches
+  | DataContext Context
   | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
-  | DataBlock Id Context StExpr -- ^ Identity, context, lambda StExpr
+  | DataBlockClosure Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
   | DataSystem -- ^ Token for system or Smalltalk singleton
   | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
@@ -335,9 +339,10 @@ objectToString (Object nm obj) =
       then concat ["#'",fromUnicodeString x,"'"]
       else concat ["'",fromUnicodeString x,"'"]
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
+    DataContext _ -> "thisContext"
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
-    DataBlock {} -> "instance of " ++ fromSymbol nm
+    DataBlockClosure {} -> "instance of " ++ fromSymbol nm
     DataReturn _ _ o -> "Return: " ++ objectToString o
     DataSystem -> "instance of " ++ fromSymbol nm
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
@@ -386,7 +391,7 @@ objectExamine vmPp f (Object nm obj) =
       tblStr <- objectTableExamine f tbl
       return (St.className x ++ ": " ++ tblStr)
     DataMethod _ x _ -> return (show x)
-    DataBlock x _ (Expr.Lambda ld _ _ _) ->
+    DataBlockClosure x _ (Expr.Lambda ld _ _ _) ->
       return (printf "instance of %s <pc:%d, %s>" nm x (Expr.lambdaDefinitionShow ld))
     DataNonIndexable x tbl -> do
       tblStr <- objectTableExamine f tbl
@@ -436,12 +441,18 @@ objectListError o msg = objectListPrint o >> vmError (printf "%s: arity=%d" msg 
 -- * Accessors
 
 -- | The cache should be a dictionary rather than a vector.
-classCachedMethodsVec :: Object -> Maybe (Vec Object)
-classCachedMethodsVec (Object _ obj) =
+classCachedMethods :: Object -> Maybe MethodCache
+classCachedMethods (Object _ obj) =
   case obj of
     DataClass (_,False) _ (instanceMethodsCache,_) -> Just instanceMethodsCache
     DataClass (_,True) _ (_,classMethodsCache) -> Just classMethodsCache
     _ -> Nothing
+
+classCachedMethodLookup :: Object -> St.Selector -> Vm (Maybe Object)
+classCachedMethodLookup o sel =
+  case classCachedMethods o of
+    Just mth -> return (Map.lookup sel mth)
+    _ -> vmError "classCachedMethodLookup?"
 
 indexableObjectElements :: Object -> Vm [Object]
 indexableObjectElements o = case o of
@@ -457,7 +468,8 @@ arrayLiteralElements o = case o of
 
 arrayElements :: Object -> Vm [Object]
 arrayElements o = case o of
-  Object "Array" (DataIndexable _ vectorRef) -> fmap vecToList (deRef vectorRef)
+  Object "Array" (DataArrayLiteral vec) -> return (vecToList vec)
+  Object "Array" (DataIndexable _ vecRef) -> fmap vecToList (deRef vecRef)
   _ -> vmError ("arrayElements: not indexable object")
 
 -- | Lookup instance variable of Object.
@@ -517,11 +529,12 @@ nilObject :: Object
 nilObject = reservedObject "nil"
 
 -- | Make class and instance method caches.
-classMethodCache :: St.ClassDefinition -> (Vec Object,Vec Object)
+classMethodCache :: St.ClassDefinition -> (MethodCache,MethodCache)
 classMethodCache cd =
-  let im = map (methodObject (toSymbol (St.className cd))) (St.instanceMethods cd)
-      cm = map (methodObject (toSymbol (St.classMetaclassName cd))) (St.classMethods cd)
-  in (vecFromList im,vecFromList cm)
+  let f nm m = (St.methodSelector m, methodObject nm m)
+      im = map (f (St.className cd)) (St.instanceMethods cd)
+      cm = map (f (St.classMetaclassName cd)) (St.classMethods cd)
+  in (Map.fromList im,Map.fromList cm)
 
 -- | An ObjectTable with all variables set to nil.
 variablesTbl :: MonadIO m => [Symbol] -> m ObjectTable
@@ -692,23 +705,40 @@ mHash :: (Monad m,Hashable.Hashable t) => t -> m SmallInteger
 mHash = return . Hashable.hash
 
 -- | Hash of object.  Used for object equality.
-objectIntHash :: (MonadIO m, StError m) => Object -> m SmallInteger
-objectIntHash (Object nm obj) =
+objectHash :: (MonadIO m, StError m) => Object -> m SmallInteger
+objectHash (Object nm obj) =
   case obj of
     DataUndefinedObject -> mHash (nm,"nil")
     DataBoolean -> mHash nm
     DataSmallInteger x -> return x -- c.f. Integer>>hashcode
-    DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hashcode
+    DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hash
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
-    DataImmutableString x -> mHash (nm, x) -- c.f. 'x' hashcode /= #'x' hashcode
+    DataImmutableString x -> mHash (nm, x) -- c.f. 'x' hash /= #'x' hash
     DataClass (x,_) _ _ -> mHash (nm,St.className x)
+    DataContext _ -> vmError ("Object>>hash: Context")
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
-    DataBlock x _ _ -> mHash ("Block",x)
+    DataBlockClosure x _ _ -> mHash ("Block",x)
     DataReturn _ _ _ -> vmError ("Object>>hashcode: Return")
     DataSystem -> mHash (nm,"system")
-    DataArrayLiteral vec -> mapM objectIntHash (vecToList vec) >>= \lst -> mHash (nm, lst)
+    DataArrayLiteral vec -> mapM objectHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm,x)
     DataNonIndexable x _ -> mHash (nm,x)
     DataCharacterArray _ ref -> vecRefToList ref >>= \str -> mHash (nm, str) -- strings and copies of strings hash equally
+
+objectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Bool
+objectHashEqual obj1 obj2 = do
+  hash1 <- objectHash obj1
+  hash2 <- objectHash obj2
+  return (hash1 == hash2)
+
+-- * Identical
+
+-- | String literals are a special case.
+objectIdentical :: (MonadIO m, StError m) => Object -> Object -> m Bool
+objectIdentical obj1 obj2 =
+  case (obj1, obj2) of
+    (Object "String" (DataCharacterArray k1 _), Object "String" (DataCharacterArray k2 _))
+      -> if k1 == stringLiteralId && k2 == stringLiteralId then objectHashEqual obj1 obj2 else return (obj1 == obj2)
+    _ -> return (obj1 == obj2)

@@ -24,6 +24,15 @@ String = ArrayedCollection (
 	^(self compare: aString) >= 2
 )
 
+<=> aCharacterArray = (
+	"Return a collation order of -1, 0, or 1, indicating whether I should be collated before the receiver, am equal, or after.
+	See also:  http://en.wikipedia.org/wiki/Spaceship_operator"
+	aCharacterArray isString ifTrue: [ ^(self compare: aCharacterArray) - 2 ].
+	self = aCharacterArray 	ifTrue: [ ^0 ].
+	self < aCharacterArray 	ifTrue: [ ^-1 ].
+	^1
+)
+
 , anObject = (
 	"Concatenate the argument to the receiver.
 		Transcript cr; show: 'The value is: ', 3.
@@ -246,6 +255,19 @@ findAnySubStr: delimiters startingAt: start = (
 			ifFalse: [self indexOfSubCollection: delim
 						startingAt: start ifAbsent: [min]].
 		min min: ind]
+)
+
+findBetweenSubStrs: delimiters = (
+	"Answer the collection of String tokens that result from parsing self.  Tokens are separated by 'delimiters', which can be a collection of Strings, or a collection of Characters.  Several delimiters in a row are considered as just one separation."
+	| tokens keyStart keyStop |
+	tokens := OrderedCollection new.
+	keyStop := 1.
+	[keyStop <= self size] whileTrue:
+		[keyStart := self skipAnySubStr: delimiters startingAt: keyStop.
+		keyStop := self findAnySubStr: delimiters startingAt: keyStart.
+		keyStart < keyStop
+			ifTrue: [tokens add: (self copyFrom: keyStart to: (keyStop - 1))]].
+	^tokens
 )
 
 findDelimiters: delimiters startingAt: start = (

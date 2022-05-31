@@ -9,6 +9,7 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
+import qualified Data.Map as Map {- containers -}
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
 
@@ -195,7 +196,7 @@ contextAssign (Context c p) k v =
 -}
 contextAddBlockContext :: Object -> [Object] -> Vm Context
 contextAddBlockContext blockObject arguments = do
-  let Object _ (DataBlock _ blockContext lambda) = blockObject
+  let Object _ (DataBlockClosure _ blockContext lambda) = blockObject
       Expr.Lambda _ blockArguments (St.Temporaries blockTemporaries) _ = lambda
   when
     (length blockArguments /= length arguments)
@@ -255,7 +256,7 @@ vmEscapedBlock opt maybeBlock =
   case maybeBlock of
     Just block ->
       case block of
-        Object _ (DataBlock _ context _) ->
+        Object _ (DataBlockClosure _ context _) ->
           case contextReceiverMaybe context of
             Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "escapedBlock:") [block]
             Nothing -> vmError "escaped context: no receiver"
@@ -309,7 +310,7 @@ evalStatements opt st = if null st then return nilObject else evalExprSequence o
 -}
 evalBlock :: CoreOpt -> Object -> [Object] -> Vm Object
 evalBlock opt blockObject arguments = do
-  let Object _ (DataBlock _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
+  let Object _ (DataBlockClosure _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
   extendedBlockContext <- contextAddBlockContext blockObject arguments
   currentContext <- vmContextReplace extendedBlockContext
   result <- evalStatements opt blockStatements
@@ -383,6 +384,9 @@ arrayFromVec = indexableFromVec "Array"
 arrayFromList :: [Object] -> Vm Object
 arrayFromList = indexableFromList "Array"
 
+arrayFromMap :: Map.Map t Object -> Vm Object
+arrayFromMap = arrayFromList . Map.elems
+
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: CoreOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object
 findAndEvalMethodOrPrimitive opt receiver methodReceiver selector arguments = do
@@ -398,14 +402,11 @@ findAndEvalMethodOrPrimitive opt receiver methodReceiver selector arguments = do
 -- | Look in the methods of the class, then in the superclass.
 findMethodMaybe :: Object -> St.Selector -> Vm (Maybe Object)
 findMethodMaybe o sel =
-  if isNil o
-  then return Nothing
-  else case classCachedMethodsVec o of
-         Just mth ->
-          case vecFind (\(Object _ (DataMethod _ m _)) -> sel == St.methodSelector m) mth of
-            Just m -> return (Just m)
-            Nothing -> classSuperclassOf o >>= \sc -> findMethodMaybe sc sel
-         _ -> vmError "findMethodMaybe"
+  if isNil o then return Nothing else do -- Object superclass = nil
+    r <- classCachedMethodLookup o sel
+    case r of
+      Just m -> return (Just m)
+      Nothing -> classSuperclassOf o >>= \sc -> findMethodMaybe sc sel
 
 lookupClassForSuper :: CoreOpt -> Vm Object
 lookupClassForSuper opt = do
@@ -446,6 +447,11 @@ sysLiteralObject typ obj =
     (SmalltalkSystem, Object "String" (DataImmutableString str))  -> mutableStringObject True str
     _ -> return obj
 
+vmThisContextObject :: Vm Object
+vmThisContextObject = do
+  ctx <- vmContext
+  return (Object "Context" (DataContext ctx))
+
 {- | Evaluate expression.
 
 The evaluator handles non-local returns by making a "Return" object.
@@ -454,7 +460,7 @@ The evaluator runs isReturnObject to see if further work needs to be done, or if
 evalExpr :: CoreOpt -> StExpr -> Vm Object
 evalExpr opt expr =
   case expr of
-    Expr.Identifier x -> vmContextLookup opt (if x == "super" then "self" else x)
+    Expr.Identifier x -> if x == "thisContext" then vmThisContextObject else vmContextLookup opt (if x == "super" then "self" else x)
     Expr.Literal x -> sysLiteralObject (coreOptTyp opt) (literalObject (coreOptLit opt) x)
     Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmContextAssign lhs
     Expr.Return x -> do
@@ -473,7 +479,7 @@ evalExpr opt expr =
     Expr.Lambda _ld arg _tmp _stm -> do
       ctx <- vmContext
       pc <- vmProgramCounterIncrement
-      return (Object (closureClass (coreOptTyp opt) (length arg)) (DataBlock pc ctx expr))
+      return (Object (closureClass (coreOptTyp opt) (length arg)) (DataBlockClosure pc ctx expr))
     Expr.Array exprList -> mapM (evalExpr opt) exprList >>= arrayFromList
     Expr.Begin exprList -> evalExprSequence opt exprList
     Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence opt exprList

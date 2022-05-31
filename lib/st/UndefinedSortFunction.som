@@ -1,0 +1,44 @@
+UndefinedSortFunction = ComposedSortFunction (
+| direction |
+
+= anObject = (
+	"Answer whether the receiver and anObject represent the same object."
+	self == anObject
+		ifTrue: [ ^ true ].
+	self class = anObject class
+		ifFalse: [ ^ false ].
+	^ baseSortFunction = anObject baseSortFunction
+		and: [ direction = anObject direction ]
+)
+
+collate: anObject with: another = (
+	"Answer the collation order of anObject and another, with nil first or last according to direction"
+	anObject ifNil: [^another ifNil: [0] ifNotNil: [direction]].
+	another ifNil: [^direction negated].
+	^baseSortFunction collate: anObject with: another
+)
+
+direction = (
+	^direction
+)
+
+hash = (
+	"Answer an integer value that is related to the identity of the receiver."
+	^ super hash bitXor: direction hash
+)
+
+initialize = (
+	super initialize.
+	direction := -1
+)
+
+undefinedFirst = (
+	direction := -1
+)
+
+undefinedLast = (
+	direction := 1
+)
+
+
+)

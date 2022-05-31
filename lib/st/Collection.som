@@ -36,6 +36,13 @@ addAll: aCollection = (
 	^ aCollection
 )
 
+addIfNotPresent: anObject = (
+	"Include anObject as one of the receiver's elements, but only if there
+	is no such element already. Anwser anObject."
+	(self includes: anObject) ifFalse: [self add: anObject].
+	^ anObject
+)
+
 allSatisfy: aBlock = (
 	"Evaluate aBlock with the elements of the receiver.
 	If aBlock returns false for any element return false.
@@ -191,6 +198,12 @@ copyWithout: oldElement = (
 	^ self reject: [:each | each = oldElement]
 )
 
+copyWithoutAll: aCollection = (
+	"Answer a copy of the receiver that does not contain any elements
+	equal to those in aCollection."
+	^ self reject: [:each | aCollection includes: each]
+)
+
 degreeCos = (
 	^self collect: [:each | each degreeCos]
 )
@@ -223,6 +236,16 @@ detect: aBlock ifNone: exceptionBlock = (
 		detect: aBlock
 		ifFound: [:element | element]
 		ifNone: exceptionBlock
+)
+
+detectSum: aBlock = (
+	"Evaluate aBlock with each of the receiver's elements as the argument.
+	Return the sum of the answers."
+	| sum |
+	sum := 0.
+	self do: [:each |
+		sum := (aBlock value: each) + sum].
+	^ sum
 )
 
 difference: aCollection = (
@@ -275,6 +298,12 @@ histogramOf: aBlock = (
 	^ self collect: aBlock as: Bag
 )
 
+identityIncludes: anObject = (
+	"Answer whether anObject is one of the receiver's elements."
+	self do: [:each | anObject == each ifTrue: [^true]].
+	^false
+)
+
 ifEmpty: aBlock = (
 	"Evaluate aBlock if I'm empty, return myself otherwise."
 	self isEmpty ifTrue: [^ aBlock value].
@@ -296,6 +325,12 @@ ifEmpty: emptyBlock ifNotEmptyDo: notEmptyBlock = (
 ifNotEmpty: aBlock = (
 	"Evaluate aBlock if I'm not empty, return myself otherwise. If aBlock has an argument, evaluate it with myself as its argument. See also #ifNotEmptyDo:."
 	self isEmpty ifFalse: [^ aBlock cull: self].
+)
+
+ifNotEmpty: notEmptyBlock ifEmpty: emptyBlock = (
+	"Evaluate emptyBlock if I'm empty, notEmptyBlock otherwise. If the notEmptyBlock has an argument, evaluate it with myself as its argument. See also #ifNotEmptyDo:ifEmpty:."
+	self isEmpty ifFalse: [^notEmptyBlock cull: self].
+	^ emptyBlock value
 )
 
 ifNotEmptyDo: aBlock = (
@@ -383,6 +418,14 @@ minMax = (
 	^ Array with: min with: max
 )
 
+noneSatisfy: aBlock = (
+	"Evaluate aBlock with the elements of the receiver.
+	If aBlock returns false for all elements return true.
+	Otherwise return false"
+	self do: [:item | (aBlock value: item) ifTrue: [^ false]].
+	^ true
+)
+
 notEmpty = (
 	"Answer whether the receiver contains any elements."
 	^ self isEmpty not
@@ -394,6 +437,25 @@ occurrencesOf: anObject = (
 	tally := 0.
 	self do: [:each | anObject = each ifTrue: [tally := tally + 1]].
 	^tally
+)
+
+printElementsOn: aStream = (
+	aStream nextPut: $(.
+	self
+		printElementsOn: aStream
+		separatedBy: String space.
+	aStream nextPut: $).
+)
+
+printElementsOn: aStream separatedBy: delimiter = (
+	"Do not use #print: on the delemiter to have more control over the output. Strings get quoted, Characters get prefixed, etc."
+	self
+		do: [:element | aStream print: element]
+		separatedBy: [aStream nextPutAll: delimiter asString].
+)
+
+printNameOn: aStream = (
+	super printOn: aStream
 )
 
 product = (
@@ -436,6 +498,14 @@ remove: oldObject ifAbsent: anExceptionBlock = (
 removeAll: aCollection = (
 	aCollection == self ifTrue: [^self removeAll].
 	aCollection do: [:each | self remove: each].
+	^ aCollection
+)
+
+removeAllFoundIn: aCollection = (
+	"Remove each element of aCollection which is present in the receiver
+	from the receiver. Answer aCollection. No error is raised if an element
+	isn't found. ArrayedCollections cannot respond to this message."
+	aCollection do: [:each | self remove: each ifAbsent: []].
 	^ aCollection
 )
 
@@ -484,6 +554,10 @@ union: aCollection = (
 	^ self asSet addAll: aCollection; yourself
 )
 
+write: anObject = (
+	^ self add: anObject
+)
+
 ----
 
 isAbstract = (
@@ -515,6 +589,39 @@ with: firstObject with: secondObject with: thirdObject = (
 		add: firstObject;
 		add: secondObject;
 		add: thirdObject;
+		yourself
+)
+
+with: firstObject with: secondObject with: thirdObject with: fourthObject = (
+	"Answer an instance of me, containing the four arguments as the elements."
+	^ self new
+		add: firstObject;
+		add: secondObject;
+		add: thirdObject;
+		add: fourthObject;
+		yourself
+)
+
+with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject = (
+	"Answer an instance of me, containing the five arguments as the elements."
+	^ self new
+		add: firstObject;
+		add: secondObject;
+		add: thirdObject;
+		add: fourthObject;
+		add: fifthObject;
+		yourself
+)
+
+with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject with: sixthObject = (
+	"Answer an instance of me, containing the six arguments as the elements."
+	^ self new
+		add: firstObject;
+		add: secondObject;
+		add: thirdObject;
+		add: fourthObject;
+		add: fifthObject;
+		add: sixthObject;
 		yourself
 )
 

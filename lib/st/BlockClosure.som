@@ -1,9 +1,32 @@
 BlockClosure = (
 
+ascending = (
+	"Return a SortFunction around the receiver. If the receiver is a 2 arg block, it is assumed it will do the collation directly itself, returning -1, 0, or 1. If the receiver is a one arg block, it will be evaluated for each a and b and of the sort input, and the result of sending <=> to those will be used."
+	^self asSortFunction
+)
+
+asSortFunction = (
+	"Return a SortFunction around the receiver. If the receiver is a 2 arg block, it is assumed it will do the collation directly itself, returning -1, 0, or 1. If the receiver is a one arg block, it will be evaluated for each a and b and of the sort input, and the result of sending <=> to those will be used"
+	self numArgs = 1 ifTrue: [^PropertySortFunction property: self].
+	self numArgs = 2 ifTrue: [^CollatorBlockFunction usingBlock: self].
+	self error: 'Cant be converted to sort function. It should has one or two args'
+)
+
+collatedBy: aSortFunction = (
+	"Return a SortFunction around the receiver. If the receiver is a 2 arg block, it is assumed it will do the collation directly itself, returning -1, 0, or 1. If the receiver is a one arg block, it will be evaluated for each a and b and of the sort input, and the result of using aSortFunction on those will be used"
+	self numArgs = 1 ifTrue: [^PropertySortFunction property: self collatedWith: aSortFunction asSortFunction].
+	self error: 'Cant be converted to sort function. It should hava one arg'
+)
+
 cull: firstArg = (
 	"Activate the receiver, with one or zero arguments."
 	self numArgs >= 1 ifTrue: [ ^self value: firstArg ].
 	^self value
+)
+
+descending = (
+	"Opposite direction as ascending."
+	^self asSortFunction reversed
 )
 
 numArgs = (
@@ -14,6 +37,10 @@ numArgs = (
 repeat = (
 	"Evaluate the receiver repeatedly, ending only if the block explicitly returns."
 	[self value. true] whileTrue
+)
+
+sender = (
+	self error: 'sender'
 )
 
 value = (
@@ -34,6 +61,16 @@ value: arg1 value: arg2 = (
 value: arg1 value: arg2 value: arg3 = (
 	<primitive: 81>
 	^self valueWithArguments: (Array with: arg1 with: arg2 with: arg3)
+)
+
+value: firstArg value: secondArg value: thirdArg value: fourthArg = (
+	<primitive: 81>
+	^self valueWithArguments: (Array with: firstArg with: secondArg with: thirdArg with: fourthArg)
+)
+
+value: firstArg value: secondArg value: thirdArg value: fourthArg value: fifthArg = (
+	<primitive: 81>
+	^self valueWithArguments: (Array with: firstArg with: secondArg with: thirdArg with: fourthArg with: fifthArg)
 )
 
 valueError = (

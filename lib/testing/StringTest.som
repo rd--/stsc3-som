@@ -105,11 +105,9 @@ testEmpty = (
 		assert: String new species
 		equals: String empty species
 		description: 'The empty String should be a String';
-"
 		assert: String empty
 		identical: String empty
 		description: 'The empty String should be canonical';
-"
 		yourself
 )
 
@@ -279,14 +277,12 @@ testSubStrings = (
 					receiver subStrings: argument) ] ]
 )
 
-"
 testUpTo = (
-	self assert: #up:to: keywords = #(up: to:).
-	self assert: #copy:from:to: keywords = #(copy: from: to:).
-	self assert: #up keywords = #(up).
-	self assert: #at: keywords = #(at:).
+	self assert: #up:to: keywords = #('up:' 'to:').
+	self assert: #copy:from:to: keywords = #('copy:' 'from:' 'to:').
+	self assert: #up keywords = #('up').
+	self assert: #at: keywords = #('at:').
 )
-"
 
 testWithBlanksTrimmed = (
 	| s |

@@ -82,12 +82,6 @@ doubleNumBoolPrimitive f lhs rhs = fmap (booleanObject . f lhs) (objectDataAsDou
 prArrayAt :: (StError m, MonadIO m) => VecRef Object -> LargeInteger -> m Object
 prArrayAt ref ix = vecRefAtMaybe ref (fromInteger ix - 1) >>= maybe (prError "Array>>at: index out of range") return
 
-prObjectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Object
-prObjectHashEqual rcv arg = do
-  hash1 <- objectIntHash rcv
-  hash2 <- objectIntHash arg
-  return (booleanObject (hash1 == hash2))
-
 -- | Basis for isLetters and isDigits and isWhiteSpace.  Null strings are false.
 prStringAll :: (Char -> Bool) -> UnicodeString -> Object
 prStringAll f = booleanObject . unicodeStringAll f
@@ -184,9 +178,9 @@ somPrimitivesM (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("<", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (<) lhs rhs
     ("=", DataDouble lhs, [Object _ rhs]) -> doubleNumBoolPrimitive (==) lhs rhs
     ("rem:", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
-    ("restart", DataBlock {}, []) -> Nothing -- not implemented
+    ("restart", DataBlockClosure {}, []) -> Nothing -- not implemented
     ("sqrt", _, []) -> numNumPrimitive sqrt receiverObj
-    ("value", DataBlock {}, []) -> Nothing -- not implemented
+    ("value", DataBlockClosure {}, []) -> Nothing -- not implemented
     _ -> somPrimitivesO (prClass, prMethod) receiver arguments
 
 prAtPut :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
@@ -206,14 +200,14 @@ System>>loadFile: if the file does not exist returns nil, i.e. does not error.
 somPrimitivesI :: (StError m, MonadIO m) => SomPrimitiveOf (m Object)
 somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
-    ("==", _, [arg]) -> prObjectHashEqual receiver arg
+    ("==", _, [arg]) -> fmap booleanObject (objectHashEqual receiver arg)
     ("at:", DataIndexable _ ref, [Object _ (DataLargeInteger ix)]) -> prArrayAt ref ix
     ("at:put:", DataIndexable _ ref, [Object _ (DataLargeInteger ix), value]) -> prAtPut ref (fromInteger ix) value
     ("atRandom", DataLargeInteger x, []) -> fmap intObject (liftIO (getStdRandom (randomR (0, x - 1))))
     ("errorPrintln:", DataSystem, [Object _ (DataImmutableString x)]) -> liftIO (unicodeStringWrite x >> putChar '\n') >> error "System>>error"
     ("exit:", DataSystem, [Object _ (DataLargeInteger x)]) -> prSystemExit x
     ("fullGC", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return trueObject
-    ("hashcode", _, []) -> fmap (intObject . fromIntegral) (objectIntHash receiver)
+    ("hashcode", _, []) -> fmap (intObject . fromIntegral) (objectHash receiver)
     ("instVarAt:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix)]) -> tblAtDefault tbl (fromLargeInteger ix - 1) (prError "Object>>instVarAt:")
     ("instVarAt:put:", DataNonIndexable _ tbl, [Object _ (DataLargeInteger ix), newObject]) -> tblAtPutDefault tbl (fromLargeInteger ix - 1) newObject (prError "Object>>instVarAt:put")
     ("instVarNamed:", DataNonIndexable _ tbl, [Object "Symbol" (DataImmutableString key)]) -> tblAtKeyDefault tbl (fromUnicodeString key) (prError "Object>>instVarNamed:")
@@ -244,7 +238,7 @@ somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("global:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
     ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssign (fromUnicodeString x) e
     ("hasGlobal:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
-    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromVec (classCachedMethodsVec receiver)
+    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromMap (classCachedMethods receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmElapsedTimeInMicroseconds
     ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmElapsedTimeInMicroseconds
@@ -279,9 +273,9 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
     ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
-    ("value", DataBlock {}, []) -> evalBlock somCoreOpt receiver []
-    ("value:", DataBlock {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
-    ("value:with:", DataBlock {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
+    ("value", DataBlockClosure {}, []) -> evalBlock somCoreOpt receiver []
+    ("value:", DataBlockClosure {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
+    ("value:with:", DataBlockClosure {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
     _ -> somPrimitivesV (prClass, prMethod) receiver arguments
 
 somPrimitives :: PrimitiveDispatcher

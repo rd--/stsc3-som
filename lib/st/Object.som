@@ -46,6 +46,13 @@ adaptToInteger: rcvr andSend: selector = (
 	^ self adaptToNumber: rcvr andSend: selector
 )
 
+addDependent: anObject = (
+	"Add anObject as one of the receiver's dependents."
+	(self dependentsFields at: self ifAbsent: [self setDependents])
+		add: anObject.
+	^anObject
+)
+
 as: aSimilarClass = (
 	"Create an object of class aSimilarClass that has similar contents to the receiver."
 	^ aSimilarClass newFrom: self
@@ -58,6 +65,10 @@ assert: aBlock = (
 
 asArray = (
     ^Array with: self
+)
+
+asLink = (
+	^ ValueLink value: self
 )
 
 asOrderedCollection = (
@@ -120,6 +131,11 @@ basicSize = (
 	^0
 )
 
+breakDependents = (
+	"Deallocate the soft field for the receiver's dependents."
+	self dependentsFields removeKey: self ifAbsent: []
+)
+
 caseOf: aBlockAssociationCollection = (
 	"The elements of aBlockAssociationCollection are associations between blocks.
 	 Answer the evaluated value of the first association in aBlockAssociationCollection
@@ -135,6 +151,19 @@ caseOf: aBlockAssociationCollection otherwise: aBlock = (
 	aBlockAssociationCollection associationsDo:
 		[:assoc | (assoc key value = self) ifTrue: [^assoc value value]].
 	^ aBlock value
+)
+
+changed = (
+	"Receiver changed in a general way; inform all the dependents by sending
+	each dependent an update: message."
+	self changed: self
+)
+
+changed: aParameter = (
+	"Receiver changed.  The change is denoted by the argument aParameter.
+	Usually the argument is a Symbol that is part of the dependent's change
+	protocol.  Inform all of the dependents."
+	self dependents do: [:aDependent | aDependent update: aParameter]
 )
 
 class = (
@@ -189,6 +218,17 @@ deepCopy = (
 	^newObject
 )
 
+dependents = (
+	"Answer an OrderedCollection of the objects that are dependent on the
+	receiver, that is, the objects that should be notified if the receiver changes."
+	^ self dependentsFields at: self ifAbsent: [OrderedCollection new]
+)
+
+dependentsFields = (
+	DependentsFields ifNil: [ DependentsFields := IdentityDictionary new: 4].
+	^ DependentsFields
+)
+
 doesNotUnderstand: selector = (
 	self error: ('Method ' , selector , ' not found in class ' , self class name)
 )
@@ -241,6 +281,33 @@ fullPrintString = (
 halt = (
 	<primitive: 114>
 	self primitiveFailed
+)
+
+haltIf: condition = (
+	"This is the typical message to use for inserting breakpoints during
+	debugging.  Param can be a block or expression, halt if true.
+	If the Block has one arg, the receiver is bound to that.
+ 	If the condition is a selector, we look up in the callchain. Halt if
+      any method's selector equals selector."
+	| cntxt |
+	condition isSymbol ifTrue:[
+		"only halt if a method with selector symbol is in callchain"
+		cntxt := thisContext.
+		[cntxt sender isNil] whileFalse: [
+			cntxt := cntxt sender.
+			(cntxt selector = condition) ifTrue: [self halt].
+			].
+		^self.
+	].
+	(condition isBlock
+			ifTrue: [condition cull: self]
+			ifFalse: [condition]
+	) ifTrue: [
+		self halt
+	].
+)
+
+haltIfNil = (
 )
 
 hash = (
@@ -406,6 +473,38 @@ perform: aSymbol with: anObject = (
 	^ self perform: aSymbol withArguments: { anObject }
 )
 
+perform: aSymbol with: firstObject with: secondObject = (
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not two.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject }
+)
+
+perform: aSymbol with: firstObject with: secondObject with: thirdObject = (
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not three.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject. thirdObject }
+)
+
+perform: aSymbol with: firstObject with: secondObject with: thirdObject with: fourthObject = (
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not four.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject. thirdObject. fourthObject }
+)
+
+perform: aSymbol with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject = (
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not five.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject. thirdObject. fourthObject. fifthObject }
+)
+
 perform: selector withArguments: argArray = (
 	<primitive: 84>
 	^ self perform: selector withArguments: argArray inSuperclass: self class
@@ -420,6 +519,21 @@ perform: selector withArguments: argArray inSuperclass: lookupClass = (
 	(self class == lookupClass or: [self class inheritsFrom: lookupClass])
 		ifFalse: [^ self error: 'lookupClass is not in my inheritance chain'].
 	self primitiveFailed
+)
+
+perform: selector withEnoughArguments: anArray = (
+	"Send selector to the receiver with arguments in anArray. Only use enough arguments for the arity of the selector; supply nils for missing ones."
+	| numArgs args |
+	(numArgs := selector numArgs) = anArray size
+		ifTrue: [ args := anArray asArray ]
+		ifFalse: [
+			args := Array new: numArgs.
+			args
+				replaceFrom: 1
+				to: (anArray size min: args size)
+				with: anArray
+				startingAt: 1 ].
+	^self perform: selector withArguments: args
 )
 
 postCopy = (
@@ -462,6 +576,30 @@ printStringLimitedTo: limit = (
 
 putOn:aStream = (
 	^aStream nextPut:self.
+)
+
+release = (
+	"Remove references to objects that may refer to the receiver. Answers self.
+	This message should be overidden by subclasses with any cycles, in which
+	case the subclass should also include the expression super release."
+	self breakDependents
+)
+
+removeDependent: anObject = (
+	"Remove the argument, anObject, as one of the receiver's dependents."
+	| dependents |
+	dependents := self dependentsFields at: self ifAbsent: [^ anObject].
+	dependents remove: anObject ifAbsent: [].
+	dependents isEmpty ifTrue: [self breakDependents].
+	^anObject
+)
+
+setDependents = (
+	"Allocate the soft field for the receiver's dependents."
+	| dependents |
+	dependents := OrderedCollection new.
+	self dependentsFields add: (Association key: self value: dependents).
+	^ dependents
 )
 
 shallowCopy = (
@@ -517,6 +655,13 @@ unknownGlobal: name = (
 	^Smalltalk resolve: name
 )
 
+update: aParameter = (
+	"Receive a change notice from an object of whom the receiver is a
+	dependent. The default behavior is to do nothing; a subclass might want
+	to change itself in some way."
+	^ self
+)
+
 value = (
 	^self
 )
@@ -526,5 +671,15 @@ yourself = (
 )
 
 ----
+
+| DependentsFields |
+
+initialize = (
+	self initializeDependentsFields.
+)
+
+initializeDependentsFields = (
+	DependentsFields := IdentityDictionary new: 4
+)
 
 )
