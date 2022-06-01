@@ -180,7 +180,6 @@ somPrimitivesM (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("rem:", DataLargeInteger lhs, [Object _ rhs]) -> intNumNumPrimitive rem undefined lhs rhs
     ("restart", DataBlockClosure {}, []) -> Nothing -- not implemented
     ("sqrt", _, []) -> numNumPrimitive sqrt receiverObj
-    ("value", DataBlockClosure {}, []) -> Nothing -- not implemented
     _ -> somPrimitivesO (prClass, prMethod) receiver arguments
 
 prAtPut :: (MonadIO m, StError m) => VecRef t -> Int -> t -> m t
@@ -238,7 +237,7 @@ somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("global:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
     ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssign (fromUnicodeString x) e
     ("hasGlobal:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
-    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromMap (classCachedMethods receiver)
+    ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromIndexedMap (classCachedMethods receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmElapsedTimeInMicroseconds
     ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmElapsedTimeInMicroseconds
@@ -273,15 +272,15 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
     ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
-    ("value", DataBlockClosure {}, []) -> evalBlock somCoreOpt receiver []
-    ("value:", DataBlockClosure {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
-    ("value:with:", DataBlockClosure {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
     _ -> somPrimitivesV (prClass, prMethod) receiver arguments
 
 somPrimitives :: PrimitiveDispatcher
-somPrimitives hs _cd rcv arg = do
-  answer <- somPrimitivesC hs rcv arg
-  return (Just answer)
+somPrimitives hs@(_prClass, prMethod) _cd receiver@(Object _ receiverObj) arguments =
+  case (prMethod, receiverObj, arguments) of
+    ("value", DataBlockClosure {}, []) -> evalBlock somCoreOpt receiver []
+    ("value:", DataBlockClosure {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
+    ("value:with:", DataBlockClosure {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
+    _ -> fmap Just (somPrimitivesC hs receiver arguments)
 
 somCoreOpt :: CoreOpt
 somCoreOpt = CoreOpt SomSystem (intObject, strObject, symObject . Som.somEscapedString) somPrimitives

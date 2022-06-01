@@ -373,6 +373,10 @@ isCollection = (
 	^false
 )
 
+isContext = (
+	^false
+)
+
 isDictionary = (
 	^false
 )

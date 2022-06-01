@@ -6,6 +6,7 @@ module Interpreter.Som.Core where
 import Control.Monad {- base -}
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
+import Data.List {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
@@ -194,16 +195,16 @@ contextAssign (Context c p) k v =
      For blocks with no arguments and no temporaries and no return statements,
      the context could perhaps be elided.
 -}
-contextAddBlockContext :: Object -> [Object] -> Vm Context
+contextAddBlockContext :: Object -> [Object] -> Vm (Maybe Context)
 contextAddBlockContext blockObject arguments = do
   let Object _ (DataBlockClosure _ blockContext lambda) = blockObject
       Expr.Lambda _ blockArguments (St.Temporaries blockTemporaries) _ = lambda
-  when
-    (length blockArguments /= length arguments)
-    (vmErrorWithBacktrace "contextAddBlockContext: arity error" (blockObject : arguments))
-  localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
-  pc <- vmProgramCounterIncrement
-  return (contextAdd blockContext (BlockContext pc blockObject localVariables))
+  if length blockArguments /= length arguments
+    then return Nothing
+    else do
+      localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
+      pc <- vmProgramCounterIncrement
+      return (Just (contextAdd blockContext (BlockContext pc blockObject localVariables)))
 
 contextLookupOrUnknown :: CoreOpt -> Context -> Symbol -> Vm Object
 contextLookupOrUnknown opt ctx k = do
@@ -309,19 +310,22 @@ evalStatements opt st = if null st then return nilObject else evalExprSequence o
    4. restoring the saved context
    5. returning the saved result
 -}
-evalBlock :: CoreOpt -> Object -> [Object] -> Vm Object
+evalBlock :: CoreOpt -> Object -> [Object] -> Vm (Maybe Object)
 evalBlock opt blockObject arguments = do
-  let Object _ (DataBlockClosure _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
-  extendedBlockContext <- contextAddBlockContext blockObject arguments
-  currentContext <- vmContextReplace extendedBlockContext
-  result <- evalStatements opt blockStatements
-  _ <- vmContextReplace currentContext
-  case result of
-    Object _ (DataReturn pc maybeBlock _) ->
-      if contextHasMethodWithId pc currentContext
-      then return result
-      else vmEscapedBlock opt maybeBlock
-    _ -> return result
+  ctx <- contextAddBlockContext blockObject arguments
+  case ctx of
+    Nothing -> return Nothing
+    Just extendedBlockContext -> do
+      let Object _ (DataBlockClosure _ _ (Expr.Lambda _ _ _ blockStatements)) = blockObject
+      currentContext <- vmContextReplace extendedBlockContext
+      result <- evalStatements opt blockStatements
+      _ <- vmContextReplace currentContext
+      case result of
+        Object _ (DataReturn pc maybeBlock _) ->
+          if contextHasMethodWithId pc currentContext
+          then return (Just result)
+          else fmap Just (vmEscapedBlock opt maybeBlock)
+        _ -> return (Just result)
 
 {- | evalMethod is similar to evalBlock, except that methods:
    1. have a receiver which is stored and can be referenced as self or super
@@ -387,6 +391,9 @@ arrayFromList = indexableFromList "Array"
 
 arrayFromMap :: Map.Map t Object -> Vm Object
 arrayFromMap = arrayFromList . Map.elems
+
+arrayFromIndexedMap :: Map.Map t (Int, Object) -> Vm Object
+arrayFromIndexedMap = arrayFromList . map snd . sortOn fst . Map.elems
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: CoreOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object

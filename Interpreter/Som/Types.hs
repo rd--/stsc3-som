@@ -110,7 +110,8 @@ type StExpr = Expr.Expr
 -- | (intObject, strObject, symObject)
 type LiteralConstructors = (LargeInteger -> Object, String -> Object, String -> Object)
 
-type MethodCache = Map.Map St.Selector Object
+-- | The method cache has indices of the ordering in the class description because Som tests for this.
+type MethodCache = Map.Map St.Selector (Int, Object)
 
 {- | Data associated with an object.
 
@@ -452,7 +453,7 @@ classCachedMethods (Object _ obj) =
 classCachedMethodLookup :: Object -> St.Selector -> Vm (Maybe Object)
 classCachedMethodLookup o sel =
   case classCachedMethods o of
-    Just mth -> return (Map.lookup sel mth)
+    Just mth -> return (fmap snd (Map.lookup sel mth))
     _ -> vmError "classCachedMethodLookup?"
 
 indexableObjectElements :: Object -> Vm [Object]
@@ -532,9 +533,9 @@ nilObject = reservedObject "nil"
 -- | Make class and instance method caches.
 classMethodCache :: St.ClassDefinition -> (MethodCache,MethodCache)
 classMethodCache cd =
-  let f nm m = (St.methodSelector m, methodObject nm m)
-      im = map (f (St.className cd)) (St.instanceMethods cd)
-      cm = map (f (St.classMetaclassName cd)) (St.classMethods cd)
+  let f nm m ix = (St.methodSelector m, (ix, methodObject nm m))
+      im = zipWith (f (St.className cd)) (St.instanceMethods cd) [1..]
+      cm = zipWith (f (St.classMetaclassName cd)) (St.classMethods cd) [1..]
   in (Map.fromList im,Map.fromList cm)
 
 -- | An ObjectTable with all variables set to nil.

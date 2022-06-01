@@ -1,4 +1,4 @@
-Class = Behavior (
+Class = ClassDescription (
 
 allClassVarNames = (
 	<primitive: -1>

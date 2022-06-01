@@ -80,7 +80,7 @@ prMethodArray :: Object -> Vm (Maybe Object)
 prMethodArray rcv =
   case classCachedMethods rcv of
     Nothing -> return Nothing
-    Just mth  -> fmap Just (arrayFromMap mth)
+    Just mth  -> fmap Just (arrayFromIndexedMap mth)
 
 fmapMaybeM :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
 fmapMaybeM f = maybe (return Nothing) (fmap Just . f)
@@ -166,7 +166,7 @@ prValueWithArguments :: Object -> Object -> Vm (Maybe Object)
 prValueWithArguments receiver (Object _ argumentsArray) = do
   maybeList <- objectDataAsArray argumentsArray
   case maybeList of
-    Just lst -> fmap Just (evalBlock stCoreOpt receiver lst)
+    Just lst -> evalBlock stCoreOpt receiver lst
     Nothing -> return Nothing
 
 stPrimitives :: PrimitiveDispatcher
@@ -223,12 +223,12 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:
     (74, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> tblAtPutMaybe tbl (ix - 1) newObject -- instVarAt:put:
     (75, _, []) -> fmap (Just . intObject) (objectHash receiver) -- identityHash
-    (81, DataBlockClosure {}, []) -> fmap Just (evalBlock stCoreOpt receiver [])
-    (81, DataBlockClosure {}, [arg1]) -> fmap Just (evalBlock stCoreOpt receiver [arg1])
-    (81, DataBlockClosure {}, [arg1, arg2]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2])
-    (81, DataBlockClosure {}, [arg1, arg2, arg3]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2, arg3])
-    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4])
-    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4, arg5]) -> fmap Just (evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4, arg5])
+    (81, DataBlockClosure {}, []) -> evalBlock stCoreOpt receiver []
+    (81, DataBlockClosure {}, [arg1]) -> evalBlock stCoreOpt receiver [arg1]
+    (81, DataBlockClosure {}, [arg1, arg2]) -> evalBlock stCoreOpt receiver [arg1, arg2]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4, arg5]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4, arg5]
     (82, DataBlockClosure {}, [argumentsArray]) -> prValueWithArguments receiver argumentsArray
     (83, _, [Object "Symbol" (DataImmutableString sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel) -- perform: perform:with:
     (84, _, [Object "Symbol" (DataImmutableString sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg) -- perform:withArguments:

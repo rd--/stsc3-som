@@ -1,5 +1,9 @@
 Context = (
 
+isContext = (
+	^true
+)
+
 selector = (
 	<primitive: -1>
 	^ self primitiveFailed

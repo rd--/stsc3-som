@@ -1,0 +1,250 @@
+BlockClosureTest = TestCase (
+
+| aBlockClosure homeOfABlockClosure |
+
+setUp = (
+	super setUp.
+	aBlockClosure := [100@100 corner: 200@200].
+	homeOfABlockClosure := thisContext
+)
+
+testCull = (
+	self assert: nil equals: ([ ] cull: 1).
+	self assert: nil equals: ([ :x | ] cull: 1).
+	self assert: 1 equals: ([ :x | x ] cull: 1).
+"
+	self should: [ [ :x :y | ] cull: 1 ] raise: Error.
+	self should: [ [ :x :y :z | ] cull: 1 ] raise: Error.
+	self should: [ [ :x :y :z :a | ] cull: 1 ] raise: Error.
+	self should: [ [ :x :y :z :a :b | ] cull: 1 ] raise: Error.
+"
+	self assert: ([ 0 ] cull: 1) = 0.
+	self assert: ([ :x | x ] cull: 1) = 1
+)
+
+testCullCull = (
+	self assert: nil equals: ([ ] cull: 1 cull: 2).
+	self assert: nil equals: ([ :x | ] cull: 1 cull: 2).
+	self assert: 1 equals: ([ :x | x ] cull: 1 cull: 2).
+	self assert: nil equals: ([ :x :y | ] cull: 1 cull: 2).
+	self assert: 1 equals: ([ :x :y | x ] cull: 1 cull: 2).
+	self assert: 2 equals: ([ :x :y | y ] cull: 1 cull: 2).
+"
+	self should: [ [ :x :y :z | ] cull: 1 cull: 2 ] raise: Error.
+	self should: [ [ :x :y :z :a | ] cull: 1 cull: 2 ] raise: Error.
+	self should: [ [ :x :y :z :a :b | ] cull: 1 cull: 2 ] raise: Error.
+"
+	self assert: ([ 0 ] cull: 1 cull: 2) = 0.
+	self assert: ([ :x | x ] cull: 1 cull: 2) = 1.
+	self assert: ([ :x :y | y ] cull: 1 cull: 2) = 2.
+)
+
+testCullCullCull = (
+	self assert: nil equals: ([ ] cull: 1 cull: 2 cull: 3).
+	self assert: nil equals: ([ :x | ] cull: 1 cull: 2 cull: 3).
+	self assert: 1 equals: ([ :x | x ] cull: 1 cull: 2 cull: 3).
+	self assert: nil equals: ([ :x :y | ] cull: 1 cull: 2 cull: 3).
+	self assert: 1 equals: ([ :x :y | x ] cull: 1 cull: 2 cull: 3).
+	self assert: 2 equals: ([ :x :y | y ] cull: 1 cull: 2 cull: 3).
+	self assert: nil equals: ([ :x :y :z | ] cull: 1 cull: 2 cull: 3).
+	self assert: 1 equals: ([ :x :y :z | x ] cull: 1 cull: 2 cull: 3).
+	self assert: 2 equals: ([ :x :y :z | y ] cull: 1 cull: 2 cull: 3).
+	self assert: 3 equals: ([ :x :y :z | z ] cull: 1 cull: 2 cull: 3).
+"
+	self should: [ [ :x :y :z :a | ] cull: 1 cull: 2 cull: 3 ] raise: Error.
+	self should: [ [ :x :y :z :a :b | ] cull: 1 cull: 2 cull: 3 ] raise: Error.
+"
+	self assert: ([ 0 ] cull: 1 cull: 2 cull: 3) = 0.
+	self assert: ([ :x | x ] cull: 1 cull: 2 cull: 3) = 1.
+	self assert: ([ :x :y | y ] cull: 1 cull: 2 cull: 3) = 2.
+	self assert: ([ :x :y :z | z ] cull: 1 cull: 2 cull: 3) = 3.
+)
+
+testCullCullCullCull = (
+	self assert: nil equals: ([ ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: nil equals: ([ :x | ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 1 equals: ([ :x | x ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: nil equals: ([ :x :y | ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 1 equals: ([ :x :y | x ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 2 equals: ([ :x :y | y ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: nil equals: ([ :x :y :z | ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 1 equals: ([ :x :y :z | x ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 2 equals: ([ :x :y :z | y ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 3 equals: ([ :x :y :z | z ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: nil equals: ([ :x :y :z :a | ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 1 equals: ([ :x :y :z :a | x ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 2 equals: ([ :x :y :z :a | y ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 3 equals: ([ :x :y :z :a | z ] cull: 1 cull: 2 cull: 3 cull: 4).
+	self assert: 4 equals: ([ :x :y :z :a | a ] cull: 1 cull: 2 cull: 3 cull: 4).
+"
+	self should: [ [ :x :y :z :a :b | ] cull: 1 cull: 2 cull: 3 cull: 4 ] raise: Error.
+"
+	self assert: ([ 0 ] cull: 1 cull: 2 cull: 3 cull: 4) = 0.
+	self assert: ([ :x | x ] cull: 1 cull: 2 cull: 3 cull: 4) = 1.
+	self assert: ([ :x :y | y ] cull: 1 cull: 2 cull: 3 cull: 4) = 2.
+	self assert: ([ :x :y :z | z ] cull: 1 cull: 2 cull: 3 cull: 4) = 3.
+	self assert: ([ :x :y :z :a | a ] cull: 1 cull: 2 cull: 3 cull: 4) = 4.
+)
+
+"
+testDecompile = (
+	self assert: ([3 + 4] decompile printString = '{[3 + 4]}')
+)
+"
+
+testEmptyBlocksAnswerNil = (
+	"In the olden days ([:a :b|] value: #first value: #last) == #last..."
+	{[]. [:a|]. [:a :b|]. [:a :b :c|]} do:
+		[:block|
+		self assert: (block cull: 1 cull: 2 cull: 3) equals: nil]
+)
+
+"
+testNew = (
+	self should: [Context new: 5] raise: Error.
+	[Context new: 5]
+		on: Error do: [:e|
+			self assert: (e messageText includesSubstring: 'newForMethod:') description: 'Error doesn''t tell you what you did wrong by calling #new:'].
+	self should: [Context new] raise: Error.
+	[Context new]
+		on: Error do: [:e|
+			self assert: (e messageText includesSubstring: 'newForMethod:') description: 'Error doesn''t tell you what you did wrong by calling #new']
+)
+"
+
+"
+testNoArguments = (
+	[10
+		timesRepeat: [:arg | 1 + 2]]
+		ifError: [:err :rcvr | self deny: err = 'This block requires 1 arguments.'].
+	[10
+		timesRepeat: [:arg1 :arg2 | 1 + 2]]
+		ifError: [:err :rcvr | self deny: err = 'This block requires 2 arguments.']
+)
+"
+
+"
+testOnce = (
+	| objs result |
+	objs := (1 to: 10) collect: [:ign| [Object new] once].
+	self assert: (objs allSatisfy: [:obj| obj == objs first]).
+	result := self class onceMethod.
+	1 to: 10 do:
+		[:ign|
+		self assert: result == self class onceMethod]
+)
+"
+
+"
+testOneArgument = (
+	| c |
+	c := OrderedCollection new.
+	c add: 'hello'.
+	[c
+		do: [1 + 2]]
+		ifError: [:err :rcvr | self deny: err = 'This block requires 0 arguments.'].
+	[c
+		do: [:arg1 :arg2 | 1 + 2]]
+		ifError: [:err :rcvr | self deny: err = 'This block requires 2 arguments.']
+)
+"
+
+"
+testRunSimulated = (
+	self assert: Rectangle equals: (Context runSimulated: aBlockClosure asContext) class
+)
+"
+
+testSetUp = (
+	"Note: In addition to verifying that the setUp worked the way it was expected to, testSetUp is used to illustrate the meaning of the simple access methods, methods that are not normally otherwise 'tested'"
+	self deny: aBlockClosure isContext.
+	self assert: aBlockClosure isBlock.
+"
+	self assert: aBlockClosure home = homeOfABlockClosure.
+	self assert: aBlockClosure receiver = self.
+	self assert: aBlockClosure method isCompiledMethod
+"
+)
+
+"
+testSourceString = (
+	self assert: [] sourceString equals: '[]'.
+	self assert: (#((#'[' #':arg' #| nil #']') (#'[' #':arg' #| #']')) includes: (Scanner new scanTokens: [:arg|] sourceString)).
+	self assert: (Scanner new scanTokens: [ : stream | self printSourceOn: stream ] sourceString)
+		equals:  #(#'[' #':stream' #| #self #printSourceOn: #stream #']')
+)
+"
+
+testValueValue = (
+	self
+		assert: nil equals: ([ :a :b | ] value: 1 value: 2);
+		assert: 1 equals: ([ :a :b | a ] value: 1 value: 2);
+		assert: 2 equals: ([ :a :b | b ] value: 1 value: 2).
+)
+
+testValueValueValue = (
+	self
+		assert: nil equals: ([ :a :b :c | ] value: 1 value: 2 value: 3);
+		assert: 1 equals: ([ :a :b :c | a ] value: 1 value: 2 value: 3);
+		assert: 2 equals: ([ :a :b :c | b ] value: 1 value: 2 value: 3);
+		assert: 3 equals: ([ :a :b :c | c ] value: 1 value: 2 value: 3).
+)
+
+testValueValueValueValue = (
+	self
+		assert: nil equals: ([ :a :b :c :d | ] value: 1 value: 2 value: 3 value: 4);
+		assert: 1 equals: ([ :a :b :c :d | a ] value: 1 value: 2 value: 3 value: 4);
+		assert: 2 equals: ([ :a :b :c :d | b ] value: 1 value: 2 value: 3 value: 4);
+		assert: 3 equals: ([ :a :b :c :d | c ] value: 1 value: 2 value: 3 value: 4);
+		assert: 4 equals: ([ :a :b :c :d | d ] value: 1 value: 2 value: 3 value: 4).
+)
+
+testValueValueValueValueValue = (
+	self
+		assert: nil equals: ([ :a :b :c :d :e | ] value: 1 value: 2 value: 3 value: 4 value: 5);
+		assert: 1 equals: ([ :a :b :c :d :e | a ] value: 1 value: 2 value: 3 value: 4 value: 5);
+		assert: 2 equals: ([ :a :b :c :d :e | b ] value: 1 value: 2 value: 3 value: 4 value: 5);
+		assert: 3 equals: ([ :a :b :c :d :e | c ] value: 1 value: 2 value: 3 value: 4 value: 5);
+		assert: 4 equals: ([ :a :b :c :d :e | d ] value: 1 value: 2 value: 3 value: 4 value: 5);
+		assert: 5 equals: ([ :a :b :c :d :e | e ] value: 1 value: 2 value: 3 value: 4 value: 5).
+)
+
+testValueWithPossibleArgs = (
+	| block  blockWithArg blockWith2Arg |
+	block := [1].
+	blockWithArg  := [:arg | arg].
+	blockWith2Arg := [:arg1 :arg2 | {arg1. arg2}].
+	self assert: (block valueWithPossibleArgs: #()) = 1.
+	self assert: (block valueWithPossibleArgs: #(1)) = 1.
+	self assert: (blockWithArg valueWithPossibleArgs: #()) = nil.
+	self assert: (blockWithArg valueWithPossibleArgs: #(1)) = 1.
+	self assert: (blockWithArg valueWithPossibleArgs: #(1 2)) = 1.
+	self assert: (blockWith2Arg valueWithPossibleArgs: #()) = {nil .nil}.
+	self assert: (blockWith2Arg valueWithPossibleArgs: #(1)) =  {1 . nil}.
+	self assert: (blockWith2Arg valueWithPossibleArgs: #(1 2)) =  #(1 2).
+	self assert: (blockWith2Arg valueWithPossibleArgs: #(1 2 3)) = #(1 2)
+)
+
+testValueWithPossibleArgument = (
+	| block  blockWithArg blockWith2Arg |
+	block := [1].
+	blockWithArg  := [:arg | arg].
+	blockWith2Arg := [:arg1 :arg2 | {arg1. arg2}].
+	self assert: (block valueWithPossibleArgument: 1) = 1.
+	self assert: (blockWithArg valueWithPossibleArgument: 1) = 1.
+	self assert: (blockWith2Arg valueWithPossibleArgument: 1) = {1 . nil}
+)
+
+
+----------------------------
+
+onceMethod = (
+	^[Object new] once
+)
+
+
+comment = (^'
+No comment
+')
+
+)

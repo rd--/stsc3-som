@@ -7,6 +7,9 @@ ArrayTest suite run printOn: Transcript
 BagTest testSelectors do: [ :each | Transcript show: each; cr. BagTest run: each ]
 BagTest suite run printOn: Transcript
 
+BlockClosureTest testSelectors do: [ :each | Transcript show: each; cr. BlockClosureTest run: each ]
+BlockClosureTest suite run printOn: Transcript
+
 ChainedSortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. ChainedSortFunctionTest run: each ]
 ChainedSortFunctionTest suite run printOn: Transcript
 
