@@ -87,7 +87,6 @@ testAssociationsSelect = (
 		should: [answer size = 0]
 )
 
-"
 testAtError = (
 	| dict |
 	dict := Dictionary new.
@@ -95,10 +94,8 @@ testAtError = (
 	self shouldnt: [ dict at: #a ] raise: KeyNotFound.
 	self should: [ dict at: #b ] raise: KeyNotFound.
 )
-"
 
 testAtIfAbsent = (
-	"self run: #testAtIfAbsent"
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 666.
@@ -107,7 +104,6 @@ testAtIfAbsent = (
 )
 
 testAtIfPresentIfAbsent = (
-	"Test at:ifPresent:ifAbsent:"
 	| dict present absent |
 	dict := Dictionary new.
 	present := absent := false.
@@ -126,7 +122,6 @@ testAtIfPresentIfAbsent = (
 )
 
 testAtIfPresentIfAbsentPut = (
-	"Test at:ifPresent:ifAbsentPut:"
 	| dict present absent |
 	dict := Dictionary new.
 	present := absent := false.
@@ -312,7 +307,7 @@ testKeyAtValue = (
 	"which ever is answered depends on hashing, and hashing is improved in Spur."
 	self assert: ((dict keyAtValue: 1) = #a or: [(dict keyAtValue: 1) = #c]).
 	"ugly may be a bug, why not have a set #a and #c?  cuz that would be keys at value."
-	"self should: [dict keyAtValue: 0] raise: Error"
+	self should: [dict keyAtValue: 0] raise: Error
 )
 
 testKeys = (
@@ -430,7 +425,7 @@ testRemoveKey = (
 	self assert: (dict keys size) = 2.
 	dict removeKey: #a.
 	self assert: dict keys size  = 1.
-	"self should: [dict at: #a] raise: Error."
+	self should: [dict at: #a] raise: KeyNotFound.
 	self assert: (dict at: #b) = 2
 )
 

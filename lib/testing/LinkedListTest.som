@@ -894,7 +894,6 @@ testAddAfterLast2 = (
 testAfter = (
 	"self debug: #testAfter"
 	self assert: (self moreThan4Elements after: (self moreThan4Elements at: 1)) = (self moreThan4Elements at: 2).
-"
 	self
 		should:
 			[ self moreThan4Elements after: (self moreThan4Elements at: self moreThan4Elements size) ]
@@ -902,7 +901,6 @@ testAfter = (
 	self
 		should: [ self moreThan4Elements after: self elementNotInForElementAccessing ]
 		raise: Error
-"
 )
 
 testAfterIfAbsent = (
@@ -1081,13 +1079,11 @@ testAtLast = (
 	self assert: (self moreThan4Elements atLast: index) = (self moreThan4Elements at: self moreThan4Elements size - index + 1)
 )
 
-"
 testAtLastError = (
 	self
 		should: [ self moreThan4Elements atLast: self moreThan4Elements size + 1 ]
 		raise: Error
 )
-"
 
 testAtLastIfAbsent = (
 	"self debug: #testAtLastIfAbsent"
@@ -1099,7 +1095,6 @@ testAtLastIfAbsent = (
 			ifAbsent: [ 222 ]) = 222
 )
 
-"
 testAtOutOfBounds = (
 	self
 		should: [ self moreThan4Elements at: self moreThan4Elements size + 1 ]
@@ -1108,7 +1103,6 @@ testAtOutOfBounds = (
 		should: [ self moreThan4Elements at: -1 ]
 		raise: Error
 )
-"
 
 testAtPin = (
 	"self debug: #testAtPin"
@@ -1125,13 +1119,11 @@ testAtPut = (
 	self assert: (ll at: 1) equals: 2
 )
 
-"
 testAtPutOutsideBounds = (
 	| ll |
 	ll := LinkedList new.
 	self should: [ ll at: 1 put: 1 ] raise: Error
 )
-"
 
 testAtRandom = (
 	| result |
@@ -1172,14 +1164,12 @@ testBasicCollectEmpty = (
 
 testBefore = (
 	self assert: (self moreThan4Elements before: (self moreThan4Elements at: 2)) = (self moreThan4Elements at: 1).
-"
 	self
 		should: [ self moreThan4Elements before: (self moreThan4Elements at: 1) ]
 		raise: Error.
 	self
 		should: [ self moreThan4Elements before: 66 ]
 		raise: Error
-"
 )
 
 testBeforeIfAbsent = (
@@ -1721,11 +1711,9 @@ testFirstNElements = (
 		to: result size
 		do: [ :i | self assert: (result at: i) = (self moreThan3Elements at: i) ].
 	self assert: result size = (self moreThan3Elements size - 1).
-"
 	self
 		should: [ self moreThan3Elements first: self moreThan3Elements size + 1 ]
 		raise: Error
-"
 )
 
 testFirstSecondThird = (
@@ -2098,11 +2086,9 @@ testLastNElements = (
 		to: result size
 		do: [ :i | self assert: (result at: i) = (self moreThan3Elements at: i + 1) ].
 	self assert: result size = (self moreThan3Elements size - 1).
-"
 	self
 		should: [ self moreThan3Elements last: self moreThan3Elements size + 1 ]
 		raise: Error
-"
 )
 
 testMiddle = (
@@ -2300,7 +2286,6 @@ testRemoveAll = (
 	self assert: list2 size = 4 description: 'the copy has not been modified'
 )
 
-"
 testRemoveAllError = (
 	| el aSubCollection |
 	el := self elementNotIn.
@@ -2309,7 +2294,6 @@ testRemoveAllError = (
 		should: [ | res | res := self nonEmptyWithoutEqualElements removeAll: aSubCollection ]
 		raise: Error
 )
-"
 
 testRemoveAllFoundIn = (
 	"self debug: #testRemoveElementThatExists"
@@ -2331,13 +2315,11 @@ testRemoveAllSuchThat = (
 	self nonEmptyWithoutEqualElements do: [ :each | self assert: each = el ]
 )
 
-"
 testRemoveElementFromEmpty = (
 	self
 		should: [ self empty remove: self nonEmptyWithoutEqualElements anyOne ]
 		raise: Error
 )
-"
 
 testRemoveElementReallyRemovesElement = (
 	"self debug: #testRemoveElementReallyRemovesElement"
@@ -2649,11 +2631,9 @@ testWithCollect = (
 	self assert: result size = secondCollection  size.
 )
 
-"
 testWithCollectError = (
 	self should: [self nonEmptyMoreThan1Element with: self empty collect:[:a :b | ]] raise: Error.
 )
-"
 
 testWithDo = (
 	| firstCollection secondCollection index |
@@ -2667,11 +2647,9 @@ testWithDo = (
 		self assert: (secondCollection at: index) equals:  b.]
 )
 
-"
 testWithDoError = (
 	self should: [self nonEmptyMoreThan1Element with: self empty do:[:a :b | ]] raise: Error.
 )
-"
 
 testWithIndexCollect = (
 	| result index collection |

@@ -1,8 +1,8 @@
-AssociationTest testSelectors do: [ :each | Transcript show: each; cr. AssociationTest run: each ]
-AssociationTest suite run printOn: Transcript
-
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
 ArrayTest suite run printOn: Transcript
+
+AssociationTest testSelectors do: [ :each | Transcript show: each; cr. AssociationTest run: each ]
+AssociationTest suite run printOn: Transcript
 
 BagTest testSelectors do: [ :each | Transcript show: each; cr. BagTest run: each ]
 BagTest suite run printOn: Transcript

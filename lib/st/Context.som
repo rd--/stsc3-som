@@ -1,7 +1,41 @@
 Context = (
 
+findNextHandlerContextStarting = (
+	"Return the next handler marked context, returning nil if there is none.  Search starts with self and proceeds up to nil."
+	<primitive: 197>
+	| ctx |
+	ctx := self.
+		[ctx isHandlerContext ifTrue:[^ctx].
+		(ctx := ctx sender) == nil ] whileFalse.
+	^nil
+)
+
+findNextUnwindContextUpTo: aContext = (
+	"Return the next unwind marked above the receiver, returning nil if there is none.  Search proceeds up to but not including aContext."
+	<primitive: 195>
+	| ctx |
+	ctx := self.
+	[(ctx := ctx sender) == nil or: [ctx == aContext]] whileFalse:
+		[ ctx isUnwindContext ifTrue: [^ctx]].
+	^nil
+)
+
 isContext = (
 	^true
+)
+
+isHandlerContext  = (
+	"is this context for method that is marked?"
+	^self method primitive = 199
+)
+
+method = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+nextHandlerContext = (
+	^ self sender findNextHandlerContextStarting
 )
 
 selector = (

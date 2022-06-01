@@ -72,7 +72,7 @@ testCollectAs = (
 
 testDetect = (
 	self assert: #x equals: (nonEmpty detect: [:ea | ea isSymbol]).
-	"self should: [nonEmpty detect: [:ea | ea isNumber]] raise: Error."
+	self should: [nonEmpty detect: [:ea | ea isNumber]] raise: Error.
 )
 
 testDetectIfFound = (
@@ -217,8 +217,8 @@ testReduce = (
 testTake = (
 	self
 		assert: 2 equals: (#(1 2) take: 5) size;
-		assert: 2 equals: (#(1 2) readStream take: 5) size.
-		"should: [#(1 2) take: -1] raise: Error."
+		assert: 2 equals: (#(1 2) readStream take: 5) size;
+		should: [#(1 2) take: -1] raise: Error.
 )
 
 )

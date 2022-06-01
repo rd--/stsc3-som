@@ -46,6 +46,13 @@ canUnderstand: selector = (
 	^ self superclass canUnderstand: selector
 )
 
+compiledMethodAt: selector = (
+	"Answer the compiled method associated with the argument, selector (a
+	Symbol), a message selector in the receiver's method dictionary. If the
+	selector is not in the dictionary, create an error notification."
+	^ self methodDict at: selector
+)
+
 deepCopy = (
 	"Behavior are shared rather than copied."
 	^ self
@@ -57,7 +64,7 @@ flushCache = (
 )
 
 hasMethod: aSymbol = (
-	self methodArray do: [ :m | m signature = aSymbol ifTrue: [ ^true ] ].
+	self methodArray do: [ :m | m selector = aSymbol ifTrue: [ ^true ] ].
 	^false
 )
 
@@ -107,9 +114,28 @@ isBehavior = (
 	^true
 )
 
+lookupSelector: selector = (
+	"Look up the given selector in my methodDictionary.
+	Return the corresponding method if found.
+	Otherwise chase the superclass chain and try again.
+	Return nil if no method is found."
+	| lookupClass |
+	lookupClass := self.
+	[lookupClass == nil]
+		whileFalse:
+			[(lookupClass includesSelector: selector)
+				ifTrue: [^ lookupClass compiledMethodAt: selector].
+			lookupClass := lookupClass superclass].
+	^ nil
+)
+
 methodArray = (
 	<primitive: -1>
 	self primitiveFailed
+)
+
+methodDict = (
+	^Dictionary newFrom: (self methodArray collect: [ :method | method selector -> method ])
 )
 
 new = (
@@ -124,7 +150,7 @@ new: sizeRequested = (
 )
 
 selectors = (
-	^self methodArray collect: [ :item | item signature ]
+	^self methodArray collect: [ :item | item selector ]
 )
 
 selectorsDo: selectorBlock = (

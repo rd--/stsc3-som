@@ -154,7 +154,7 @@ contextLookup (Context c p) k =
                            ,objectLookupInstanceVariable rcv
                            ,objectLookupClassVariable rcv
                            ,vmGlobalResolveMaybe] k
-    BlockContext _ _ localVariables ->
+    BlockContext _ _ _ localVariables ->
       mLookupSequence [dictRefLookup localVariables
                       ,maybe (\_ -> return Nothing) (\c' -> contextLookup c') p
                       ,vmGlobalResolveMaybe
@@ -184,7 +184,7 @@ contextAssign (Context c p) k v =
                       ,objectAssignInstanceVariable rcv
                       ,objectAssignClassVariable rcv
                       ,vmGlobalAssignMaybe] k v
-    BlockContext _ _ localVariables ->
+    BlockContext _ _ _ localVariables ->
       mAssignSequence [dictRefAssignMaybe localVariables
                       ,maybe (\_ _ -> return Nothing) (\c' -> contextAssign c') p
                       ,vmGlobalAssignMaybe
@@ -195,8 +195,8 @@ contextAssign (Context c p) k v =
      For blocks with no arguments and no temporaries and no return statements,
      the context could perhaps be elided.
 -}
-contextAddBlockContext :: Object -> [Object] -> Vm (Maybe Context)
-contextAddBlockContext blockObject arguments = do
+contextAddBlockContext :: Object -> [Object] -> Maybe ExceptionHandler -> Vm (Maybe Context)
+contextAddBlockContext blockObject arguments maybeExceptionHandler = do
   let Object _ (DataBlockClosure _ blockContext lambda) = blockObject
       Expr.Lambda _ blockArguments (St.Temporaries blockTemporaries) _ = lambda
   if length blockArguments /= length arguments
@@ -204,7 +204,7 @@ contextAddBlockContext blockObject arguments = do
     else do
       localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
       pc <- vmProgramCounterIncrement
-      return (Just (contextAdd blockContext (BlockContext pc blockObject localVariables)))
+      return (Just (contextAdd blockContext (BlockContext pc blockObject maybeExceptionHandler localVariables)))
 
 contextLookupOrUnknown :: CoreOpt -> Context -> Symbol -> Vm Object
 contextLookupOrUnknown opt ctx k = do
@@ -247,7 +247,7 @@ vmUnknownGlobal opt ctx k =
     Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [coreSymbolObject opt k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
-{- | If a Return escapes we send an escapedBlock: message to the Object that the Block that Returned escaped from.
+{- | If a Return escapes we send an escapedBlock: message to the Object that the Block escaped from.
      For this purpose the Return object stores the Block that sent it.
      The Block can access the required Object from it's stored context.
      The Block that sent Return will be the current BlockContext.
@@ -287,7 +287,7 @@ vmGlobalResolveOrError key = vmGlobalResolveMaybe key >>= maybe (vmError ("vmGlo
 
 {- | Evaluate StExpr in sequence.
 
-If an StExpr evaluates to a Return Object it is returned and no further StExpr are evaluated.
+If an StExpr evaluates to a Return or an Exception Object it is returned and no further StExpr are evaluated.
 Note that the return value of e0 being a Return object is not the same as e0 being a Return expression.
 -}
 evalExprSequence :: CoreOpt -> [StExpr] -> Vm Object
@@ -297,9 +297,9 @@ evalExprSequence opt st =
     [e] -> evalExpr opt e
     e0:eN -> do
       r <- evalExpr opt e0
-      if isReturnObject r then return r else evalExprSequence opt eN
+      if isReturnOrExceptionObject r then return r else evalExprSequence opt eN
 
--- | An empty sequence returns nil, otherwise either a Return value or the value of the last StExpr is returned.
+-- | An empty sequence returns nil, otherwise either a Return or an Exception value or the value of the last StExpr is returned.
 evalStatements :: CoreOpt -> [StExpr] -> Vm Object
 evalStatements opt st = if null st then return nilObject else evalExprSequence opt st
 
@@ -310,9 +310,9 @@ evalStatements opt st = if null st then return nilObject else evalExprSequence o
    4. restoring the saved context
    5. returning the saved result
 -}
-evalBlock :: CoreOpt -> Object -> [Object] -> Vm (Maybe Object)
-evalBlock opt blockObject arguments = do
-  ctx <- contextAddBlockContext blockObject arguments
+evalBlockWithMaybeExceptionHandler :: CoreOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm (Maybe Object)
+evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler = do
+  ctx <- contextAddBlockContext blockObject arguments maybeExceptionHandler
   case ctx of
     Nothing -> return Nothing
     Just extendedBlockContext -> do
@@ -325,7 +325,18 @@ evalBlock opt blockObject arguments = do
           if contextHasMethodWithId pc currentContext
           then return (Just result)
           else fmap Just (vmEscapedBlock opt maybeBlock)
+        Object _ (DataException returnException@(Object returnExceptionClass _)) ->
+          --printTrace "evalBlockWithMaybeExceptionHandler: result is Exception" [result] >>
+          case contextExceptionHandler extendedBlockContext of
+            Just ((Object exceptionClass _), handler) ->
+              if St.metaclassName returnExceptionClass == exceptionClass
+              then evalBlock opt handler [returnException]
+              else return (Just result)
+            _ -> return (Just result)
         _ -> return (Just result)
+
+evalBlock :: CoreOpt -> Object -> [Object] -> Vm (Maybe Object)
+evalBlock opt blockObject arguments = evalBlockWithMaybeExceptionHandler opt blockObject arguments Nothing
 
 {- | evalMethod is similar to evalBlock, except that methods:
    1. have a receiver which is stored and can be referenced as self or super
@@ -352,12 +363,11 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
   result <- evalStatements opt methodStatements
   _ <- vmContextDelete
   case result of
-    (Object "Return" (DataReturn ctxId _ x)) ->
+    Object _ (DataReturn ctxId _ x) ->
       if ctxId == pc
-      then --printTrace ("evalMethod: Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result] >>
-           return x
-      else --printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc)) [receiver, result]) >>
-           return result
+      then return x -- << printTrace ("evalMethod: Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result]
+      else return result -- << printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc)) [receiver, result])
+    Object _ (DataException _) -> return result
     _ -> return receiver
 
 -- | Evaluate method, deferring to Primitive if required.
@@ -462,7 +472,7 @@ vmThisContextObject = do
 
 {- | Evaluate expression.
 
-The evaluator handles non-local returns by making a "Return" object.
+The evaluator handles non-local returns by making a Return object.
 The evaluator runs isReturnObject to see if further work needs to be done, or if the evaluation is unwinding.
 -}
 evalExpr :: CoreOpt -> StExpr -> Vm Object
@@ -473,14 +483,14 @@ evalExpr opt expr =
     Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmContextAssign lhs
     Expr.Return x -> do
       result <- evalExpr opt x
-      if isReturnObject result
+      if isReturnOrExceptionObject result
       then return result
       else do ctx <- vmContextNearestMethod
               blk <- vmContextCurrentBlock
               returnObject (contextId ctx) blk result
     Expr.Send e (Expr.Message selector exprList) -> do
       receiver <- evalExpr opt e
-      if (isReturnObject receiver)
+      if isReturnOrExceptionObject receiver
       then return receiver
       else do arguments <- mapM (evalExpr opt) exprList
               evalMessageSend opt (Expr.exprIsSuper e) receiver selector arguments
@@ -494,7 +504,11 @@ evalExpr opt expr =
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
 evalString :: CoreOpt -> String -> Vm Object
-evalString opt txt = evalExpr opt (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
+evalString opt txt = do
+  res <- evalExpr opt (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
+  case res of
+    Object _ (DataException exc) -> objectInspectAndPrint exc >> vmBacktrace >> return res
+    _ -> return res
 
 deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
@@ -556,12 +570,14 @@ stringNewWithArg size = do
   ref <- liftIO (toRef vec)
   return (Object "String" (DataCharacterArray pc ref))
 
-classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm Object
-classNewWithArg cd size = do
-  case St.className cd of
-    "Array" -> arrayNewWithArg size
-    "String" -> stringNewWithArg size
-    _ -> vmError "classNewWithArg"
+classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm (Maybe Object)
+classNewWithArg cd size =
+  if size < 0
+  then return Nothing
+  else case St.className cd of
+         "Array" -> fmap Just (arrayNewWithArg size)
+         "String" -> fmap Just (stringNewWithArg size)
+         _ -> return Nothing
 
 {- | Class>>superclass => Class|nil
 

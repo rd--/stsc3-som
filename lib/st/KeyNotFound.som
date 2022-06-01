@@ -1,0 +1,37 @@
+KeyNotFound = Error (
+| key |
+
+description = (
+	"Return a textual description of the exception."
+	^self messageText
+)
+
+key = (
+	"The key which wasn't found"
+	^key
+)
+
+key: anObject = (
+	"The key which wasn't found"
+	key := anObject
+)
+
+messageText = (
+	"Return a textual description of the exception."
+	^messageText ifNil:['Key not found: ', key]
+)
+
+
+----------------------------
+
+key: anObject = (
+	^self new key: anObject
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

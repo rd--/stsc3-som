@@ -88,10 +88,9 @@ numArgsError: numArgsForInvocation = (
 
 on: exceptionOrExceptionSet do: handlerAction = (
 	"Evaluate the receiver in the scope of an exception handler."
-	<primitive: 199>  "just a marker, fail and execute the following"
-	| handlerActive |
-	handlerActive := true.
-	^ self value
+	<primitive: -1>
+	self numArgs ~= 0 ifTrue: [self numArgsError: 0].
+	^self valueWithArguments: #()
 )
 
 repeat = (

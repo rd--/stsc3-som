@@ -60,7 +60,7 @@ as: aSimilarClass = (
 
 assert: aBlock = (
 	"Throw an assertion error if aBlock does not evaluates to true."
-	aBlock value ifFalse: [self error: 'assertion failed']
+	aBlock value ifFalse: [AssertionFailure signal: 'Assertion failed']
 )
 
 asArray = (
@@ -240,11 +240,14 @@ doesNotUnderstand: selector arguments: arguments = (
 enclosedSetElement = (
 )
 
+error = (
+	"Throw a generic Error exception."
+	^self error: 'Error!'.
+)
+
 error: aString = (
-        Transcript show: ('Object>>error: ' , aString , ' at: ', self class name); cr.
-        Smalltalk printContext.
-	self halt.
-	^ nil
+	"Throw a generic Error exception."
+	^Error new signal: aString
 )
 
 errorImproperStore = (
@@ -279,8 +282,18 @@ fullPrintString = (
 )
 
 halt = (
-	<primitive: 114>
-	self primitiveFailed
+	"This is the typical message to use for inserting breakpoints during
+	debugging. It behaves like halt:, but does not call on halt: in order to
+	avoid putting this message on the stack. Halt is especially useful when
+	the breakpoint message is an arbitrary one."
+	Halt signal
+)
+
+halt: aString = (
+	"This is the typical message to use for inserting breakpoints during
+	debugging. It creates and schedules a Notifier with the argument,
+	aString, as the label."
+	Halt new signal: aString
 )
 
 haltIf: condition = (

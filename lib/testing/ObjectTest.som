@@ -19,10 +19,8 @@ b1 = (
 testAssert = (
 	Object assert: [true].
 	Object assert: true.
-"
 	self should: [Object assert: [false]] raise: AssertionFailure.
 	self should: [Object assert: false] raise: AssertionFailure.
-"
 )
 
 "
@@ -51,7 +49,6 @@ testBecomeForward = (
 )
 "
 
-"
 testHaltIf = (
 	self should: [self haltIf: true] raise: Halt.
 	self haltIf: false.
@@ -64,7 +61,6 @@ testHaltIf = (
 	self should: [self haltIf: [:o | o class = self class]] raise: Halt.
 	self haltIf: [:o | o class ~= self class].
 )
-"
 
 testNotNil = (
 	self assert: Object new notNil

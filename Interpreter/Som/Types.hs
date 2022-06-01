@@ -46,6 +46,8 @@ type Id = Int
 stringLiteralId :: Id
 stringLiteralId = -1
 
+type ExceptionHandler = (Object, Object)
+
 {- | Method contexts store:
        1. a context identifier to receive non-local returns
        2. the class the method was defined in (for super message send)
@@ -53,11 +55,12 @@ stringLiteralId = -1
        4. the receiver
      Block contexts store:
        1. the Block object to report cases of escaped blocks.
+       2. maybe an (exception, handler) pair
      In addition both store local variables (arguments and temporaries) as a Dict.
 -}
 data ContextNode =
     MethodContext Id ((Symbol, Bool), Symbol) Object ObjectDictionary
-  | BlockContext Id Object ObjectDictionary
+  | BlockContext Id Object (Maybe ExceptionHandler) ObjectDictionary
   | NilContext
   deriving (Eq)
 
@@ -66,11 +69,12 @@ contextNodeIsMethod node =
   case node of
     MethodContext {} -> True
     _ -> False
+
 contextNodeId :: ContextNode -> Id
 contextNodeId node =
   case node of
     MethodContext k _ _ _ -> k
-    BlockContext k _ _ -> k
+    BlockContext k _ _ _ -> k
     NilContext -> error "contextNodeId"
 
 contextId :: Context -> Id
@@ -134,6 +138,7 @@ data ObjectData
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
   | DataBlockClosure Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
+  | DataException Object -- ^ Exception
   | DataSystem -- ^ Token for system or Smalltalk singleton
   | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
   | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number of integer indexed mutable slots
@@ -348,7 +353,8 @@ objectToString (Object nm obj) =
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
-    DataReturn _ _ o -> "Return: " ++ objectToString o
+    DataReturn _ _ o -> "PrimitiveReturn: " ++ objectToString o
+    DataException e -> "PrimitiveException: " ++ objectToString e
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
     _ -> "instance of " ++ fromSymbol nm
 
@@ -418,10 +424,10 @@ contextNodeInspect ctx =
       rcv' <- objectInspect rcv
       dict' <- objectDictionaryInspect dict
       return (unlines ["MethodContext:", hdr, rcv', dict'])
-    BlockContext ctxId blk dict -> do
+    BlockContext ctxId blk eh dict -> do
       blk' <- objectInspect blk
       dict' <- objectDictionaryInspect dict
-      return (unlines [printf "BlockContext: <pc:%d>" ctxId, blk', dict'])
+      return (unlines [printf "BlockContext: <pc:%d, eh:%s>" ctxId (show (isJust eh)), blk', dict'])
     NilContext -> return "NilContext\n"
 
 vmContextPrint :: Context -> Vm ()
@@ -626,15 +632,27 @@ returnObject :: StError m => Id -> Maybe Object -> Object -> m Object
 returnObject pc blockObject x =
   if isReturnObject x
   then vmError "returnObject: already Return"
-  else return (Object (toSymbol "Return") (DataReturn pc blockObject x))
+  else return (Object (toSymbol "PrimitiveReturn") (DataReturn pc blockObject x))
+
+exceptionObject :: Object -> Object
+exceptionObject exception = Object (toSymbol "PrimitiveException") (DataException exception)
 
 -- * Object predicates
 
 isReturnObject :: Object -> Bool
 isReturnObject x =
   case x of
-    Object _ (DataReturn _ _ _) -> True
+    Object _ (DataReturn {}) -> True
     _ -> False
+
+isExceptionObject :: Object -> Bool
+isExceptionObject x =
+  case x of
+    Object _ (DataException {}) -> True
+    _ -> False
+
+isReturnOrExceptionObject :: Object -> Bool
+isReturnOrExceptionObject x = isReturnObject x || isExceptionObject x
 
 isNil :: Object -> Bool
 isNil = (==) nilObject
@@ -677,7 +695,7 @@ contextReceiver ctx =
 contextHasMethodWithId :: Id -> Context -> Bool
 contextHasMethodWithId k (Context c p) =
   case c of
-    BlockContext _ _ _ -> maybe False (contextHasMethodWithId k) p
+    BlockContext {} -> maybe False (contextHasMethodWithId k) p
     MethodContext pc _ _ _ -> pc == k || maybe False (contextHasMethodWithId k) p
     NilContext -> False
 
@@ -685,7 +703,13 @@ contextHasMethodWithId k (Context c p) =
 contextCurrentBlock :: Context -> Maybe Object
 contextCurrentBlock (Context c _x) =
   case c of
-    BlockContext _ blockObject _ -> Just blockObject
+    BlockContext _ blockObject _ _ -> Just blockObject
+    _ -> Nothing
+
+contextExceptionHandler :: Context -> Maybe ExceptionHandler
+contextExceptionHandler (Context c _x) =
+  case c of
+    BlockContext _ _ (Just eh) _ -> Just eh
     _ -> Nothing
 
 -- | Add a node to the start of the Context.
@@ -722,7 +746,8 @@ objectHash (Object nm obj) =
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
     DataBlockClosure x _ _ -> mHash ("Block",x)
-    DataReturn _ _ _ -> vmError ("Object>>hashcode: Return")
+    DataReturn {} -> vmError ("Object>>hashcode: Return")
+    DataException {} -> vmError ("Object>>hashcode: Exception")
     DataSystem -> mHash (nm,"system")
     DataArrayLiteral vec -> mapM objectHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm,x)

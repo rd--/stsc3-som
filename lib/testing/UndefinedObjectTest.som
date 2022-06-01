@@ -5,6 +5,7 @@ testAllInstances = (
 	self assert: UndefinedObject allInstances size = 1 description: 'There should be a single instance of UndefinedObject'.
 	self assert: (UndefinedObject allInstances includes: nil) description: 'nil should be an instance of UndefinedObject'.
 )
+"
 
 testDeepCopy = (
 	self assert:  (nil deepCopy = nil).
@@ -13,16 +14,15 @@ testDeepCopy = (
 testHaltIfNil = (
 	self should: [ nil haltIfNil] raise: Halt.
 )
-"
 
 testIfNil = (
 	| object block |
 	object := Object new.
-	"self should: [ nil ifNil: [ self halt ] ] raise: Halt."
+	self should: [ nil ifNil: [ self halt ] ] raise: Halt.
 	self assert: (nil ifNil: [ object ]) == object.
 	"Now the same without inlining."
 	block := [ self halt ].
-	"self should: [ nil ifNil: block ] raise: Halt."
+	self should: [ nil ifNil: block ] raise: Halt.
 	block := [ object ].
 	self assert: (nil ifNil: block) == object.
 )
@@ -30,14 +30,14 @@ testIfNil = (
 testIfNilIfNotNil = (
 	| object block |
 	object := Object new.
-	"self should: [ nil ifNil: [self halt] ifNotNil: [ self error] ] raise: Halt."
-	"self should: [ nil ifNil: [ self halt ] ifNotNil: [ :o | self error ] ] raise: Halt."
+	self should: [ nil ifNil: [self halt] ifNotNil: [ self error] ] raise: Halt.
+	self should: [ nil ifNil: [ self halt ] ifNotNil: [ :o | self error ] ] raise: Halt.
 	self assert: (nil ifNil: [ object ] ifNotNil: [ 1 ]) == object.
 	self assert: (nil ifNil: [ object ] ifNotNil: [ :o | 1 ]) == object.
 	"Now the same without inlining."
 	block := [ self halt ].
-	"self should: [ nil ifNil: block ifNotNil: [ self error ] ] raise: Halt."
-	"self should: [ nil ifNil: block ifNotNil: [ :o | self error ] ] raise: Halt."
+	self should: [ nil ifNil: block ifNotNil: [ self error ] ] raise: Halt.
+	self should: [ nil ifNil: block ifNotNil: [ :o | self error ] ] raise: Halt.
 	block := [ object ].
 	self assert: (nil ifNil: block ifNotNil: [ 1 ]) == object.
 	self assert: (nil ifNil: block ifNotNil: [ :o | 1 ]) == object
@@ -46,15 +46,15 @@ testIfNilIfNotNil = (
 
 testIfNotNil = (
 	| block |
-	"self shouldnt: [ nil ifNotNil: [ self halt ] ] raise: Halt."
-	"self shouldnt: [ nil ifNotNil: [ :object | self halt ] ] raise: Halt."
+	self shouldnt: [ nil ifNotNil: [ self halt ] ] raise: Halt.
+	self shouldnt: [ nil ifNotNil: [ :object | self halt ] ] raise: Halt.
 	self assert: (nil ifNotNil: [ 1 ]) == nil.
 	self assert: (nil ifNotNil: [ :o | 1 ]) == nil.
 	"Now the same without inlining."
 	block := [ self halt ].
-	"self shouldnt: [ nil ifNotNil: block ] raise: Halt."
+	self shouldnt: [ nil ifNotNil: block ] raise: Halt.
 	block := [ :object | self halt ].
-	"self shouldnt: [ nil ifNotNil: block ] raise: Halt."
+	self shouldnt: [ nil ifNotNil: block ] raise: Halt.
 	block := [ 1 ].
 	self assert: (nil ifNotNil: block) == nil.
 	block := [ :o | 1 ].
@@ -64,15 +64,15 @@ testIfNotNil = (
 testIfNotNilIfNil = (
 	| object block |
 	object := Object new.
-	"self should: [ nil ifNotNil: [ self error ] ifNil: [ self halt ] ] raise: Halt."
-	"self should: [ nil ifNotNil: [ :o | self error] ifNil: [ self halt ] ] raise: Halt."
+	self should: [ nil ifNotNil: [ self error ] ifNil: [ self halt ] ] raise: Halt.
+	self should: [ nil ifNotNil: [ :o | self error] ifNil: [ self halt ] ] raise: Halt.
 	self assert: (nil ifNotNil: [ 1 ] ifNil: [ object ]) == object.
 	self assert: (nil ifNotNil: [ :o | 1 ] ifNil: [ object ]) == object.
 	"Now the same without inlining."
 	block := [ self error ].
-	"self should: [ nil ifNotNil: block ifNil: [ self halt ] ] raise: Halt."
+	self should: [ nil ifNotNil: block ifNil: [ self halt ] ] raise: Halt.
 	block := [ :o | self error].
-	"self should: [ nil ifNotNil: block ifNil: [ self halt ] ] raise: Halt."
+	self should: [ nil ifNotNil: block ifNil: [ self halt ] ] raise: Halt.
 	block := [ 1 ].
 	self assert: (nil ifNotNil: block ifNil: [ object ]) == object.
 	block := [ :o | 1 ].

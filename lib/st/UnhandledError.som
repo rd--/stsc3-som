@@ -1,0 +1,32 @@
+UnhandledError = Exception (
+
+| exception |
+
+defaultAction = (
+	"The current computation is terminated. The cause of the error should be logged or reported to the user. If the program is operating in an interactive debugging environment the computation should be suspended and the debugger activated."
+	<primitive: 114>
+	self primitiveFailed
+)
+
+exception = (
+	^ exception
+)
+
+exception: anError = (
+	exception := anError
+)
+
+----------------------------
+
+signalForException: anError = (
+	"Very important entry point for analysis stack when stepping in a debugging session. See Process >> #stepToHome: for further explanations."
+	^ self new
+		exception: anError;
+		signal
+)
+
+comment = (^'
+This is a wrapper for an unhandled error. Having this, process stepping is able to correctly fire other unhandled errors. See Process >> #stepToHome: for further explanations.
+')
+
+)

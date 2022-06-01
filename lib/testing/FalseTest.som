@@ -54,10 +54,8 @@ testXor = (
 	self assert: (false xor: [true]) = true.
 	self assert: (false xor: [false]) = false.
 	"Verify that boolean with non-boolean raise errors."
-"
 	self should: [false xor: [1]] raise: Error.
 	self should: [false xor: 1] raise: Error.
-"
 )
 
 )

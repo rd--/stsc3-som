@@ -125,25 +125,25 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("global:", DataSystem, [Object "Symbol" str]) -> mapMMM vmGlobalLookupMaybe (objectDataAsString str)
     ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssign sym e) (objectDataAsString str)
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
-    ("holder", DataMethod holder _ _,[]) -> fmap Just (vmGlobalResolveOrError holder)
-    ("holder", DataPrimitive x _, []) -> return (Just (symObject x))
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
-    ("invokeOn:with:", DataPrimitive {}, [_,_]) -> fmap Just (vmError "Primitive>>invokeOn:with: not implemented")
     ("load:", DataSystem, [Object "Symbol" str]) -> mapMM systemLoadClassOrNil (objectDataAsString str)
     ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
+    ("methodClass", DataMethod methodClass _ _,[]) -> fmap Just (vmGlobalResolveOrError methodClass)
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
+    ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stCoreOpt receiver [] (Just (exception, handler))
     ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stCoreOpt receiver sym cl) (objectDataAsString str)
+    ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
     ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
     ("sender", DataContext ctx, []) -> return (fmap (Object "Context" . DataContext) (contextSender ctx))
+    ("signal", _, []) -> return (Just (exceptionObject receiver))
     ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelector) (contextNearestMethod ctx))
-    ("signature", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
-    ("signature", DataPrimitive _ x, []) -> return (Just (symObject x))
+    ("selector", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
     ("utcOffset", DataSystem, []) -> fmap (Just . intObject) getSystemTimezoneInSeconds
     ("utcTime", DataSystem, []) -> fmap (Just . intObject . secondsToMicroseconds) getSystemTimeInSeconds
@@ -219,21 +219,21 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
     -- 65 next
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd) -- basicNew
-    (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> fmap Just (classNewWithArg cd size) -- basicNew:
+    (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> classNewWithArg cd size -- basicNew:
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:
     (74, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> tblAtPutMaybe tbl (ix - 1) newObject -- instVarAt:put:
     (75, _, []) -> fmap (Just . intObject) (objectHash receiver) -- identityHash
-    (81, DataBlockClosure {}, []) -> evalBlock stCoreOpt receiver []
+    (81, DataBlockClosure {}, []) -> evalBlock stCoreOpt receiver [] -- value value: &etc.
     (81, DataBlockClosure {}, [arg1]) -> evalBlock stCoreOpt receiver [arg1]
     (81, DataBlockClosure {}, [arg1, arg2]) -> evalBlock stCoreOpt receiver [arg1, arg2]
     (81, DataBlockClosure {}, [arg1, arg2, arg3]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3]
     (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4]
     (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4, arg5]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4, arg5]
-    (82, DataBlockClosure {}, [argumentsArray]) -> prValueWithArguments receiver argumentsArray
+    (82, DataBlockClosure {}, [argumentsArray]) -> prValueWithArguments receiver argumentsArray -- value:withArguments:
     (83, _, [Object "Symbol" (DataImmutableString sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel) -- perform: perform:with:
     (84, _, [Object "Symbol" (DataImmutableString sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg) -- perform:withArguments:
     (100, _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl) -- perform:withArguments:inSuperclass:
-    (110, _, [arg]) -> fmap (Just . booleanObject) (objectIdentical receiver arg) -- == (Fix: String identity)
+    (110, _, [arg]) -> fmap (Just . booleanObject) (objectIdentical receiver arg) -- ==
     (111, _, []) -> fmap Just (objectClass receiver) -- class species
     (113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prQuit x)
     (114, _, []) -> vmErrorWithBacktrace "halt" [receiver] -- ExitToDebugger
@@ -243,5 +243,8 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (171, DataCharacter char, []) -> return (Just (intObject (fromEnum char)))
     _ -> stPrimitivesC (prClass, prMethod) prCode receiver arguments
 
+stLiteralConstructors :: LiteralConstructors
+stLiteralConstructors = (intObject . fromInteger, strObject, symObject)
+
 stCoreOpt :: CoreOpt
-stCoreOpt = CoreOpt SmalltalkSystem (intObject . fromInteger, strObject, symObject) stPrimitives
+stCoreOpt = CoreOpt SmalltalkSystem stLiteralConstructors stPrimitives

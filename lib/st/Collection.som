@@ -113,6 +113,11 @@ asSet = (
 	^ Set withAll: self
 )
 
+asSortedArray = (
+	"Return a copy of the receiver in sorted order, as an Array.  6/10/96 sw"
+	^ self asSortedCollection asArray
+)
+
 asSortedCollection = (
 	"Answer a SortedCollection whose elements are the elements of the
 	receiver. The sort order is the default less than or equal.
@@ -277,6 +282,11 @@ errorDifferentSize = (
 
 errorEmptyCollection = (
 	self error: 'this collection is empty'
+)
+
+errorKeyNotFound: key = (
+	"Signal KeyNotFound error"
+	^(KeyNotFound key: key) signal
 )
 
 errorNotFound: anObject = (

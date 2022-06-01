@@ -3,18 +3,14 @@ StackTest = TestCase (
 testEmptyError = (
 	| aStack |
 	aStack := Stack new.
-"
 	self should: [ aStack top ] raise: Error.
 	self should: [ aStack pop] raise: Error.
-"
 	aStack push: 'element'.
 	self assert: 'element' equals: aStack top.
 	self assert: 'element' equals:  aStack pop.
 	"The stack is empty again due to previous pop"
-"
 	self should: [ aStack top ] raise: Error.
 	self should: [ aStack pop] raise: Error.
-"
 )
 
 testPop = (

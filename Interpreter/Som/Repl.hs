@@ -91,6 +91,7 @@ loadAndRunClass opt dir cl arg = do
   (result,_) <- vmEval opt st (runSomClassSmalltalk cl arg)
   case result of
     Left msg -> putStrLn ("error: " ++ msg)
+    Right (Object _ (DataException err)) -> putStr "exception: " >> objectPrint err >> return ()
     Right res -> putStr "result: " >> objectPrint res >> return ()
 
 {- | If there are no arguments start a read-evaluate-print loop.

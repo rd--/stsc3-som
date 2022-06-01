@@ -25,12 +25,10 @@ testBeforeIfAbsent = (
 
 testBeginsWith = (
 	"We can''t test SequenceableCollection directly. However, we can test a sampling of its descendants."
-
 	| la prefix oc |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
 	oc add: 1; add: 2; add: 3.
-
 	self assert: (la beginsWith: #(1)).
 	self assert: (la beginsWith: #(1 2)).
 	self assert: (la beginsWith: #(1 2 3)).
@@ -38,9 +36,7 @@ testBeginsWith = (
 	self deny: (la beginsWith: #()).
 	self deny: (la beginsWith: '').
 	self deny: (la beginsWith: OrderedCollection new).
-
 	self assert: (oc beginsWith: #(1 2)).
-
 	prefix := OrderedCollection new.
 	self deny: (oc beginsWith: prefix).
 	prefix add: 1.
@@ -55,12 +51,10 @@ testBeginsWith = (
 
 testBeginsWithAnyOf = (
 	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
-
 	| la oc |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
 	oc add: 1; add: 2; add: 3.
-
 	self assert: (la beginsWithAnyOf: #((17) (1) (42))).
 	self assert: (la beginsWithAnyOf: #((17) (1 2) (42))).
 	self assert: (la beginsWithAnyOf: #((17) (1 2 3) (42))).
@@ -72,8 +66,7 @@ testBeginsWithAnyOf = (
 testConcatenation = (
 	self assert: #( (1 2) (3 4) ) concatenation = #(1 2 3 4).
 	self assert: #( (1 2) ( (3 4) ) ) concatenation = #(1 2 (3 4)).
-	"self should: [#(1 2 3 4) concatenation] raise: Error."
-
+	self should: [#(1 2 3 4) concatenation] raise: Error.
 	self assert: #() concatenation = #().
 	self assert: #( (1 2) () (3) ()) concatenation = #(1 2 3).
 )
@@ -88,19 +81,16 @@ testCopyWith = (
 
 testEndsWith = (
 	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
-
 	| la oc suffix |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
 	oc add: 4; add: 5; add: 6.
-
 	self assert: (la endsWith: #(6)).
 	self assert: (la endsWith: #(5 6)).
 	self assert: (la endsWith: #(4 5 6)).
 	self assert: (la endsWith: oc).
 	self deny: (la endsWith: #()).
 	self deny: (la endsWith: '').
-
 	suffix := OrderedCollection new.
 	suffix add: 6.
 	self assert: (oc endsWith: suffix).
@@ -114,12 +104,10 @@ testEndsWith = (
 
 testEndsWithAnyOf = (
 	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
-
 	| la oc |
 	la := #(6 5 4 3 2 1).
 	oc := OrderedCollection new.
 	oc add: 3; add: 2; add: 1.
-
 	self assert: (la endsWithAnyOf: #((17) (1) (42))).
 	self assert: (la endsWithAnyOf: #((17) (2 1) (42))).
 	self assert: (la endsWithAnyOf: #((17) (3 2 1) (42))).
@@ -184,7 +172,7 @@ testFlattened = (
 testGroupsDo = (
 	| array |
 	array := (1 to: 12) asArray.
-	"self should: [ array groupsDo: [ ] ] raise: Error."
+	self should: [ array groupsDo: [ ] ] raise: Error.
 	self assert: array equals: (Array streamContents: [ :stream |
 		array groupsDo: [ :each | stream nextPut: each ] ]).
 	self assert: #((1 2) (3 4) (5 6) (7 8) (9 10) (11 12)) equals: (Array streamContents: [ :stream |
@@ -207,7 +195,6 @@ testGroupsDo = (
 			stream nextPut: { a. b. c. d. e. f. g } ] ]).
 	self assert: #() equals: (Array streamContents: [ :stream |
 		#(1 2 3) groupsDo: [ :a :b :c :d | stream nextPut: { a. b. c. d } ] ])
-
 )
 
 testIndexOfSubCollectionStartingAt = (
@@ -218,13 +205,11 @@ testIndexOfSubCollectionStartingAt = (
 	self assert: (c indexOfSubCollection: 'cde' startingAt: 1) = 3.
 	self assert: (c indexOfSubCollection: 'cde' startingAt: 0) = 3.
 	self assert: (c indexOfSubCollection: 'cde' startingAt: -1) = 3.
-
 	self assert: (c indexOfSubCollection: 'abcdefg' startingAt: 400) = 0.
 	self assert: (c indexOfSubCollection: 'abcdefg' startingAt: 4) = 0.
 	self assert: (c indexOfSubCollection: 'abcdefg' startingAt: 1) = 1.
 	self assert: (c indexOfSubCollection: 'abcdefg' startingAt: 0) = 1.
 	self assert: (c indexOfSubCollection: 'abcdefg' startingAt: -1) = 1.
-
 	self assert: (c indexOfSubCollection: 'abcdefghij' startingAt: 400) = 0.
 	self assert: (c indexOfSubCollection: 'abcdefghij' startingAt: 4) = 0.
 	self assert: (c indexOfSubCollection: 'abcdefghij' startingAt: 1) = 0.
@@ -239,12 +224,10 @@ testJoin = (
 
 testPreMultiplyByArray = (
 	| array|
-
 	array := #(3).
 	self assert:(array preMultiplyByArray: 2)=6.
-
 	array := Array new: 4.
-	"self should:[array preMultiplyByArray: 2] raise:Error."
+	self should:[array preMultiplyByArray: 2] raise:Error.
 )
 
 "
@@ -274,15 +257,12 @@ testPreMultiplyByMatrix2 = (
 
 testReplaceFromToWithStartingAt = (
 	| string |
-
 	string := 'abcd' copy.
 	string replaceFrom: 1 to: 3 with: 'lmnop' startingAt: 1.
 	self assert: string = 'lmnd'.
-
 	string := 'abcd' copy.
 	string replaceFrom: 1 to: 3 with: 'lmnop' startingAt: 2.
 	self assert: string = 'mnod'.
-
 	string := 'abcd' copy.
 	string replaceFrom: 2 to: 3 with: 'lmnop' startingAt: 1.
 	self assert: string = 'almd'.
@@ -294,7 +274,6 @@ testSplitAndJoin = (
 
 testSplitBy = (
 	"Tests for  splitBy: and splitBy:do:"
-
 	self assert: ('a/b' splitBy: '/') = #('a' 'b').
 	self assert: ('a/b/' splitBy: '/') = #('a' 'b' '').
 	self assert: ('/a/b/' splitBy: '/') = #('' 'a' 'b' '').
@@ -302,10 +281,8 @@ testSplitBy = (
 	self assert: ('/' splitBy: '/') = #('' '').
 	self assert: ('a' splitBy: '/') = #('a').
 	self assert: ('' splitBy: '/') = #('').
-
 	self assert: ('a//b' splitBy: '//') = #('a' 'b').
 	self assert: ('///' splitBy: '//') = #('' '/').
-
 	self assert: ('Hello<p>World<p>' splitBy: '<p>') = #('Hello' 'World' '').
 )
 
@@ -313,7 +290,6 @@ testWithCollect = (
 	| c1 c2 |
 	c1 := #(1 2 3).
 	c2 := #(4 5 6).
-
 	self assert: #(4 10 18) equals: (c1 with: c2 collect: [:a :b | a * b]).
 )
 
@@ -321,12 +297,9 @@ testWithDo = (
 	| c1 c2 i |
 	c1 := #(1 2 3).
 	c2 := #(a b).
-
-"	self
+	self
 		should: [c1 with: c2 do: [:ea1 :ea2 | ] ]
 		raise: Error.
-"
-
 	c2 := #(a b c).
 	i := 0.
 	c1 with: c2 do: [:number :letter |

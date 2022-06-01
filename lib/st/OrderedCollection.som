@@ -135,6 +135,7 @@ collect: aBlock = (
 	newCollection := OrderedCollection new: self size.
 	firstIndex to: lastIndex do:
 		[:index |
+                Transcript show: newCollection; cr.
 		newCollection addLast: (aBlock value: (array at: index))].
 	^ newCollection
 )
@@ -201,13 +202,6 @@ copyWithout: oldElement = (
 	| newCollection each |
 	newCollection := self species new: self size.
 	self do: [ :each | oldElement = each ifFalse: [ newCollection add: each ] ].
-	^newCollection
-)
-
-collect: aBlock = (
-	| newCollection |
-	newCollection := self species new.
-	self do: [ :each | newCollection add: (aBlock value: each) ].
 	^newCollection
 )
 

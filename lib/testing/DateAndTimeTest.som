@@ -126,7 +126,6 @@ testDateTimeDenotation2 = (
 	self assert:  lateEveningInLocalTimeOfMoscow = localMoscowTimeFromDenotation.
 )
 
-"
 testErrorWhenDayIsAfterMonthEnd = (
 	self
 		should:
@@ -153,7 +152,6 @@ testErrorWhenDayIsBeforeMonthStart = (
 				day: 0]
 		raise: Error.
 )
-"
 
 testFromString = (
 	| fromString fromStringNoOffset fromStringUTC |

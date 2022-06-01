@@ -1107,6 +1107,12 @@ indexOfAnyOf: aCollection startingAt: start ifAbsent: exceptionBlock = (
 	^exceptionBlock value
 )
 
+indexOfNoneOf: aCollection startingAt: start = (
+	start to: self size do: [ :index |
+		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
+	^0
+)
+
 indexOfSubCollection: aSubCollection = (
 	"Answer the index of the receiver's first element, such that that element
 	equals the first element of aSubCollection, and the next elements equal
@@ -1277,6 +1283,18 @@ lastIndexOfAnyOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
 	elements, answer the result of evaluating the argument, exceptionBlock."
 	| index |
 	(index := self lastIndexOfAnyOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
+	^exceptionBlock value
+)
+
+lastIndexOfNoneOf: aCollection startingAt: lastIndex = (
+	lastIndex to: 1 by: -1 do: [ :index |
+		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
+	^0
+)
+
+lastIndexOfNoneOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
+	| index |
+	(index := self lastIndexOfNoneOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
 	^exceptionBlock value
 )
 
