@@ -380,14 +380,15 @@ evalMethodOrPrimitive :: CoreOpt -> ObjectData -> Object -> [Object] -> Vm Objec
 evalMethodOrPrimitive opt dat rcv arg =
   let (DataMethod holder methodDefinition expr) = dat
       (Expr.Lambda _ methodArguments methodTemporaries methodStatements) = expr
+      notPrimitive = evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
   in case St.methodDefinitionPrimitiveCode methodDefinition of
        Just k -> do
          --printTrace "evalMethodOrPrimitive: primitive" (rcv : arg)
          answer <- (coreOptPrim opt) (holder, St.methodSignature methodDefinition) k rcv arg
          case answer of
            Just result -> return result
-           Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
-       Nothing -> evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
+           Nothing -> notPrimitive
+       Nothing -> notPrimitive
 
 indexableFromVec :: Symbol -> Vec Object -> Vm Object
 indexableFromVec cl vec = do

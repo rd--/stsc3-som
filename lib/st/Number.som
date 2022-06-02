@@ -489,6 +489,10 @@ strictlyPositive = (
 	^ self > 0
 )
 
+threadDelaySeconds = (
+	^ self asFloat threadDelaySeconds
+)
+
 to: stop = (
 	^Interval from: self to: stop
 )

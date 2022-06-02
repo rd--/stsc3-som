@@ -85,7 +85,6 @@ testDecompile = (
 "
 
 testEmptyBlocksAnswerNil = (
-	"In the olden days ([:a :b|] value: #first value: #last) == #last..."
 	{[]. [:a|]. [:a :b|]. [:a :b :c|]} do:
 		[:block|
 		self assert: (block cull: 1 cull: 2 cull: 3) equals: nil]
@@ -148,7 +147,6 @@ testRunSimulated = (
 "
 
 testSetUp = (
-	"Note: In addition to verifying that the setUp worked the way it was expected to, testSetUp is used to illustrate the meaning of the simple access methods, methods that are not normally otherwise 'tested'"
 	self deny: aBlockClosure isContext.
 	self assert: aBlockClosure isBlock.
 "
@@ -227,16 +225,10 @@ testValueWithPossibleArgument = (
 	self assert: (blockWith2Arg valueWithPossibleArgument: 1) = {1 . nil}
 )
 
-
 ----------------------------
 
 onceMethod = (
 	^[Object new] once
 )
-
-
-comment = (^'
-No comment
-')
 
 )

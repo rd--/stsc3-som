@@ -12,6 +12,8 @@ import System.Mem {- base -}
 
 import System.Random {- random -}
 
+import qualified Music.Theory.Concurrent {- hmt-base -}
+
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as St {- stsc3 -}
 
@@ -135,6 +137,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stCoreOpt receiver [] (Just (exception, handler))
+    ("threadDelaySeconds", DataDouble x, []) -> liftIO (Music.Theory.Concurrent.threadDelaySeconds x) >> return (Just receiver)
     ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stCoreOpt receiver sym cl) (objectDataAsString str)
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
     ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)

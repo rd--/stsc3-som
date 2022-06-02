@@ -1,7 +1,6 @@
 CharacterTest = ClassTestCase (
 
 testCharacterSeparators = (
-	"Regression test"
 	| result |
 	result := '/', Character separators.
 	self assert: result size = (Character separators size + 1).
@@ -15,9 +14,6 @@ testCodePoint = (
 )
 
 testDigitValue = (
-	"Answer the Character whose digit value is x. For example,
-	 answer $9 for x=9, $0 for x=0, $A for x=10, $Z for x=35.
-	Results outside this range are undefined."
 	self assert: $0 = (Character digitValue: 0).
 	self assert: $1 = (Character digitValue: 1).
 	self assert: $9 = (Character digitValue: 9).

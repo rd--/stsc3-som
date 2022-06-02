@@ -121,6 +121,11 @@ sqrt = (
 	self primitiveFailed: #sqrt
 )
 
+threadDelaySeconds = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 truncated = (
 	<primitive: 51>
 	self primitiveFailed: #truncated

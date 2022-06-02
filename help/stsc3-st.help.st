@@ -131,5 +131,9 @@ Smalltalk utcTime
 Smalltalk utcOffset
 {Smalltalk utcTime. Smalltalk utcOffset}
 
+[ 0.5 threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
+[ (2/3) threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
+[ 1 threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
+
 "Emacs"
 (setq stsc3-interpreter (list "stsc3-st"))

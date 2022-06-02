@@ -19,8 +19,6 @@ testArithmeticAcrossDateBoundary = (
 )
 
 testAsSecondsIsTheSameInAnyTimezone = (
-	"Using the Posix epoch as a convenient reference, verify that this point
-	in time is represented with the same magnitude in any local time zone."
 	| posixEpochInVariousLocations |
 	posixEpochInVariousLocations := {
 		'1970-01-01T00:00:00+00:00' asDateAndTime .
@@ -36,14 +34,11 @@ testAsSecondsIsTheSameInAnyTimezone = (
 )
 
 testAsSecondsMatchesFromSecondsUsingAnyOffset = (
-	"Verify that #asSeconds is symmetric with #fromSeconds: for an instance with
-	offset that does not match the current local time zone offset."
 	| aDateAndTime seconds newDateAndTime |
 	aDateAndTime := DateAndTime year: 2004 month: 2 day: 29 hour: 13 minute: 33 second: 0 offset: 2 hours.
 	seconds := aDateAndTime asSeconds.
 	newDateAndTime := DateAndTime fromSeconds: seconds.
 	self assert: seconds equals: newDateAndTime asSeconds.
-	"Repeat with another offset to ensure coverage"
 	aDateAndTime := DateAndTime year: 2004 month: 2 day: 29 hour: 13 minute: 33 second: 0 offset: -11 hours.
 	seconds := aDateAndTime asSeconds.
 	newDateAndTime := DateAndTime fromSeconds: seconds.
@@ -51,8 +46,6 @@ testAsSecondsMatchesFromSecondsUsingAnyOffset = (
 )
 
 testAsSecondsMatchesFromSecondsUsingCurrentLocalOffset = (
-	"Verify that #asSeconds is symmetric with #fromSeconds: for an instance with
-	offset that matches the current local time zone offset."
 	| seconds newDateAndTime now |
 	now := DateAndTime now.
 	seconds := now asSeconds.
@@ -61,8 +54,6 @@ testAsSecondsMatchesFromSecondsUsingCurrentLocalOffset = (
 )
 
 testAsSecondsMatchesFromSecondsUsingZeroOffset = (
-	"Verify that #asSeconds is symmetric with #fromSeconds: for an instance with
-	zero offset as in UTC time."
 	| aDateAndTime seconds newDateAndTime |
 	aDateAndTime := DateAndTime year: 2004 month: 2 day: 29 hour: 13 minute: 33 second: 0 offset: 0 hours.
 	seconds := aDateAndTime asSeconds.
@@ -71,8 +62,6 @@ testAsSecondsMatchesFromSecondsUsingZeroOffset = (
 )
 
 testAsStringFromString = (
-	"Convert to string then back, verify same date and time. Skip years in the
-	range 0 to 99 because they are interpreted relative to 2000."
 	| day hour dt min mo nano offset sec dtNew s |
 	mo := 12.
 	day := 2.
@@ -92,8 +81,6 @@ testAsStringFromString = (
 )
 
 testDateTimeDenotation1 = (
-  "DateAndTimeTest new testDateTimeDenotation1"
-	 " Detroit is 5 hours behind UTC, this offset to UTC is therefore written with a minus sign. This example tests the correct interpretation of the DateAndTime denotation. "
 	| twoPmInLondon twoPmUTCInLocalTimeOfDetroit nineAmInDetroit |
 	twoPmInLondon := DateAndTime
 				year: 2004
@@ -109,8 +96,6 @@ testDateTimeDenotation1 = (
 )
 
 testDateTimeDenotation2 = (
-  "DateAndTimeTest new testDateTimeDenotation2"
-	 " Moscow is 3 hours ahead UTC, this offset to UTC is therefore positive. This example tests the correct interpretation of the DateAndTime denotation. "
 	| lateEveningInLondon lateEveningInLocalTimeOfMoscow
 	 localMoscowTimeFromDenotation |
 	lateEveningInLondon := DateAndTime
@@ -157,20 +142,13 @@ testFromString = (
 	| fromString fromStringNoOffset fromStringUTC |
 	fromString := DateAndTime fromString: '-1199-01-05T20:33:14.321-05:00'.
 	self assert: (fromString printString = '-1199-01-05T20:33:14.321-05:00').
-	"if no offset is provided, the local offset should be used"
 	fromStringNoOffset := DateAndTime fromString: '-1199-01-05T20:33:14.321'.
 	self assert: (fromStringNoOffset offset = DateAndTime localOffset).
-	"if a string contains the UTC designator Z, the local offset should not be used"
 	fromStringUTC := DateAndTime fromString: '2011-08-26T18:00:03Z'.
 	self assert: (fromStringUTC printString = '2011-08-26T18:00:03+00:00').
 )
 
 testGetSeconds = (
-	"Verify that getSeconds represents whole seconds in the local time zone. For
-	a given instance of DateAndTime, changing the time zone offset changes the
-	local representation, but does not affect magnitude (time since a defiined
-	epoch). Therefore, if time zone offset changes, the asSeconds value should
-	not change, and the getSeconds value should change to reflect local timezone."
 	| dt s1 id stSeconds seconds1 seconds2 |
 	s1 :=  '2019-01-12T10:07:05.18743-05:00'.
 	dt := s1 asDateAndTime.
@@ -212,7 +190,9 @@ testInstanceCreation = (
 		assert: (t second = 4);
 		assert: (t nanoSecond = 5).
 )
+"
 
+"
 testMonotonicity = (
 	| t1 t2 t3 t4 |
 	t1 := DateAndTime now.

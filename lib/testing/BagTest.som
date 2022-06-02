@@ -46,8 +46,6 @@ testCopy = (
 )
 
 testCreation = (
-	"self run: #testCreation"
-	"self debug: #testCreation"
 	| bag |
 	bag := Bag new.
 	self assert: (bag size) = 0.
@@ -55,8 +53,6 @@ testCreation = (
 )
 
 testCumulativeCounts = (
-	"self run: #testCumulativeCounts"
-	"self debug: #testCumulativeCounts"
 	| bag cumulativeCounts |
 	bag := Bag new.
 	bag add: '1' withOccurrences: 50.
@@ -70,8 +66,6 @@ testCumulativeCounts = (
 )
 
 testEqual = (
-	"(self run: #testEqual)"
-	"(self debug: #testEqual)"
 	| bag1 bag2 |
 	bag1 := Bag new.
 	bag2 := Bag new.
@@ -92,7 +86,6 @@ testEqual = (
 )
 
 testOccurrencesOf = (
-	"self debug: #testOccurrencesOf"
 	| aBag |
  	aBag := Bag new.
 	aBag add: 'a' withOccurrences: 3.
@@ -109,8 +102,6 @@ testOccurrencesOf = (
 )
 
 testRemove = (
-	"self run: #testRemove"
-	"self debug: #testRemove"
 	| bag item |
 	item := 'test item'.
 	bag := Bag new.
@@ -125,7 +116,6 @@ testRemove = (
 )
 
 testRemoveAll = (
-	"Allows one to remove all elements of a collection"
 	| c1 c2 s2 |
 	c1 := #(10 9 8 7 5 4 4 2) asBag.
 	c2 := c1 copy.
@@ -136,44 +126,29 @@ testRemoveAll = (
 )
 
 testSortedCounts = (
-	"self run: #testSortedCounts"
-	"self debug: #testSortedCounts"
-
 	| bag sortedCounts|
 	bag := Bag new.
 	bag add: '1' withOccurrences: 10.
 	bag add: '2' withOccurrences: 1.
 	bag add: '3' withOccurrences: 5.
-
 	sortedCounts := bag sortedCounts.
 	self assert: sortedCounts size = 3.
-
 	self assert: sortedCounts first = (10->'1').
 	self assert: sortedCounts second =  (5->'3').
-	self assert: sortedCounts third =  (1->'2').	
-
+	self assert: sortedCounts third =  (1->'2').
 )
 
 testSortedElements = (
-	"self run: #testSortedElements"
-	"self debug: #testSortedElements"
-
 	| bag sortedElements|
 	bag := Bag new.
 	bag add: '2' withOccurrences: 1.
 	bag add: '1' withOccurrences: 10.
 	bag add: '3' withOccurrences: 5.
-
 	sortedElements := bag sortedElements.
-
 	self assert: sortedElements size = 3.
-
 	self assert: sortedElements first = ('1'->10).
 	self assert: sortedElements second =  ('2'->1).
 	self assert: sortedElements third =  ('3'->5).
-	
-
 )
-
 
 )

@@ -26,7 +26,8 @@ testAny = (
 )
 "
 
-"testAnyAs = (
+"
+testAnyAs = (
 	{
 		{ 2. 2. OrderedCollection. Array withAll: #(1 2 3 4) }.
 		{ 4. 1. Set. Array withAll: #(1 1 1 1) }.
@@ -113,7 +114,6 @@ testEmptyOfLiteralCollections = (
 "
 
 testHistogramOf = (
-	" could be collect:as: Bag, but histogram is what it's used for "
 	| baseCollection collection |
 	baseCollection := {#x -> 2 . #y -> 3 . #y -> 4. #z -> 2 }.
 	{ Array . OrderedCollection . Set } do:
@@ -198,7 +198,6 @@ testMinMax = (
 )
 
 testReduce = (
-	"self run: #testReduce"
 	| array set bag |
 	array := Array with: 1 with: 2 with: 3.
 	self assert: (array reduce:[:a :b| a + b]) = 6.
