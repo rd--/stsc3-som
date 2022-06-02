@@ -309,6 +309,9 @@ evalStatements opt st = if null st then return nilObject else evalExprSequence o
    3. evaluating the block body and saving the result
    4. restoring the saved context
    5. returning the saved result
+
+Exception handlers are at Block contexts.
+If an exception value is returned, and the block context has a handler for that exception, the handler is evaluated.
 -}
 evalBlockWithMaybeExceptionHandler :: CoreOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm (Maybe Object)
 evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler = do
@@ -322,7 +325,7 @@ evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandl
       _ <- vmContextReplace currentContext
       case result of
         Object _ (DataReturn pc maybeBlock _) ->
-          if contextHasMethodWithId pc currentContext
+          if contextHasMethodWithId pc currentContext -- this could be elided here and the escaped block could be reported if it returns all the way?
           then return (Just result)
           else fmap Just (vmEscapedBlock opt maybeBlock)
         Object _ (DataException returnException@(Object returnExceptionClass _)) ->
@@ -342,11 +345,13 @@ evalBlock opt blockObject arguments = evalBlockWithMaybeExceptionHandler opt blo
    1. have a receiver which is stored and can be referenced as self or super
    2. store a context identifier in order to receive non-local returns
    2. don't have a stored (saved) context (they begin in the current environment, they are not closures)
-   4. return self (the receiver) if there is no return statement
+   4. return self (the receiver) if there is no return or exception value
 
 Return statements are allowed as the last statement of either a Method or a Block.
 Returns in Blocks are non-local, they return to the blocks home context.
 The home context is the method the block was defined in.
+When a Return value arrives at it's home context the answer is unpacked and returned.
+Exception values and are always returned directly since exception handlers are at Block contexts.
 
 -}
 evalMethod :: CoreOpt -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> [StExpr] -> Object -> [Object] -> Vm Object
@@ -473,7 +478,7 @@ vmThisContextObject = do
 {- | Evaluate expression.
 
 The evaluator handles non-local returns by making a Return object.
-The evaluator runs isReturnObject to see if further work needs to be done, or if the evaluation is unwinding.
+The evaluator runs isReturnOrExceptionObject to see if further work needs to be done.
 -}
 evalExpr :: CoreOpt -> StExpr -> Vm Object
 evalExpr opt expr =
@@ -485,9 +490,9 @@ evalExpr opt expr =
       result <- evalExpr opt x
       if isReturnOrExceptionObject result
       then return result
-      else do ctx <- vmContextNearestMethod
+      else do homeContext <- vmContextNearestMethod
               blk <- vmContextCurrentBlock
-              returnObject (contextId ctx) blk result
+              returnObject (contextId homeContext) blk result
     Expr.Send e (Expr.Message selector exprList) -> do
       receiver <- evalExpr opt e
       if isReturnOrExceptionObject receiver
@@ -502,25 +507,34 @@ evalExpr opt expr =
     Expr.Begin exprList -> evalExprSequence opt exprList
     Expr.Init _ (St.Temporaries tmp) exprList -> vmContextAssignAllToNil tmp >> evalExprSequence opt exprList
 
--- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
-evalString :: CoreOpt -> String -> Vm Object
+evalString :: CoreOpt -> String -> Vm (Maybe Object)
 evalString opt txt = do
-  res <- evalExpr opt (Expr.smalltalkProgramExpr (St.stParse St.smalltalkProgram txt))
-  case res of
-    Object _ (DataException exc) -> objectInspectAndPrint exc >> vmBacktrace >> return res
-    _ -> return res
+  case St.stParseMaybe St.smalltalkProgram txt of
+    Nothing -> return Nothing
+    Just st -> fmap Just (evalExpr opt (Expr.smalltalkProgramExpr st))
+
+-- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
+evalStringOrError :: CoreOpt -> String -> Vm Object
+evalStringOrError opt txt = do
+  maybeAnswer <- evalString opt txt
+  case maybeAnswer of
+    Nothing -> vmError "evalString"
+    Just answer ->
+      case answer of
+        Object _ (DataException exc) -> objectInspectAndPrint exc >> vmBacktrace >> return answer
+        _ -> return answer
 
 deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
 
-{- | Run evalString given initial state and input text.
+{- | Run evalStringOrError given initial state and input text.
      If the text is empty (or whitespace only) return nil.
 -}
 vmEval :: CoreOpt -> VmState -> String -> IO (Either String Object, VmState)
 vmEval opt vmState str =
   case deleteLeadingSpaces str of
     [] -> return (Right nilObject, vmState)
-    txt -> State.runStateT (Except.runExceptT (evalString opt txt)) vmState
+    txt -> State.runStateT (Except.runExceptT (evalStringOrError opt txt)) vmState
 
 -- * Class Primitives
 
