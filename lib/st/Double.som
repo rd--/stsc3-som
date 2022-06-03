@@ -64,6 +64,11 @@ arcTan = (
 	self primitiveFailed
 )
 
+asIEEE32BitWord = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 asString = (
 	<primitive: -1>
 	self primitiveFailed
@@ -121,17 +126,17 @@ sqrt = (
 	self primitiveFailed: #sqrt
 )
 
-threadDelaySeconds = (
-	<primitive: -1>
-	self primitiveFailed
-)
-
 truncated = (
 	<primitive: 51>
 	self primitiveFailed: #truncated
 )
 
 ----
+
+fromIEEE32Bit: anInteger = (
+	<primitive: -1>
+	^ self primitiveFailed
+)
 
 fromString: aString = (
 	<primitive: -1>

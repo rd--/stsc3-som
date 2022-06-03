@@ -1,0 +1,24 @@
+MVar = (
+
+next = (
+	"Read next value from MVar, blocks until MVar is non-empty and value can be read."
+	<primitive: 65>
+	^self primitiveFailed
+)
+
+nextPut: anObject = (
+	"Write value to MVar, blocks until MVar is empty and can be written to."
+	<primitive: 66>
+	^self primitiveFailed
+)
+
+----
+
+comment = (^'
+A communication variable for concurrent threads.
+When created the variable is empty.
+nextPut: writes a value, blocking until the variable is empty and can accept the value.
+next reads a value, blocking until the variable is non-empty and can provide the value.
+')
+
+)

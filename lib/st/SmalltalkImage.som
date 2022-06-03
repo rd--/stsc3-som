@@ -23,6 +23,11 @@ exit = (
 	self exit: 0
 )
 
+exitToDebugger = (
+	<primitive: 114>
+	self primitiveFailed
+)
+
 garbageCollect = (
 	"Reclaims all garbage and answers the number of bytes of available space in the largest free chunk."
 	<primitive: -1>
@@ -77,7 +82,6 @@ load: aSymbol = (
 
 primitiveGarbageCollect = (
 	"Primitive. Reclaims all garbage and answers the size of the largest free chunk in old space.."
-
 	<primitive: 130>
 	^self primitiveFailed
 )

@@ -10,6 +10,9 @@ BagTest suite run printOn: Transcript
 BlockClosureTest testSelectors do: [ :each | Transcript show: each; cr. BlockClosureTest run: each ]
 BlockClosureTest suite run printOn: Transcript
 
+ByteArrayTest testSelectors do: [ :each | Transcript show: each; cr. ByteArrayTest run: each ]
+ByteArrayTest suite run printOn: Transcript
+
 ChainedSortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. ChainedSortFunctionTest run: each ]
 ChainedSortFunctionTest suite run printOn: Transcript
 
@@ -131,9 +134,11 @@ Smalltalk utcTime
 Smalltalk utcOffset
 {Smalltalk utcTime. Smalltalk utcOffset}
 
-[ 0.5 threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
-[ (2/3) threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
-[ 1 threadDelaySeconds. Transcript nextPutAll: 'delayed'; cr ] value
+'Thread'
+
+[ [ (Delay forSeconds: 3) wait. Transcript nextPutAll: 'thread'; cr ] fork. Transcript nextPutAll: 'main'; cr ] value "prints main then thread"
+[ | thread | thread := [ (Delay forSeconds: 1) wait. Transcript nextPutAll: 'thread'; cr ] fork. thread kill. ] value "won't print anything..."
+[ | mvar | mvar := MVar new. [ (Delay forSeconds: 3) wait. mvar nextPut: 'delayed' ] fork. Transcript nextPutAll: mvar next; cr ] value "print after delay"
 
 "Emacs"
 (setq stsc3-interpreter (list "stsc3-st"))

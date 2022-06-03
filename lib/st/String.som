@@ -42,6 +42,16 @@ String = ArrayedCollection (
 		  with: anObject asString
 )
 
+asByteArray = (
+	"Convert to a ByteArray with the ascii values of the string."
+	| answer |
+	answer := ByteArray new: self size.
+	1 to: self size do: [ :index |
+		answer at: index put: (self at: index) asInteger
+	].
+	^ answer
+)
+
 asDate = (
 	"Many allowed forms, see Date>>#readFrom:"
 	^ Date fromString: self
@@ -182,6 +192,10 @@ basicAt: index put: aCharacter = (
 	(aCharacter isKindOf: Character)
 		ifTrue: [self errorNonIntegerIndex]
 		ifFalse: [self error: 'Strings only store Characters']
+)
+
+byteAt: anInteger = (
+	^ (self at: anInteger) asInteger
 )
 
 compare: s = (

@@ -102,6 +102,11 @@ asArray = (
 	^ Array withAll: self
 )
 
+asByteArray = (
+	"Answer a ByteArray whose elements are the elements of the receiver."
+	^ ByteArray withAll: self
+)
+
 asDigitsAt: anInteger in: aCollection do: aBlock = (
 	"(0 to: 1) asDigitsToPower: 4 do: [:each | Transcript cr; show: each printString]"
 	self do:

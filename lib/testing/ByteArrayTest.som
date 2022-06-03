@@ -1,0 +1,27 @@
+ByteArrayTest = ClassTestCase (
+
+testEmpty = (
+	self
+		assert: 0
+		equals: ByteArray empty size
+		description: 'The empty ByteArray should be empty indeed';
+		assert: ByteArray
+		equals: ByteArray empty species
+		description: 'The empty ByteArray should be a ByteArray';
+"
+		assert: ByteArray empty
+		identical: ByteArray empty
+		description: 'The empty ByteArray should be canonical';
+"
+		yourself
+)
+
+testHex = (
+	self assert: #(122 43 213 7) asByteArray hex = '7a2bd507'.
+)
+
+testReadHexFrom = (
+	self assert: (ByteArray readHexFrom: '7a2bd507') = #(122 43 213 7) asByteArray.
+)
+
+)

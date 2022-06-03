@@ -5,6 +5,7 @@ Error handling and delegation is in the standard library.
 -}
 module Interpreter.Som.Primitives.Smalltalk where
 
+import Control.Concurrent {- base -}
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
 import System.Exit {- base -}
@@ -12,7 +13,7 @@ import System.Mem {- base -}
 
 import System.Random {- random -}
 
-import qualified Music.Theory.Concurrent {- hmt-base -}
+import qualified Music.Theory.Byte {- hmt-base -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as St {- stsc3 -}
@@ -113,12 +114,15 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
   case (prMethod, receiverObj, arguments) of
     ("allInstVarNames", DataClass (cd, False) _ _, []) -> prAllInstVarNames cd
     ("allClassVarNames", DataClass (cd, False) _ _, []) -> prAllClassVarNames cd
+    ("asIEEE32BitWord", DataDouble x, []) -> return (Just (intObject (fromIntegral (Music.Theory.Byte.castFloatToWord32 (realToFrac x)))))
     ("asString", DataDouble x, []) -> fmap Just (mutableStringObject False (show x))
     ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
     ("evaluate:", DataSystem, [Object "String" str]) -> mapMMM (evalString stCoreOpt) (objectDataAsString str)
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
+    ("fork", DataBlockClosure {}, []) -> fmap Just (threadObject stCoreOpt receiver)
+    ("fromIEEE32Bit:", DataClass {}, [Object _ (DataSmallInteger x)]) -> return (Just (doubleObject (realToFrac (Music.Theory.Byte.castWord32ToFloat (fromIntegral x)))))
     ("fromString:", DataClass {}, [Object _ (DataImmutableString x)]) ->
       case prClass of
         "Double class" -> return (Just (maybe nanObject doubleObject (unicodeStringReadDouble x)))
@@ -130,6 +134,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
+    ("kill", DataThread threadId, []) -> liftIO (killThread threadId) >> return (Just nilObject)
     ("load:", DataSystem, [Object "Symbol" str]) -> mapMM systemLoadClassOrNil (objectDataAsString str)
     ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
@@ -137,15 +142,15 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stCoreOpt receiver [] (Just (exception, handler))
-    ("threadDelaySeconds", DataDouble x, []) -> liftIO (Music.Theory.Concurrent.threadDelaySeconds x) >> return (Just receiver)
+    ("threadDelayMicroseconds", DataSmallInteger x, []) -> liftIO (threadDelay x) >> return (Just receiver)
     ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stCoreOpt receiver sym cl) (objectDataAsString str)
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
     ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
-    ("sender", DataContext ctx, []) -> return (fmap (Object "Context" . DataContext) (contextSender ctx))
-    ("signal", _, []) -> return (Just (exceptionObject receiver))
+    ("sender", DataContext ctx, []) -> return (fmap contextObject (contextSender ctx))
+    ("signal", _, []) -> vmContext >>= return . Just . exceptionObject receiver . contextObject
     ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelector) (contextNearestMethod ctx))
     ("selector", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
@@ -211,17 +216,21 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (57, DataDouble x, []) -> return (Just (doubleObject (atan x)))
     (58, DataDouble x, []) -> return (Just (doubleObject (log x)))
     (59, DataDouble x, []) -> return (Just (doubleObject (exp x)))
-    (60, DataArrayLiteral vec, [Object _ (DataSmallInteger ix)]) -> return (vecAtMaybe vec (ix - 1))
-    (60, DataIndexable _ ref, [Object _ (DataSmallInteger ix)]) -> vecRefAtMaybe ref (ix - 1) -- basicAt: at:
+    (60, DataArrayLiteral vec, [Object _ (DataSmallInteger ix)]) -> return (vecAtMaybe vec (ix - 1)) -- basicAt: at:
+    (60, DataIndexable _ ref, [Object _ (DataSmallInteger ix)]) -> vecRefAtMaybe ref (ix - 1)
+    (60, DataByteArray _ ref, [Object _ (DataSmallInteger ix)]) -> fmap (fmap (intObject . fromIntegral)) (vecRefAtMaybe ref (ix - 1))
     (61, DataIndexable _ ref, [Object _ (DataSmallInteger ix), value]) -> vecRefAtPutMaybe ref (ix - 1) value -- basicAt:put: at:put:
+    (61, DataByteArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataSmallInteger byte)]) -> fmap (fmap (intObject . fromIntegral)) (vecRefAtPutMaybe ref (ix - 1) (fromIntegral byte))
     (62, DataArrayLiteral vec, []) -> return (Just (intObject (vecLength vec))) -- basicSize size
     (62, DataIndexable _ ref, []) -> deRef ref >>= \vec -> return (Just (intObject (vecLength vec)))
     (62, DataCharacterArray _ ref, []) -> deRef ref >>= \vec -> return (Just (intObject (vecLength vec)))
+    (62, DataByteArray _ ref, []) -> deRef ref >>= \vec -> return (Just (intObject (vecLength vec)))
     (62, DataImmutableString str, []) -> return (Just (intObject (unicodeStringLength str)))
     (63, DataImmutableString str, [Object _ (DataSmallInteger ix)]) -> return (fmap characterObject (unicodeStringAt str ix))
     (63, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix)]) -> fmap (fmap characterObject) (vecRefAtMaybe ref (ix - 1))
     (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
-    -- 65 next
+    (65, DataMVar mvar, []) -> fmap Just (liftIO (takeMVar mvar)) -- next
+    (66, DataMVar mvar, [obj]) -> liftIO (putMVar mvar obj) >> return (Just obj) -- nextPut:
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd) -- basicNew
     (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> classNewWithArg cd size -- basicNew:
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:

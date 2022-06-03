@@ -7,10 +7,12 @@ and for a more traditional Smalltalk interpreter.
 -}
 module Interpreter.Som.Types where
 
+import Control.Concurrent {- base -}
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
 import Data.List {- base -}
 import Data.Maybe {- base -}
+import Data.Word {- base -}
 import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
@@ -20,6 +22,8 @@ import qualified Data.Time.LocalTime as Time {- time -}
 
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
+
+import qualified Music.Theory.Byte {- hmt-base -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
@@ -138,12 +142,15 @@ data ObjectData
   | DataPrimitive Symbol Symbol -- ^ Holder & Signature
   | DataBlockClosure Id Context StExpr -- ^ Identity, context, lambda StExpr
   | DataReturn Id (Maybe Object) Object -- ^ Return contextId, Block returned from & value
-  | DataException Object -- ^ Exception
+  | DataException Object Object -- ^ Exception
   | DataSystem -- ^ Token for system or Smalltalk singleton
   | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
   | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number of integer indexed mutable slots
   | DataNonIndexable Id ObjectTable -- ^ Objects with named and index addressable instance variables
-  | DataCharacterArray Id (VecRef Char) -- ^ Character array (for String and Symbol)
+  | DataCharacterArray Id (VecRef Char) -- ^ Character array
+  | DataByteArray Id (VecRef Word8) -- ^ Byte array
+  | DataThread ThreadId
+  | DataMVar (MVar Object)
   deriving (Eq)
 
 objectDataAsDouble :: ObjectData -> Maybe Double
@@ -159,6 +166,7 @@ objectDataAsString o =
   case o of
     DataImmutableString str -> return (Just (fromUnicodeString str))
     DataCharacterArray _ ref -> fmap Just (vecRefToList ref)
+    DataByteArray _ ref -> fmap (Just . map (toEnum . fromIntegral)) (vecRefToList ref)
     _ -> return Nothing
 
 objectDataAsArray :: MonadIO m => ObjectData -> m (Maybe [Object])
@@ -354,7 +362,7 @@ objectToString (Object nm obj) =
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
     DataReturn _ _ o -> "PrimitiveReturn: " ++ objectToString o
-    DataException e -> "PrimitiveException: " ++ objectToString e
+    DataException e c -> "PrimitiveException: " ++ unwords (map objectToString [e, c])
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
     _ -> "instance of " ++ fromSymbol nm
 
@@ -395,6 +403,10 @@ objectExamine vmPp f (Object nm obj) =
       vec <- deRef ref
       let str = vecToList vec
       return (printf "instance of %s <pc:%d> with: '%s'" nm x str)
+    DataByteArray x ref -> do
+      vec <- deRef ref
+      let bytes = vecToList vec
+      return (printf "instance of %s <pc:%d> with: '%s'" nm x (Music.Theory.Byte.byte_seq_hex_pp False bytes))
     DataClass (x,_) tbl _ -> do
       tblStr <- objectTableExamine f tbl
       return (St.className x ++ ": " ++ tblStr)
@@ -498,6 +510,9 @@ objectAssignInstanceVariable object key value =
 
 data SystemType = SomSystem | SmalltalkSystem
 
+contextObject :: Context -> Object
+contextObject = Object "Context" . DataContext
+
 -- | In Som the class of nil is Nil and in St-80 it is UndefinedObject.
 sysNilClass :: SystemType -> String
 sysNilClass sys =
@@ -575,7 +590,7 @@ largeIntegerObject x = Object (toSymbol "LargeInteger") (DataLargeInteger x)
 doubleObject :: Double -> Object
 doubleObject x = Object (toSymbol "Double") (DataDouble x)
 
--- | Integer given by consrtructor if fractional part is zero, else Double.
+-- | Integer given by constructor if fractional part is zero, else Double.
 doubleAsFractional :: Integral t => (t -> Object) -> Double -> Object
 doubleAsFractional cons x =
   case properFraction x of
@@ -634,8 +649,8 @@ returnObject pc blockObject x =
   then vmError "returnObject: already Return"
   else return (Object (toSymbol "PrimitiveReturn") (DataReturn pc blockObject x))
 
-exceptionObject :: Object -> Object
-exceptionObject exception = Object (toSymbol "PrimitiveException") (DataException exception)
+exceptionObject :: Object -> Object -> Object
+exceptionObject exception signalContext = Object (toSymbol "PrimitiveException") (DataException exception signalContext)
 
 -- * Object predicates
 
@@ -753,6 +768,9 @@ objectHash (Object nm obj) =
     DataIndexable x _ -> mHash (nm,x)
     DataNonIndexable x _ -> mHash (nm,x)
     DataCharacterArray _ ref -> vecRefToList ref >>= \str -> mHash (nm, str) -- strings and copies of strings hash equally
+    DataByteArray _ ref -> vecRefToList ref >>= \bytes -> mHash (nm, bytes)
+    DataThread _ -> vmError ("Object>>hash: Thread")
+    DataMVar _ -> vmError ("Object>>hash: MVar")
 
 objectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Bool
 objectHashEqual obj1 obj2 = do

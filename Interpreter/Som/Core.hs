@@ -3,6 +3,7 @@
      interpreter primitives -}
 module Interpreter.Som.Core where
 
+import Control.Concurrent {- base -}
 import Control.Monad {- base -}
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
@@ -69,6 +70,10 @@ objectDataShallowCopy od =
       pc <- vmProgramCounterIncrement
       cpy <- vecRefShallowCopy ref
       return (DataCharacterArray pc cpy)
+    DataByteArray _ ref -> do
+      pc <- vmProgramCounterIncrement
+      cpy <- vecRefShallowCopy ref
+      return (DataByteArray pc cpy)
     DataImmutableString str -> stringToCharacterArray False str
     DataIndexable _ ref -> do
       pc <- vmProgramCounterIncrement
@@ -328,7 +333,7 @@ evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandl
           if contextHasMethodWithId pc currentContext -- this could be elided here and the escaped block could be reported if it returns all the way?
           then return (Just result)
           else fmap Just (vmEscapedBlock opt maybeBlock)
-        Object _ (DataException returnException@(Object returnExceptionClass _)) ->
+        Object _ (DataException returnException@(Object returnExceptionClass _) _signalContext) ->
           --printTrace "evalBlockWithMaybeExceptionHandler: result is Exception" [result] >>
           case contextExceptionHandler extendedBlockContext of
             Just ((Object exceptionClass _), handler) ->
@@ -372,7 +377,7 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
       if ctxId == pc
       then return x -- << printTrace ("evalMethod: Return: ctxId at pc: " ++ show (ctxId, pc)) [receiver, result]
       else return result -- << printTrace ("evalMethod: Return: ctxId not at pc: " ++ show (ctxId, pc)) [receiver, result])
-    Object _ (DataException _) -> return result
+    Object _ (DataException {}) -> return result
     _ -> return receiver
 
 -- | Evaluate method, deferring to Primitive if required.
@@ -522,11 +527,14 @@ evalStringOrError opt txt = do
     Nothing -> vmError "evalString"
     Just answer ->
       case answer of
-        Object _ (DataException exc) -> objectInspectAndPrint exc >> vmBacktrace >> return answer
+        Object _ (DataException exc (Object _ (DataContext ctx))) -> objectInspectAndPrint exc >> vmContextPrint ctx >> return answer
         _ -> return answer
 
 deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
+
+vmRun :: VmState -> Vm Object -> IO (Either String Object, VmState)
+vmRun vmState f = State.runStateT (Except.runExceptT f) vmState
 
 {- | Run evalStringOrError given initial state and input text.
      If the text is empty (or whitespace only) return nil.
@@ -535,7 +543,7 @@ vmEval :: CoreOpt -> VmState -> String -> IO (Either String Object, VmState)
 vmEval opt vmState str =
   case deleteLeadingSpaces str of
     [] -> return (Right nilObject, vmState)
-    txt -> State.runStateT (Except.runExceptT (evalStringOrError opt txt)) vmState
+    txt -> vmRun vmState (evalStringOrError opt txt)
 
 -- * Class Primitives
 
@@ -562,6 +570,17 @@ classAllVariableNamesFor cd isMeta =
     False -> classAllVariableNames St.classInstanceVariableNames cd
     True -> classAllVariableNames St.classVariableNames cd
 
+mvarObject :: Vm Object
+mvarObject = do
+  mvar <- liftIO newEmptyMVar
+  return (Object "MVar" (DataMVar mvar))
+
+threadObject :: CoreOpt -> Object -> Vm Object
+threadObject opt block = do
+  st <- State.get
+  threadId <- liftIO (forkIO (vmRun st (evalBlock opt block [] >> return nilObject) >> return ()))
+  return (Object "Thread" (DataThread threadId))
+
 {- | Create instance of a non-indexable non-immediate class.
      Allocate reference for instance variables and initialize to nil.
      The instance variables of an object are:
@@ -569,11 +588,14 @@ classAllVariableNamesFor cd isMeta =
          - all of the instance variables of all of it's superclasses.
 -}
 classNew :: St.ClassDefinition -> Vm Object
-classNew cd = do
-  instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
-  tbl <- variablesTbl instVarNames
-  pc <- vmProgramCounterIncrement
-  return (Object (St.className cd) (DataNonIndexable pc tbl))
+classNew cd =
+  case St.className cd of
+         "MVar" -> mvarObject
+         _ -> do
+           instVarNames <- classAllVariableNames St.classInstanceVariableNames cd
+           tbl <- variablesTbl instVarNames
+           pc <- vmProgramCounterIncrement
+           return (Object (St.className cd) (DataNonIndexable pc tbl))
 
 arrayNewWithArg :: Int -> Vm Object
 arrayNewWithArg size = arrayFromList (replicate size nilObject)
@@ -585,12 +607,20 @@ stringNewWithArg size = do
   ref <- liftIO (toRef vec)
   return (Object "String" (DataCharacterArray pc ref))
 
+byteArrayNewWithArg :: SmallInteger -> Vm Object
+byteArrayNewWithArg size = do
+  pc <- vmProgramCounterIncrement
+  let vec = vecFromList (replicate size 0)
+  ref <- liftIO (toRef vec)
+  return (Object "ByteArray" (DataByteArray pc ref))
+
 classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm (Maybe Object)
 classNewWithArg cd size =
   if size < 0
   then return Nothing
   else case St.className cd of
          "Array" -> fmap Just (arrayNewWithArg size)
+         "ByteArray" -> fmap Just (byteArrayNewWithArg size)
          "String" -> fmap Just (stringNewWithArg size)
          _ -> return Nothing
 

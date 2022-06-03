@@ -1,0 +1,188 @@
+ByteArray = ArrayedCollection (
+
+asByteArray = (
+	^ self
+)
+
+asString = (
+	| answer |
+	answer := String new: self size.
+	1 to: self size do: [ :index |
+		answer at: index put: (self at: index) asCharacter
+	].
+	^ answer
+)
+
+atAllPut: value = (
+	"Fill the receiver with the given value"
+	<primitive: 145>
+	super atAllPut: value
+)
+
+at: index = (
+	<primitive: 60>
+	self primitiveFailed
+)
+
+at: index put: value = (
+	<primitive: 61>
+	self primitiveFailed
+)
+
+byteAt: index = (
+	<primitive: 60>
+	self primitiveFailed
+)
+
+byteAt: index put: value = (
+	<primitive: 61>
+	self primitiveFailed
+)
+
+byteSize = (
+	<primitive: 62>
+	self primitiveFailed
+)
+
+bytesPerElement = (
+	"Number of bytes in each item.  This multiplied by (self size)*8 gives the number of bits stored."
+	^ 1
+)
+
+defaultElement = (
+	^0
+)
+
+hex = (
+	"Answer a hexa decimal representation of the receiver"
+	| string v index map |
+	map := '0123456789abcdef'.
+	string := String new: self size * 2. "hex"
+	index := 0.
+	1 to: self size do:[:i|
+		v := self at: i.
+		string at: (index := index + 1) put: (map at: (v bitShift: -4) + 1).
+		string at: (index := index + 1) put: (map at: (v bitAnd: 15) + 1).
+	].
+	^string
+)
+
+occurrencesOf: anObject = (
+	"Answer how many of the receiver's elements are equal to anObject. Optimized version."
+	| tally |
+	anObject isInteger ifFalse: [ ^0 ].
+	anObject negative ifTrue: [ ^0 ].
+	anObject > 255 ifTrue: [ ^0 ].
+	tally := 0.
+	1 to: self size do: [ :index |
+		(self at: index) = anObject ifTrue: [ tally := tally + 1 ] ].
+	^tally
+)
+
+primReplaceFrom: start to: stop with: replacement startingAt: repStart = (
+	"This destructively replaces elements from start to stop in the receiver
+	starting at index, repStart, in the collection, replacement.  Answer the
+	receiver.  No range checks are performed - this may be primitively implemented."
+	<primitive: 105>
+	super replaceFrom: start to: stop with: replacement startingAt: repStart
+)
+
+readHexFrom: aStream = (
+	"Initialize the receiver from a hexadecimal string representation"
+	| map v ch value |
+	map := '0123456789abcdefABCDEF'.
+	1 to: self size do:[:i|
+		ch := aStream next.
+		v := (map indexOf: ch) - 1.
+		((v between: 0 and: 15) or: [((v:= v - 6) between: 0 and: 15)]) ifFalse:[^self error: 'Hex digit expected'].
+		value := v bitShift: 4.
+		ch := aStream next.
+		v := (map indexOf: ch) - 1.
+		((v between: 0 and: 15) or: [((v:= v - 6) between: 0 and: 15)]) ifFalse:[^self error: 'Hex digit expected'].
+		value := value + v.
+		self at: i put: value.
+	].
+)
+
+replaceFrom: start to: stop with: replacement startingAt: repStart = (
+	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
+	<primitive: 105>
+	replacement isString
+		ifFalse:
+			[super replaceFrom: start to: stop with: replacement startingAt: repStart]
+		ifTrue:
+			[ "use String>>byteAt: to mimic prim 105"
+			| index repOff |
+			repOff := repStart - start.
+			index := start - 1.
+			[(index := index + 1) <= stop]
+				whileTrue: [self at: index put: (replacement byteAt: repOff + index)]]
+)
+
+size = (
+	<primitive: 62>
+	self primitiveFailed
+)
+
+word16At: i = (
+	"Answer the value of the word (2 bytes) starting at index i."
+	| j |
+	j := i + i.
+	^((self at: j - 1) bitShift: 8) + (self at: j)
+)
+
+word16At: i put: v = (
+	"Set the value of the word (2 bytes) starting at index i."
+	| j |
+	j := i + i.
+	self at: j - 1 put: ((v bitShift: -8) bitAnd: 8r377).
+	self at: j put: (v bitAnd: 8r377)
+)
+
+word32At: i = (
+	"Answer the value of the Word32 (4 bytes) starting at byte index i."
+	| b0 b1 b2 w |
+	b0 := self at: i.
+	b1 := self at: i+1.
+	b2 := self at: i+2.
+	w := self at: i+3.
+	b2=0 ifFalse: [w := (b2 bitShift: 8) + w].
+	b1=0 ifFalse: [w := (b1 bitShift: 16) + w].
+	b0=0 ifFalse: [w := (b0 bitShift: 24) + w].
+	^w
+)
+
+word32At: i put: value = (
+	"Set the value of the double word (4 bytes) starting at byte index i."
+	| w |
+	w := value truncated.
+	self at: i put: (w digitAt: 4).
+	self at: i + 1 put: (w digitAt: 3).
+	self at: i + 2 put: (w digitAt: 2).
+	self at: i + 3 put: (w digitAt: 1)
+)
+
+----
+
+empty = (
+	^self new: 0
+)
+
+isVariable = (
+	^true
+)
+
+new: sizeRequested = (
+	"Answer an instance of this class with the number of indexable
+	variables specified by the argument, sizeRequested.
+	This is a shortcut (direct call of primitive, no #initialize, for performance"
+	<primitive: 71>  "This method runs primitively if successful"
+	^ self basicNew: sizeRequested  "Exceptional conditions will be handled in basicNew:"
+)
+
+readHexFrom: aString = (
+	"Create a byte array from a hexadecimal representation"
+	^(self new: aString size // 2) readHexFrom: aString readStream
+)
+
+)

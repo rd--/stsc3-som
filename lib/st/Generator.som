@@ -1,16 +1,16 @@
 Generator = Stream (
 
-| block next continue home |
+| block next thread mvar |
 
 atEnd = (
 	"Answer whether the receiver can access any more objects."
-	^ continue isNil
+	^ next isException
 )
 
 close = (
 	"Close the receiving generator and unwind its ensure-blocks."
-	continue ifNotNil:[continue unwindTo: home].
-	continue := block := next := nil
+	thread ifNotNil: [ thread kill ].
+	block := next := thread := mvar := nil
 )
 
 contents = (
@@ -24,12 +24,10 @@ contents = (
 
 fork = (
 	| result |
-	home := thisContext.
-	block value: self.
-	thisContext swapSender: continue.
-	result := next.
-	continue := next := home := nil.
-	^ result
+	mvar := MVar new.
+	thread := [ block value: self. self nextPut: EndOfStream new ] fork. "append EndOfStream marker"
+	next := mvar next. "read initial value, self next checks for end of stream"
+	^ next
 )
 
 initializeOn: aBlock = (
@@ -39,18 +37,14 @@ initializeOn: aBlock = (
 
 next = (
 	"Generate and answer the next object in the receiver."
-	^ self atEnd ifFalse: [
-		home swapSender: thisContext sender.
-		continue := thisContext swapSender: continue
-	]
+	^ self atEnd ifTrue: [ nil ] ifFalse: [ | previous | previous := next. next := mvar next. previous ].
 )
 
 nextPut: anObject = (
 	"Add anObject into the generator. A synonym to #yield: and value:."
 	| previous |
 	previous := next.
-	next := anObject.
-	continue := thisContext swapSender: continue.
+	mvar nextPut: anObject.
 	^ previous
 )
 
@@ -65,9 +59,8 @@ printOn: aStream = (
 
 reset = (
 	"Reset the generator, i.e., start it over"
-	continue ifNotNil:[continue unwindTo: home].
+	thread ifNotNil: [ thread kill ].
 	next := nil.
-	continue := thisContext.
 	[ self fork ] value
 )
 
@@ -101,13 +94,13 @@ When a producer algorithm provide results as callbacks (blocks) and a consumer a
 
 	| generator |
 	generator := Generator on: [:g| Integer primesUpTo: 100 do:[:prime| g yield: prime]].
-	[generator atEnd] whileFalse:[Transcript show: generator next].
+	[generator atEnd] whileFalse:[Transcript show: generator next; cr].
 
 Instance Variables
 	block:		<BlockClosure>	The block associated with the generator.
-	continue:	<Context>			The continuation to return to.
-	home:		<Context>			The home (root) context of the activated block
 	next:		<Object>			The next object to return from the Generator.
+	thread:		<Thread>		The thread that is running block.
+	mvar:		<MVar>			The MVar that is communicating values from thread.
 ')
 
 )

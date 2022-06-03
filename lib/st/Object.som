@@ -394,6 +394,10 @@ isDictionary = (
 	^false
 )
 
+isException = (
+	^ false
+)
+
 isFloat = (
 	^ false
 )

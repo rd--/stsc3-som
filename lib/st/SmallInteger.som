@@ -386,6 +386,11 @@ sqrtRem = (
 	^{s. self - (s*s)}
 )
 
+threadDelayMicroseconds = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 threeDigitName = (
 	| units answer |
 	self = 0 ifTrue: [^''].

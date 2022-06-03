@@ -1,0 +1,19 @@
+Thread = (
+
+kill = (
+	<primitive: -1>
+	^ self primitiveFailed
+)
+
+----
+
+newOn: aBlock = (
+	^aBlock fork
+)
+
+comment = (^'
+A concurrent thread evaluating a BlockClosure object.
+Threads can communicate using MVars, see Generator for an example.
+')
+
+)

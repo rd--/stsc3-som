@@ -26,6 +26,10 @@ description = (
 		ifFalse: [desc, ': ', mt]
 )
 
+isException = (
+	^ true
+)
+
 messageText = (
 	"Return an exception's message text."
 	^ messageText ifNil: [ String empty ]

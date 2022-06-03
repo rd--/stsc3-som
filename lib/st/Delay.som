@@ -1,0 +1,80 @@
+Delay = Object (
+
+| delayDuration beingWaitedOn resumptionTime |
+
+beingWaitedOn = (
+	"Answer whether this delay is currently scheduled, e.g., being waited on"
+	^beingWaitedOn
+)
+
+delayDuration = (
+	"Answer the receiver's duration in milliseconds."
+	^delayDuration
+)
+
+delayDuration: milliseconds = (
+	"Set the receiver's duration in milliseconds, iff it is not active."
+	milliseconds < 0 ifTrue:	[self error: 'Delay times cannot be negative!'].
+	beingWaitedOn == true ifTrue: [self error: 'This delay is scheduled!'].
+	delayDuration := milliseconds asInteger
+)
+
+printOn: aStream = (
+	super printOn: aStream.
+	aStream
+		nextPut: $(;
+		print: delayDuration;
+		nextPutAll: ' msecs'.
+	beingWaitedOn ifTrue:
+		[aStream
+			nextPutAll: '; ';
+			print: resumptionTime - (Time utcMicrosecondClock + 500 // 1000);
+			nextPutAll: ' msecs remaining'].
+	aStream nextPut: $)
+)
+
+resumptionTime = (
+	"Answer the value of the system's millisecondClock at which the receiver's suspended Process will resume."
+	^ resumptionTime
+)
+
+setDelay: milliseconds = (
+	milliseconds < 0 ifTrue: [self error: 'delay times cannot be negative'].
+	delayDuration := milliseconds.
+	beingWaitedOn := false.
+)
+
+wait = (
+	"Delay the current thread for delayDuration"
+        | currentTime |
+	currentTime := Time millisecondClockValue.
+	resumptionTime := delayDuration + currentTime.
+	beingWaitedOn := true.
+	(delayDuration * 1000) threadDelayMicroseconds.
+	beingWaitedOn := false.
+)
+
+----------------------------
+
+forDuration: aDuration = (
+	^ self forMilliseconds: aDuration asMilliSeconds
+)
+
+forMilliseconds: anInteger = (
+	"Return a new Delay for the given number of milliseconds."
+	^ self new setDelay: anInteger asInteger
+)
+
+forSeconds: aNumber = (
+	^ self forMilliseconds: (aNumber * 1000)
+)
+
+comment = (^'
+I am the main way that a process may pause for some amount of time.  The simplest usage is like this:
+
+	(Delay forSeconds: 5) wait.
+
+An instance of Delay responds to the message ''wait'' by suspending the caller''s process for a certain amount of time. The duration of the pause is specified when the Delay is created with the message forMilliseconds: or forSeconds:. A Delay can be used again when the current wait has finished. For example, a clock process might repeatedly wait on a one-second Delay.
+')
+
+)
