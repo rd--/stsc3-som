@@ -248,6 +248,7 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (100, _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl) -- perform:withArguments:inSuperclass:
     (110, _, [arg]) -> fmap (Just . booleanObject) (objectIdentical receiver arg) -- ==
     (111, _, []) -> fmap Just (objectClass receiver) -- class species
+    (113, DataSystem, []) -> fmap Just (prQuit 0)
     (113, DataSystem, [Object _ (DataSmallInteger x)]) -> fmap Just (prQuit x)
     (114, _, []) -> vmErrorWithBacktrace "halt" [receiver] -- ExitToDebugger
     (130, DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just (intObject 0))

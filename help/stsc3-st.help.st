@@ -142,3 +142,4 @@ Smalltalk utcOffset
 
 "Emacs"
 (setq stsc3-interpreter (list "stsc3-st"))
+(setq stsc3-interpreter (list "gst"))
