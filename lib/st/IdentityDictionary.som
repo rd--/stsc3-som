@@ -1,4 +1,5 @@
 IdentityDictionary = Dictionary (
+
 keyAtValue: value ifAbsent: exceptionBlock = (
 	"Answer the key that is the external name for the argument, value. If
 	there is none, answer the result of evaluating exceptionBlock."
@@ -27,5 +28,11 @@ scanForEmptySlotFor: anObject = (
 	self errorNoFreeSpace
 )
 
+----
+
+comment = (^'
+Like a Dictionary, except that keys are compared with #== instead of #= .
+See the comment of IdentitySet for more information.
+')
 
 )

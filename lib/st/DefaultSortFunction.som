@@ -1,19 +1,7 @@
 DefaultSortFunction = SortFunction (
+
 collate: anObject with: anotherObject = (
 	^anObject <=> anotherObject
 )
-
-
-----------------------------
-
-initialize = (
-	Default := self new
-)
-
-
-comment = (^'
-No comment
-')
-
 
 )

@@ -1,3 +1,14 @@
+"Since classes are loaded lazily, asking for subclasses initially gives an empty set"
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SpaceshipOperatorTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+
+"Run all tests"
+allTests do: [ :each | each suite run printOn: Transcript ]
+
+allTests size = 45
+ClassTestCase subclasses size = 44
+TestCase subclasses size = (1 + 1) "ClassTestCase is a subclass of TestCase"
+
+"Individual tests"
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
 ArrayTest suite run printOn: Transcript
 
@@ -73,6 +84,9 @@ ObjectTest suite run printOn: Transcript
 OrderedCollectionTest testSelectors do: [ :each | Transcript show: each; cr. OrderedCollectionTest run: each ]
 OrderedCollectionTest suite run printOn: Transcript
 
+OrderedDictionaryTest testSelectors do: [ :each | Transcript show: each; cr. OrderedDictionaryTest run: each ]
+OrderedDictionaryTest suite run printOn: Transcript
+
 ReadStreamTest testSelectors do: [ :each | Transcript show: each; cr. ReadStreamTest run: each ]
 ReadStreamTest suite run printOn: Transcript
 
@@ -130,6 +144,8 @@ WriteStreamTest suite run printOn: Transcript
 YearTest testSelectors do: [ :each | Transcript show: each; cr. YearTest run: each ]
 YearTest suite run printOn: Transcript
 
+Smalltalk globalKeys
+Smalltalk globals
 Smalltalk utcTime
 Smalltalk utcOffset
 {Smalltalk utcTime. Smalltalk utcOffset}

@@ -1,4 +1,4 @@
-SortFunctionTest = TestCase (
+SortFunctionTest = ClassTestCase (
 
 testAsSortFunction = (
 	| function |

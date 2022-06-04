@@ -1,4 +1,4 @@
-SortedCollectionTest = TestCase (
+SortedCollectionTest = ClassTestCase (
 
 testAdd = (
 	"self run: #testAdd"

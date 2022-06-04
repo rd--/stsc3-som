@@ -1,0 +1,145 @@
+OrderedDictionaryTest = ClassTestCase (
+
+| sut |
+
+setUp = (
+	super setUp.
+	sut := OrderedDictionary new: 7.
+)
+
+testAtIndex = (
+	1 to: 10 do: [:ea |
+		sut at: ea put: nil].
+	1 to: 10 do: [:index |
+		self assert: index equals: (sut atIndex: index) key].
+)
+
+testCompact = (
+	1 to: 3 do: [:ea | sut at: ea put: nil].
+	sut removeKey: 2.
+	self assert: 2 equals: ((sut instVarNamed: #order) count: [:ea | ea notNil]).
+)
+
+testCopy = (
+	sut
+		at: 1 put: nil;
+		at: 2 put: nil;
+		at: 3 put: nil.
+	sut copy in: [:copy |
+		self assert: sut keys equals: copy keys.
+		copy at: 4 put: nil.
+		self assert: sut keys size < copy keys size].
+)
+
+testCopyFirst = (
+	1 to: 10 do: [:ea |
+		sut at: ea put: nil].
+	self assert: (1 to: 5) asArray equals: (sut first: 5) keys.
+)
+
+testCopyFromTo = (
+	| copy |
+	1 to: 10 do: [:index |
+		sut at: index put: nil].
+	copy := sut copyFrom: 3 to: 5.
+	self assert: (3 to: 5) asArray equals: copy keys.
+	copy at: 3 put: #foo.
+	self assert: (sut at: 3) isNil.
+	copy at: 11 put: #ba.
+	self assert: #ba equals: (copy at: 11).
+)
+
+testCopyLast = (
+	1 to: 10 do: [:ea |
+		sut at: ea put: nil].
+	self assert: (6 to: 10) asArray equals: (sut last: 5) keys.
+)
+
+testFirst = (
+	1 to: 10 do: [:ea |
+		sut at: ea put: nil].
+	#(first second third fourth fifth sixth seventh eighth ninth) withIndexDo: [:selector :index |
+		self assert: index equals: (sut perform: selector) key].
+)
+
+testGrow = (
+	self
+		assert: 11 equals: sut capacity;
+		assert: sut capacity > (sut instVarNamed: #order) size.
+	1 to: sut capacity do: [:ea |
+		sut at: ea put: nil].
+	self
+		assert: sut capacity > 11;
+		assert: sut capacity > (sut instVarNamed: #order) size.
+)
+
+testIsSorted = (
+	10 to: 1 by: -1 do: [:ea |
+		sut at: ea put: nil].
+	self assert: sut isSorted not.
+	sut sort.
+	self assert: sut isSorted.
+)
+
+testOrder = (
+	"We use integers as keys to match hash values."
+	| dict |
+	dict := Dictionary new.
+	1 to: 10 do: [:ea |
+		dict at: ea put: nil.
+		sut at: ea put: nil].
+	self assert: dict keys = sut keys.
+	dict removeKey: 5.
+	sut removeKey: 5.
+	self assert: dict keys = sut keys.
+	dict at: 5 put: nil.
+	sut at: 5 put: nil.
+	self
+		assert: dict keys ~= sut keys;
+		assert: #(1 2 3 4 6 7 8 9 10 5) equals: sut keys;
+		assert: #(1 2 3 4 5 6 7 8 9 10) equals: dict keys.
+)
+
+testOverflow = (
+	"Check whether repeated additions of the same alternating keys causes an error."
+	self
+		shouldnt: [20 timesRepeat: [sut at: 1 put: nil; removeKey: 1]]
+		raise: Error.
+)
+
+testOverwriteValue = (
+	"First write wins wrt. order in the dictionary."
+	1 to: 5 do: [:ea |
+		sut at: ea put: nil].
+	sut at: 3 put: nil.
+	self assert: #(1 2 3 4 5) equals: sut keys.
+)
+
+testSort = (
+	10 to: 1 by: -1 do: [:ea |
+		sut at: ea put: nil].
+	self assert: (10 to: 1 by: -1) asArray equals: sut keys.
+	sut sort.
+	self assert: (1 to: 10) asArray equals: sut keys.
+)
+
+testSortCustom = (
+	| values |
+	values := #(The quick brown fox jumps over the lazy dog).
+	1 to: 9 do: [:ea |
+		sut at: ea put: (values at: ea)].
+	sut sort: [:a1 :a2 | a1 value <= a2 value].
+	self assert: values sorted equals: sut values.
+)
+
+testSorted = (
+	10 to: 1 by: -1 do: [:ea |
+		sut at: ea put: nil].
+	sut sorted in: [:copy |
+		self
+			assert: copy ~~ sut;
+			assert: copy keys = sut keys reversed].
+)
+
+
+)

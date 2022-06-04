@@ -1,4 +1,4 @@
-DictionaryTest = TestCase (
+DictionaryTest = ClassTestCase (
 
 testAdd = (
 	| dict |

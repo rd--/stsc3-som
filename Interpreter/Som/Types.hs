@@ -285,6 +285,9 @@ vmContextReplace ctx = do
 vmGlobalDict :: Vm ObjectDictionary
 vmGlobalDict = State.get >>= \(_,_,_,dict,_) -> return dict
 
+vmGlobalDictAllKeys :: Vm [Symbol]
+vmGlobalDictAllKeys = vmGlobalDict >>= dictRefKeys
+
 -- | Lookup global, don't attempt to resolve if not found.
 vmGlobalLookupMaybe :: Symbol -> Vm (Maybe Object)
 vmGlobalLookupMaybe key = vmGlobalDict >>= \dict -> dictRefLookup dict key

@@ -270,8 +270,7 @@ julianDayNumber = (
 )
 
 localOffsetSeconds: seconds = (
-	"Private. Allow value to be modified during initialization in order to support local
-	timezone preference."
+	"Private. Allow value to be modified during initialization in order to support local timezone preference."
 	localOffsetSeconds := seconds
 )
 
@@ -592,8 +591,6 @@ year = (
 
 ----------------------------
 
-| LocalTimeZone |
-
 clockPrecision = (
 	"One nanosecond precision"
 	^ Duration seconds: 0 nanoSeconds: 1
@@ -674,7 +671,7 @@ localOffsetSeconds = (
 
 localTimeZone = (
 	"Answer the local time zone"
-	^ LocalTimeZone ifNil: [ LocalTimeZone := TimeZone default ]
+	^ TimeZone default
 )
 
 midnight = (

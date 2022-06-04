@@ -131,6 +131,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("garbageCollect", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just nilObject)
     ("global:", DataSystem, [Object "Symbol" str]) -> mapMMM vmGlobalLookupMaybe (objectDataAsString str)
     ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssign sym e) (objectDataAsString str)
+    ("globalKeys", DataSystem, []) -> fmap Just (arrayFromList . map symObject =<< vmGlobalDictAllKeys)
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
     ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)

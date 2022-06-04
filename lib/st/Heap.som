@@ -349,7 +349,6 @@ upHeap: anIndex = (
 	indexUpdateBlock ifNotNil: [ indexUpdateBlock value: value value: index ]
 )
 
-
 ----------------------------
 
 new = (
@@ -403,7 +402,6 @@ withAll: aCollection sortBlock: sortBlock = (
 
 
 comment = (^'
-
 I implement a special data structure called Binary Heap [ https://en.wikipedia.org/wiki/Binary_heap ], which is the most commonly used variant of the Heap data structure [ https://en.wikipedia.org/wiki/Heap_%28data_structure%29 ].
 A Heap is a kind of binary tree stored in a linear array - see details after the instance variables description.
 
@@ -447,9 +445,6 @@ Of course, the children indices must be less than the tally otherwise they are c
 The Heap does arrange to preserve the following invariant:
 For any children B of a node A, A is sorted before B, in other words, (sortBlock value: A value: B) = true
 This implies that the root is always the first element according to sort order.
-
-
 ')
-
 
 )

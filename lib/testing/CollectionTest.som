@@ -1,4 +1,4 @@
-CollectionTest = TestCase (
+CollectionTest = ClassTestCase (
 
 | empty nonEmpty |
 

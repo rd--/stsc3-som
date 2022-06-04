@@ -44,6 +44,15 @@ global: name put: value = (
 	self primitiveFailed
 )
 
+globalKeys = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+globals = (
+	^self globalKeys collect: [ :each | self global: each ]
+)
+
 hasGlobal: name = (
 	<primitive: -1>
 	self primitiveFailed

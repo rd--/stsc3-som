@@ -1,4 +1,5 @@
 KeyNotFound = Error (
+
 | key |
 
 description = (
@@ -21,17 +22,10 @@ messageText = (
 	^messageText ifNil:['Key not found: ', key]
 )
 
-
 ----------------------------
 
 key: anObject = (
 	^self new key: anObject
 )
-
-
-comment = (^'
-No comment
-')
-
 
 )

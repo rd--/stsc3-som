@@ -161,7 +161,7 @@ tokenish = (
 	^self isLetter or: [self isDigit or: [self = $:]]
 )
 
-----------------------------
+----
 
 allByteCharacters = (
 	"Answer all the characters that can be encoded in a byte"

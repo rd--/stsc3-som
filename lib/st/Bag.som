@@ -91,7 +91,7 @@ setContents: aDictionary = (
 )
 
 setDictionary = (
-	contents := Dictionary new
+	contents := self class contentsClass new
 )
 
 size = (

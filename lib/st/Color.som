@@ -1,13 +1,11 @@
 Color = Object (
 
-| rgb cachedDepth cachedBitPattern |
+| rgb |
 
 * aNumberOrArray = (
 	"Answer this color with its RGB multiplied by the given number, or
 	 multiply this color's RGB values by the corresponding entries in the
 	given array."
-	"(Color brown * 2) display"
-	"(Color brown * #(1 0 1)) display"
 	| multipliers |
 	multipliers := aNumberOrArray isCollection
 		ifTrue: [aNumberOrArray]
@@ -16,7 +14,6 @@ Color = Object (
 				with: aNumberOrArray
 				with: aNumberOrArray
 				with: aNumberOrArray].
-
 	^ Color basicNew
 		setPrivateRed: (self privateRed * multipliers first) asInteger
 		green: (self privateGreen * multipliers second) asInteger
@@ -25,8 +22,6 @@ Color = Object (
 
 + aColor = (
 	"Answer this color mixed with the given color in an additive color space.  "
-	"(Color blue + Color green) display"
-
 	^ Color basicNew
 		setPrivateRed: self privateRed + aColor privateRed
 		green: self privateGreen + aColor privateGreen
@@ -35,8 +30,6 @@ Color = Object (
 
 - aColor = (
 	"Answer aColor is subtracted from the given color in an additive color space.  "
-	"(Color white - Color red) display"
-
 	^ Color basicNew
 		setPrivateRed: self privateRed - aColor privateRed
 		green: self privateGreen - aColor privateGreen
@@ -45,8 +38,6 @@ Color = Object (
 
 / aNumber = (
 	"Answer this color with its RGB divided by the given number. "
-	"(Color red / 2) display"
-
 	^ Color basicNew
 		setPrivateRed: (self privateRed / aNumber) asInteger
 		green: (self privateGreen / aNumber) asInteger
@@ -55,25 +46,13 @@ Color = Object (
 
 = aColor = (
 	"Return true if the receiver equals the given color. This method handles TranslucentColors, too."
-
 	aColor isColor ifFalse: [^ false].
 	^ aColor privateRGB = rgb and:
 		[aColor privateAlpha = self privateAlpha]
 )
 
-addName: aSymbol = (
-	"private - associate a name to this color."
-
-	| knownNames |
-	[(self class respondsTo: aSymbol) and: [(self class perform: aSymbol) = self]] assert.
-	knownNames := RGBToNames at: rgb ifAbsent: [#()].
-	(knownNames includes: aSymbol)
-		ifFalse: [ RGBToNames at: rgb put: (knownNames copyWith: aSymbol)]
-)
-
 adjustBrightness: brightness = (
 	"Adjust the relative brightness of this color. (lowest value is 0.005 so that hue information is not lost)"
-
 	^ Color
 		h: self hue
 		s: self saturation
@@ -83,7 +62,6 @@ adjustBrightness: brightness = (
 
 adjustSaturation: saturation brightness: brightness = (
 	"Adjust the relative saturation and brightness of this color. (lowest value is 0.005 so that hue information is not lost)"
-
 	^ Color
 		h: self hue
 		s: (self saturation + saturation min: 1.0 max: 0.005)
@@ -93,13 +71,11 @@ adjustSaturation: saturation brightness: brightness = (
 
 alpha = (
 	"Return the opacity ('alpha') value of opaque so that normal colors can be compared to TransparentColors."
-
 	^ 1.0
 )
 
 alpha: alphaValue = (
 	"Answer a new Color with the given amount of opacity ('alpha')."
-
 	alphaValue = 1.0
 		ifFalse: [^ TranslucentColor basicNew setRgb: rgb alpha: alphaValue]
 )
@@ -110,7 +86,6 @@ alphaMixed: proportion with: aColor = (
 	use in the mix. For example, 0.9 would yield a color close to the
 	receiver. This method uses RGB interpolation; HSV interpolation can lead
 	to surprises.  Mixes the alphas (for transparency) also."
-
 	| frac1 frac2 |
 	frac1 := proportion asFloat min: 1.0 max: 0.0.
 	frac2 := 1.0 - frac1.
@@ -136,7 +111,6 @@ asNontranslucentColor = (
 )
 
 atLeastAsLuminentAs: aFloat = (
-
 	| revisedColor |
 	revisedColor := self.
 	[revisedColor luminance < aFloat] whileTrue: [revisedColor := revisedColor slightlyLighter].
@@ -144,7 +118,6 @@ atLeastAsLuminentAs: aFloat = (
 )
 
 atMostAsLuminentAs: aFloat = (
-
 	| revisedColor |
 	revisedColor := self.
 	[revisedColor luminance > aFloat] whileTrue: [revisedColor := revisedColor slightlyDarker].
@@ -153,85 +126,42 @@ atMostAsLuminentAs: aFloat = (
 
 attemptToMutateError = (
 	"A color is immutable. Once a color's red, green, and blue have been initialized, you cannot change them. Instead, create a new Color and use it."
-
 	self error: 'Color objects are immutable once created'
 )
 
 blacker = (
-
 	^ self alphaMixed: 0.8333 with: Color black
 )
 
 blue = (
 	"Return the blue component of this color, a float in the range [0.0..1.0]."
-
 	^ self privateBlue asFloat / Color componentMax
 )
 
 brightness = (
 	"Return the brightness of this color, a float in the range [0.0..1.0]."
-
 	^ ((self privateRed max:
 	    self privateGreen) max:
 	    self privateBlue) asFloat / Color componentMax
 )
 
-byteEncode: aStream = (
-
-	aStream
-		print: '(';
-		print: self species name;
-		print: ' r: ';
-		write: (self red roundTo: 0.001);
-		print: ' g: ';
-		write: (self green roundTo: 0.001);
-		print: ' b: ';
-		write: (self blue roundTo: 0.001) ;
-		print: ')'.
-)
-
-colorForInsets = (
-	^ self
-)
-
-dansDarker = (
-	"Return a darker shade of the same color.
-	An attempt to do better than the current darker method.
-	(now obsolete, since darker has been changed to do this. -dew)"
-	^ Color h: self hue s: self saturation
-		v: (self brightness - 0.16 max: 0.0)
-)
-
 darkShades: thisMany = (
 	"An array of thisMany colors from black to the receiver.  Array is of length num. Very useful for displaying color based on a variable in your program.  "
 	"Color showColors: (Color red darkShades: 12)"
-
 	^ self class black mix: self shades: thisMany
 )
 
 darker = (
 	"Answer a darker shade of this color."
-
 	^ self adjustBrightness: -0.08
 )
 
 diff: theOther = (
 	"Returns a number between 0.0 and 1.0"
-
 	^ ((self privateRed - theOther privateRed) abs
 		+ (self privateGreen - theOther privateGreen) abs
 		+ (self privateBlue - theOther privateBlue) abs)
 		/ 3.0 / Color componentMax
-)
-
-display = (
-	"Show a swatch of this color tracking the cursor until the next mouseClick. "
-	"Color red display"
-	| f |
-	f := Form extent: 40@20 depth: Display depth.
-	f fillColor: self.
-	Cursor blank showWhile:
-		[f follow: [Sensor cursorPoint] while: [Sensor noButtonPressed]]
 )
 
 dominantColor = (
@@ -249,37 +179,25 @@ duller = (
 		ifFalse: [self adjustSaturation: adjust brightness: -0.1]
 )
 
-flushCache = (
-	"Flush my cached bit pattern."
-
-	cachedDepth := nil.
-	cachedBitPattern := nil.
-)
-
 green = (
 	"Return the green component of this color, a float in the range [0.0..1.0]."
-
 	^ self privateGreen asFloat / Color componentMax
 )
 
 hash = (
-
 	^ rgb
 )
 
 hue = (
 	"Return the hue of this color, an angle in the range [0.0..360.0]."
-
 	| r g b max min span h |
 	r := self privateRed.
 	g := self privateGreen.
 	b := self privateBlue.
-
 	max := ((r max: g) max: b).
 	min := ((r min: g) min: b).
 	span := (max - min) asFloat.
 	span = 0.0 ifTrue: [ ^ 0.0 ].
-
 	r = max ifTrue: [
 		h := ((g - b) asFloat / span) * 60.0.
 	] ifFalse: [
@@ -287,26 +205,8 @@ hue = (
 			ifTrue: [ h := 120.0 + (((b - r) asFloat / span) * 60.0). ]
 			ifFalse: [ h := 240.0 + (((r - g) asFloat / span) * 60.0). ].
 	].
-
 	h < 0.0 ifTrue: [ h := 360.0 + h ].
 	^ h
-)
-
-indexInMap: aColorMap = (
-	"Return the index corresponding to this color in the given color map. RGB colors are truncated to 3-, 4-, or 5-bits per color component when indexing into such a colorMap.  "
-
-	aColorMap size = 2 ifTrue: [^ (self pixelValueForDepth: 1) + 1].
-	aColorMap size = 4 ifTrue: [^ (self pixelValueForDepth: 2) + 1].
-	aColorMap size = 16 ifTrue: [^ (self pixelValueForDepth: 4) + 1].
-	aColorMap size = 256 ifTrue: [^ (self pixelValueForDepth: 8) + 1].
-	aColorMap size = 512 ifTrue: [^ (self pixelValueForDepth: 9) + 1].
-	aColorMap size = 4096 ifTrue: [^ (self pixelValueForDepth: 12) + 1].
-	aColorMap size = 32768 ifTrue: [^ (self pixelValueForDepth: 16) + 1].
-	self error: 'unknown pixel depth'.
-)
-
-isBitmapFill = (
-	^false
 )
 
 isBlack = (
@@ -315,7 +215,6 @@ isBlack = (
 )
 
 isColor = (
-
 	^ true
 )
 
@@ -342,7 +241,6 @@ isSolidFill = (
 )
 
 isTranslucent = (
-
 	^ false
 )
 
@@ -352,26 +250,21 @@ isTranslucentColor = (
 )
 
 isTransparent = (
-
 	^ false
 )
 
 lightShades: thisMany = (
 	"An array of thisMany colors from white to self. Very useful for displaying color based on a variable in your program.  "
-	"Color showColors: (Color red lightShades: 12)"
-
 	^ self class white mix: self shades: thisMany
 )
 
 lighter = (
 	"Answer a lighter shade of this color."
-
 	^ self adjustSaturation: -0.03 brightness: 0.08
 )
 
 luminance = (
 	"Return the luminance of this color, a brightness value weighted by the human eye's color sensitivity."
-
 	^ ((299 * self privateRed) +
 	   (587 * self privateGreen) +
 	   (114 * self privateBlue)) / (1000 * Color componentMax)
@@ -387,7 +280,6 @@ makeForegroundColor = (
 mix: color2 shades: thisMany = (
 	"Return an array of thisMany colors from self to color2. Very useful for displaying color based on a variable in your program.  "
 	"Color showColors: (Color red mix: Color green shades: 12)"
-
 	| redInc greenInc blueInc out rr gg bb |
 	thisMany = 1 ifTrue: [^ Array with: color2].
 	redInc := color2 red - self red / (thisMany-1).
@@ -408,7 +300,6 @@ mixed: proportion with: aColor = (
 	"Mix with another color and do not preserve transpareny.  Only use this for extracting the RGB value and mixing it.  All other callers should use instead:
 	aColor alphaMixed: proportion with: anotherColor
 	"
-
 	| frac1 frac2 |
 	frac1 := proportion asFloat min: 1.0 max: 0.0.
 	frac2 := 1.0 - frac1.
@@ -419,26 +310,11 @@ mixed: proportion with: aColor = (
 )
 
 muchDarker = (
-
 	^ self alphaMixed: 0.5 with: Color black
 )
 
 muchLighter = (
-
 	^ self alphaMixed: 0.233 with: Color white
-)
-
-name = (
-	"Return this color's name, or nil if it has no name."
-
-	^ (RGBToNames at: rgb ifAbsent: [nil]) ifNotNil: [:names | names at: 1 ifAbsent: [nil]]
-)
-
-names = (
-	"Return a collection of all known names for this color.
-	These are Symbol that can be used as message send to Color."
-
-	^ RGBToNames at: rgb ifAbsent: [Array new]
 )
 
 negated = (
@@ -450,8 +326,7 @@ negated = (
 )
 
 orColorUnlike: theOther = (
-	"If this color is a lot like theOther, then return its complement, otherwide, return self"
-
+	"If this color is a lot like theOther, then return its complement, otherwise, return self"
 	(self diff: theOther) < 0.3
 		ifTrue: [^ theOther negated]
 		ifFalse: [^ self]
@@ -459,7 +334,6 @@ orColorUnlike: theOther = (
 
 paler = (
 	"Answer a paler shade of this color."
-
 	^ self adjustSaturation: -0.09 brightness: 0.09
 )
 
@@ -472,42 +346,32 @@ printHtmlString = (
 )
 
 printOn: aStream = (
-	| name |
-	(name := self name) ifNotNil:
-		[^ aStream
-			nextPutAll: 'Color ';
-			nextPutAll: name].
 	self storeOn: aStream.
 )
 
 privateAlpha = (
 	"Private! Return the raw alpha value for opaque. Used only for equality testing."
-
 	^ 255
 )
 
 privateBlue = (
 	"Private! Return the internal representation of my blue component."
-
 	^ rgb bitAnd: Color componentMask
 )
 
 privateGreen = (
 	"Private! Return the internal representation of my green component.
 	Replaced >> by bitShift: 0 -. SqR! 2/25/1999 23:08"
-
 	^ (rgb bitShift: 0 - Color greenShift) bitAnd: Color componentMask
 )
 
 privateRGB = (
 	"Private! Return the internal representation of my RGB components."
-
 	^ rgb
 )
 
 privateRed = (
 	"Private! Return the internal representation of my red component."
-
 	^ (rgb bitShift: 0 - Color redShift) bitAnd: Color componentMask
 )
 
@@ -517,13 +381,11 @@ raisedColor = (
 
 red = (
 	"Return the red component of this color, a float in the range [0.0..1.0]."
-
 	^ self privateRed asFloat / Color componentMax
 )
 
 rgbTriplet = (
 	"Color fromUser rgbTriplet"
-
 	^ Array
 		with: (self red roundTo: 0.01)
 		with: (self green roundTo: 0.01)
@@ -532,38 +394,27 @@ rgbTriplet = (
 
 saturation = (
 	"Return the saturation of this color, a value between 0.0 and 1.0."
-
 	| r g b max min |
 	r := self privateRed.
 	g := self privateGreen.
 	b := self privateBlue.
-
 	max := min := r.
 	g > max ifTrue: [max := g].
 	b > max ifTrue: [max := b].
 	g < min ifTrue: [min := g].
 	b < min ifTrue: [min := b].
-
 	max = 0
 		ifTrue: [ ^ 0.0 ]
 		ifFalse: [ ^ (max - min) asFloat / max asFloat ].
 )
 
-scaledPixelValue32 = (
-	"Return the alpha scaled pixel value for depth 32"
-	^self pixelWordForDepth: 32
-)
-
 setHue: hue saturation: saturation brightness: brightness = (
 	"Initialize this color to the given hue, saturation, and brightness. See the comment in the instance creation method for details."
-
 	| s v hf i f p q t |
 	s := (saturation asFloat max: 0.0) min: 1.0.
 	v := (brightness asFloat max: 0.0) min: 1.0.
-
 	"zero saturation yields gray with the given brightness"
 	s = 0.0 ifTrue: [ ^ self setRed: v green: v blue: v ].
-
 	hf := hue asFloat.
 	(hf < 0.0 or: [hf >= 360.0])
 		ifTrue: [hf := hf \\ 360].
@@ -573,26 +424,21 @@ setHue: hue saturation: saturation brightness: brightness = (
 	p := (1.0 - s) * v.
 	q := (1.0 - (s * f)) * v.
 	t := (1.0 - (s * (1.0 - f))) * v.
-
 	0 = i ifTrue: [ ^ self setRed: v green: t blue: p ].
 	1 = i ifTrue: [ ^ self setRed: q green: v blue: p ].
 	2 = i ifTrue: [ ^ self setRed: p green: v blue: t ].
 	3 = i ifTrue: [ ^ self setRed: p green: q blue: v ].
 	4 = i ifTrue: [ ^ self setRed: t green: p blue: v ].
 	5 = i ifTrue: [ ^ self setRed: v green: p blue: q ].
-
 	self error: 'implementation error'.
 )
 
 setPrivateRed: r green: g blue: b = (
 	"Initialize this color's r, g, and b components to the given values in the range [0..Color componentMax].  Encoded in a single variable as 3 integers in [0..1023]."
-
 	rgb == nil ifFalse: [self attemptToMutateError].
 	rgb := ((r min: Color componentMask max: 0) bitShift: Color redShift) +
 		((g min: Color componentMask max: 0) bitShift: Color greenShift) +
 		 (b min: Color componentMask max: 0).
-	cachedDepth := nil.
-	cachedBitPattern := nil.
 )
 
 setRGB: rgb0 = (
@@ -602,25 +448,20 @@ setRGB: rgb0 = (
 
 setRed: r green: g blue: b = (
 	"Initialize this color's r, g, and b components to the given values in the range [0.0..1.0].  Encoded in a single variable as 3 integers in [0..1023]."
-
 	rgb == nil ifFalse: [self attemptToMutateError].
 	rgb :=
 		(((r * Color componentMax) rounded bitAnd: Color componentMask) bitShift: Color redShift) +
 		(((g * Color componentMax) rounded bitAnd: Color componentMask) bitShift: Color greenShift) +
 		 ((b * Color componentMax) rounded bitAnd: Color componentMask).
-	cachedDepth := nil.
-	cachedBitPattern := nil.
 )
 
 setRed: r green: g blue: b range: range = (
 	"Initialize this color's r, g, and b components to the given values in the range [0..r]."
-
 	^ self setRed: r / range green: g / range blue: b / range
 )
 
 shortPrintString = (
 	"Return a short (but less precise) print string for use where space is tight."
-
 	^String streamContents: [:s | s
 		nextPutAll: '(';
 		print: self class;
@@ -631,29 +472,24 @@ shortPrintString = (
 )
 
 slightlyDarker = (
-
 	^ self adjustBrightness: -0.03
 )
 
 slightlyLighter = (
-
 	^ self adjustSaturation: -0.01 brightness: 0.03
 )
 
 slightlyWhiter = (
-
 	^ self alphaMixed: 0.85 with: Color white
 )
 
 storeArrayOn: aStream = (
-
 	aStream nextPutAll: '#('.
 	self storeArrayValuesOn: aStream.
 	aStream nextPutAll: ') '
 )
 
 storeArrayValuesOn: aStream = (
-
 	aStream
 		print: self red maxDecimalPlaces: 3;
 		space;
@@ -663,7 +499,6 @@ storeArrayValuesOn: aStream = (
 )
 
 storeOn: aStream = (
-
 	aStream
 		nextPutAll: '(' , self species name;
 		nextPutAll: ' r: '; print: self red maxDecimalPlaces: 3;
@@ -674,41 +509,30 @@ storeOn: aStream = (
 
 thriceDarker = (
 	"Answer a significantly darker shade of this color."
-
 	^ self adjustSaturation: 0.09 brightness: -0.22
 )
 
 thriceLighter = (
 	"Answer a significantly lighter shade of this color."
-
 	^ self adjustSaturation: -0.09 brightness: 0.22
 )
 
 twiceDarker = (
 	"Answer a significantly darker shade of this color."
-
 	^ self adjustSaturation: 0.075 brightness: -0.15
 )
 
 twiceLighter = (
 	"Answer a significantly lighter shade of this color."
-
 	^ self adjustSaturation: -0.06 brightness: 0.15
 )
 
-veryDeepCopyWith: deepCopier = (
-	"I am immutable in the Morphic world. Do not record me."
-	^ self
-)
-
 veryMuchLighter = (
-
 	^ self alphaMixed: 0.1165 with: Color white
 )
 
 wheel: thisMany = (
 	"An array of thisMany colors around the color wheel starting at self and ending all the way around the hue space just before self.  Array is of length thisMany.  Very useful for displaying color based on a variable in your program.  "
-
 	| sat bri step hue |
 	sat := self saturation.
 	bri := self brightness.
@@ -718,36 +542,27 @@ wheel: thisMany = (
 		c := Color h: hue s: sat v: bri.  "hue is taken mod 360"
 		hue := hue + step.
 		c].
-"
-(Color wheel: 8) withIndexDo: [:c :i | Display fill: (i*10@20 extent: 10@20) fillColor: c]
-"
 )
 
 whiter = (
-
 	^ self alphaMixed: 0.8333 with: Color white
 )
-
 
 ----------------------------
 
 aluminum = (
-
 	^ Color r: 153/255 g: 153/255 b: 153/255
 )
 
 aqua = (
-
 	^ Color r: 0.0 g: 128/255 b: 1.0
 )
 
 asparagus = (
-
 	^ Color r: 128/255 g: 128/255 b: 0.0
 )
 
 banana = (
-
 	^ Color r: 1.0 g: 1.0 b: 102/255
 )
 
@@ -760,56 +575,30 @@ blue = (
 )
 
 blueberry = (
-
 	^ Color r: 0.0 g: 0.0 b: 1.0
 )
 
 brown = (
-	^Brown
+	^Color r: 0.6 g: 0.2 b: 0
 )
 
 bubblegum = (
-
 	^ Color r: 1.0 g: 102/255 b: 1.0
 )
 
-cachedColormapFrom: sourceDepth to: destDepth = (
-	"Return a cached colormap for mapping between the given depths. Always return a real colormap, not nil; this allows the client to get an identity colormap that can then be copied and modified to do color transformations."
-	"Note: This method returns a shared, cached colormap to save time and space. Clients that need to modify a colormap returned by this method should make a copy and modify that!"
-	"Note: The colormap cache may be cleared by evaluating 'Color shutDown'."
-
-	| srcIndex map |
-	CachedColormaps class == Array ifFalse: [CachedColormaps := (1 to: 9) collect: [:i | Array new: 32]].
-	srcIndex := sourceDepth.
-	sourceDepth > 8 ifTrue: [srcIndex := 9].
-	(map := (CachedColormaps at: srcIndex) at: destDepth) ~~ nil ifTrue: [^ map].
-
-	map := self computeColormapFrom: sourceDepth to: destDepth.
-	(CachedColormaps at: srcIndex) at: destDepth put: map.
-	^ map
-)
-
 cantaloupe = (
-
 	^ Color r: 1.0 g: 204/255 b: 102/255
 )
 
 carnation = (
-
 	^ Color r: 1.0 g: 111/255 b: 207/255
 )
 
 cayenne = (
-
 	^ Color r: 128/255 g: 0.0 b: 0.0
 )
 
-cleanUp: aggressive = (
-	self initializeNamesMap
-)
-
 clover = (
-
 	^ Color r: 0.0 g: 128/255 b: 0.0
 )
 
@@ -821,46 +610,36 @@ componentMax = (
 	^ 1023.0.  "a Float used to normalize components"
 )
 
-colorNames = (
-	"Return a collection of color names."
-	^ ColorNames asArray, self orderedCrayonColorNames
-)
-
 cyan = (
-	^Cyan
+	^(Color r: 0 g: 1.0 b: 1.0)
 )
 
 darkGray = (
-	^DarkGray
+	^(Color r: 0.375 g: 0.375 b: 0.375)
 )
 
 eggplant = (
-
 	^ Color r: 64/255 g: 0.0 b: 128/255
 )
 
 fern = (
-
 	^ Color r: 64/255 g: 128/255 b: 0.0
 )
 
 flora = (
-
 	^ Color r: 102/255 g: 1.0 b: 102/255
 )
 
 grape = (
-
 	^ Color r: 128/255 g: 0.0 b: 1.0
 )
 
 gray = (
-	^Gray
+	^(Color r: 0.5 g: 0.5 b: 0.5)
 )
 
 gray: brightness = (
 	"Return a gray shade with the given brightness in the range [0.0..1.0]."
-
 	^ self basicNew setRed: brightness green: brightness blue: brightness
 )
 
@@ -889,7 +668,6 @@ honeydew = (
 hotColdShades: thisMany = (
 	"An array of thisMany colors showing temperature from blue to red to white hot.  (Later improve this by swinging in hue.)  "
 	"Color showColors: (Color hotColdShades: 25)"
-
 	| n s1 s2 s3 s4 s5 |
 	thisMany < 5 ifTrue: [^ self error: 'must be at least 5 shades'].
 	n := thisMany // 5.
@@ -906,13 +684,7 @@ hotColdShades: thisMany = (
 )
 
 ice = (
-
 	^ Color r: 102/255 g: 1.0 b: 1.0
-)
-
-indexedColors = (
-
-	^ IndexedColors
 )
 
 redShift = ( ^ 20 )
@@ -926,316 +698,186 @@ pureYellow = ( ^self r: 1 g: 1 b: 0 )
 pureCyan = ( ^self r: 0 g: 1 b: 1 )
 pureMagenta = ( ^ self r: 1 g: 0 b: 1 )
 
-initializeNames = (
-	"Name some colors."
-	"Color initializeNames"
-
-	ColorNames := Set new.
-	self named: #black put: (Color r: 0 g: 0 b: 0).
-	self named: #veryVeryDarkGray put: (Color r: 0.125 g: 0.125 b: 0.125).
-	self named: #veryDarkGray put: (Color r: 0.25 g: 0.25 b: 0.25).
-	self named: #darkGray put: (Color r: 0.375 g: 0.375 b: 0.375).
-	self named: #gray put: (Color r: 0.5 g: 0.5 b: 0.5).
-	self named: #lightGray put: (Color r: 0.625 g: 0.625 b: 0.625).
-	self named: #veryLightGray put: (Color r: 0.75 g: 0.75 b: 0.75).
-	self named: #veryVeryLightGray put: (Color r: 0.875 g: 0.875 b: 0.875).
-	self named: #white put: (Color r: 1.0 g: 1.0 b: 1.0).
-	self named: #red put: (Color r: 1.0 g: 0 b: 0).
-	self named: #yellow put: (Color r: 1.0 g: 1.0 b: 0).
-	self named: #green put: (Color r: 0 g: 1.0 b: 0).
-	self named: #cyan put: (Color r: 0 g: 1.0 b: 1.0).
-	self named: #blue put: (Color r: 0 g: 0 b: 1.0).
-	self named: #magenta put: (Color r: 1.0 g: 0 b: 1.0).
-	self named: #brown put: (Color r: 0.6 g: 0.2 b: 0).
-	self named: #orange put: (Color r: 1.0 g: 0.6 b: 0).
-	self named: #lightRed put: (Color r: 1.0 g: 0.8 b: 0.8).
-	self named: #lightYellow put: (Color r: 1.0 g: 1.0 b: 0.8).
-	self named: #lightGreen put: (Color r: 0.8 g: 1.0 b: 0.6).
-	self named: #lightCyan put: (Color r: 0.4 g: 1.0 b: 1.0).
-	self named: #lightBlue put: (Color r: 0.8 g: 1.0 b: 1.0).
-	self named: #lightMagenta put: (Color r: 1.0 g: 0.8 b: 1.0).
-	self named: #lightBrown put: (Color r: 1.0 g: 0.6 b: 0.2).
-	self named: #lightOrange put: (Color r: 1.0 g: 0.8 b: 0.4).
-	self named: #transparent put: (TranslucentColor new alpha: 0.0).
-	self named: #paleBuff put: (Color r: 254 g: 250 b: 235 range: 255).
-	self named: #paleBlue put: (Color r: 222 g: 249 b: 254 range: 255).
-	self named: #paleYellow put: (Color r: 255 g: 255 b: 217 range: 255).
-	self named: #paleGreen put: (Color r: 223 g: 255 b: 213 range: 255).
-	self named: #paleRed put: (Color r: 255 g: 230 b: 230 range: 255).
-	self named: #veryPaleRed put: (Color r: 255 g: 242 b: 242 range: 255).
-	self named: #paleTan put: (Color r: 235 g: 224 b: 199 range: 255).
-	self named: #paleMagenta put: (Color r: 255 g: 230 b: 255 range: 255).
-	self named: #paleOrange put: (Color r: 253 g: 237 b: 215 range: 255).
-	self named: #palePeach put: (Color r: 255 g: 237 b: 213 range: 255).
-	self named: #pantonePurpleU put: (Color r: 193 g: 81 b: 184 range: 255).
-	self initializeNamesMap
-
-)
-
 iron = (
-
 	^ Color r: 76/255 g: 76/255 b: 76/255
 )
 
 lavender = (
-
 	^ Color r: 204/255 g: 102/255 b: 1.0
 )
 
 lead = (
-
 	^ Color r: 25/255 g: 25/255 b: 25/255
 )
 
 lemon = (
-
 	^ Color r: 1.0 g: 1.0 b: 0.0
 )
 
 licorice = (
-
 	^ Color r: 0.0 g: 0.0 b: 0.0
 )
 
 lightBlue = (
-	^LightBlue
+	^Color r: 0.8 g: 1.0 b: 1.0
 )
 
 lightBrown = (
-	^LightBrown
+	^Color r: 1.0 g: 0.6 b: 0.2
 )
 
 lightCyan = (
-	^LightCyan
+	^(Color r: 0.4 g: 1.0 b: 1.0)
 )
 
 lightGray = (
-	^LightGray
+	^(Color r: 0.625 g: 0.625 b: 0.625)
 )
 
 lightGreen = (
-	^LightGreen
+	^(Color r: 0.8 g: 1.0 b: 0.6)
 )
 
 lightMagenta = (
-	^LightMagenta
+	^(Color r: 1.0 g: 0.8 b: 1.0)
 )
 
 lightOrange = (
-	^LightOrange
+	^(Color r: 1.0 g: 0.8 b: 0.4)
 )
 
 lightRed = (
-	^LightRed
+	^(Color r: 1.0 g: 0.8 b: 0.8)
 )
 
 lightYellow = (
-	^LightYellow
+	^(Color r: 1.0 g: 1.0 b: 0.8)
 )
 
 lime = (
-
 	^ Color r: 128/255 g: 1.0 b: 0.0
 )
 
 magenta = (
-	^Magenta
+	^(Color r: 1.0 g: 0 b: 1.0)
 )
 
 magnesium = (
-
 	^ Color r: 179/255 g: 179/255 b: 179/255
 )
 
 maraschino = (
-
 	^ Color r: 1.0 g: 0.0 b: 0.0
 )
 
 maroon = (
-
 	^ Color r: 128/255 g: 0.0 b: 64/255
 )
 
 mercury = (
-
 	^ Color r: 230.0 g: 230.0 b: 230.0
 )
 
 midnight = (
-
 	^ Color r: 0.0 g: 0.0 b: 128/255
 )
 
 mocha = (
-
 	^ Color r: 128/255 g: 64/255 b: 0.0
 )
 
 moss = (
-
 	^ Color r: 0.0 g: 128/255 b: 64/255
 )
 
-named: newName put: aColor = (
-	"Add a new color to the list and create an access message and a class variable for it.  The name should start with a lowercase letter.  (The class variable will start with an uppercase letter.)  (Color colorNames) returns a list of all color names.  "
-	| str cap sym accessor csym |
-	(aColor isKindOf: self) ifFalse: [^ self error: 'not a Color'].
-	str := newName asString.
-	sym := str asSymbol.
-	cap := str capitalized.
-	csym := cap asSymbol.
-	(self class canUnderstand: sym) ifFalse: [
-		"define access message"
-		accessor := str, (String with: Character cr with: Character tab), 			'^', cap.
-		self class compile: accessor
-			classified: 'named colors'].
-	(self classPool includesKey: csym) ifFalse: [
-		self addClassVarName: cap].
-	ColorNames add: sym.
-	^ self classPool at: csym put: aColor
-)
-
 new = (
-
 	^ self r: 0.0 g: 0.0 b: 0.0
 )
 
 nickel = (
-
 	^ Color r: 128/255 g: 128/255 b: 128/255
 )
 
 ocean = (
-
 	^ Color r: 0.0 g: 64/255 b: 128/255
 )
 
-oldColorPaletteForDepth: depth extent: paletteExtent = (
-	"Returns a form of the given size showing a color palette for the given depth."
-	"(Color oldColorPaletteForDepth: Display depth extent: 720@100) display"
-
-	| c p f nSteps rect w h q |
-	f := Form extent: paletteExtent depth: depth.
-	f fill: f boundingBox fillColor: Color white.
-	nSteps := depth > 8 ifTrue: [12] ifFalse: [6].
-	w := paletteExtent x // (nSteps * nSteps).
-	h := paletteExtent y - 20 // nSteps.
-	0 to: nSteps-1 do: [:r |
-		0 to: nSteps-1 do: [:g |
-			0 to: nSteps-1 do: [:b |
-				c := Color r: r g: g b: b range: nSteps - 1.
-				rect := ((r * nSteps * w) + (b * w)) @ (g * h) extent: w@(h + 1).
-				f fill: rect fillColor: c]]].
-	q := Quadrangle origin: paletteExtent - (50@19) corner: paletteExtent.
-	q displayOn: f.
-	'Trans.' displayOn: f at: q origin + (9@1).
-
-	w := ((paletteExtent x - q width - 130) // 64) max: 1.
-	p := paletteExtent x - q width - (64 * w) - 1 @ (paletteExtent y - 19).
-	0 to: 63 do:
-		[:v | c := Color r: v g: v b: v range: 63.
-		f fill: ((v * w)@0 + p extent: (w + 1)@19) fillColor: c].
-	^ f
-)
-
 orange = (
-	^Orange
+	^(Color r: 1.0 g: 0.6 b: 0)
 )
 
 orchid = (
-
 	^ Color r: 102/255 g: 102/255 b: 1.0
 )
 
 orderedCrayonColorNames = (
-
 	^ #(cantaloupe honeydew spindrift sky lavender carnation licorice snow salmon banana flora ice orchid bubblegum lead mercury tangerine lime seaFoam aqua grape strawberry tungsten silver maraschino lemon spring turquoise blueberry magenta iron magnesium mocha fern moss ocean eggplant maroon steel aluminum cayenne asparagus clover teal midnight plum tin nickel)
 )
 
 orderedCrayonColors = (
-	"self orderedCrayonColors explore."
-
 	^ OrderedDictionary newFrom: (self orderedCrayonColorNames collect: [:ea | ea -> (self perform: ea)])
 )
 
 paleBlue = (
-	^PaleBlue
+	^(Color r: 222 g: 249 b: 254 range: 255)
 )
 
 paleBuff = (
-	^PaleBuff
+	^(Color r: 254 g: 250 b: 235 range: 255)
 )
 
 paleGreen = (
-	^PaleGreen
+	^(Color r: 223 g: 255 b: 213 range: 255)
 )
 
 paleMagenta = (
-	^PaleMagenta
+	^(Color r: 255 g: 230 b: 255 range: 255)
 )
 
 paleOrange = (
-	^PaleOrange
+	^(Color r: 253 g: 237 b: 215 range: 255)
 )
 
 palePeach = (
-	^PalePeach
+	^(Color r: 255 g: 237 b: 213 range: 255)
 )
 
 paleRed = (
-	^PaleRed
+	^(Color r: 255 g: 230 b: 230 range: 255)
 )
 
 paleTan = (
-	^PaleTan
+	^(Color r: 235 g: 224 b: 199 range: 255)
 )
 
 paleYellow = (
-	^PaleYellow
+	^(Color r: 255 g: 255 b: 217 range: 255)
 )
 
 pantonePurpleU = (
-	^PantonePurpleU
-)
-
-pixelScreenForDepth: depth = (
-	"Return a 50% stipple containing alternating pixels of all-zeros and all-ones to be used as a mask at the given depth."
-
-	| mask bits |
-	mask := (1 bitShift: depth) - 1.
-	bits := 2 * depth.
-	[bits >= 32] whileFalse: [
-		mask := mask bitOr: (mask bitShift: bits).  "double the length of mask"
-		bits := bits + bits].
-	^ Bitmap with: mask with: mask bitInvert32
+	^(Color r: 193 g: 81 b: 184 range: 255)
 )
 
 plum = (
-
 	^ Color r: 128/255 g: 0.0 b: 128/255
 )
 
 r: r g: g b: b = (
 	"Return a color with the given r, g, and b components in the range [0.0..1.0]."
-
 	^ self basicNew setRed: r green: g blue: b
 )
 
 r: r g: g b: b alpha: alpha = (
-
 	^ (self r: r g: g b: b) alpha: alpha
 )
 
 r: r g: g b: b range: range = (
 	"Return a color with the given r, g, and b components specified as integers in the range [0..r]. This avoids the floating point arithmetic in the red:green:blue: message and is thus a bit faster for certain applications (such as computing a sequence of colors for a palette)."
-
 	^ self basicNew setRed: r green: g blue: b range: range
 )
 
 random = (
 	"Return a random color that isn't too dark or under-saturated."
-
 	^ self basicNew
 		setHue: (360.0 * RandomStream next)
 		saturation: (0.3 + (RandomStream next * 0.7))
@@ -1246,110 +888,43 @@ red = (
 	^ Color r: 1 g: 0 b: 0
 )
 
-salmon = (
+red: r green: g blue: b = (
+	^ self basicNew setRed: r green: g blue: b
+)
 
+salmon = (
 	^ Color r: 1.0 g: 102/255 b: 102/255
 )
 
 seaFoam = (
-
 	^ Color r: 0.0 g: 1.0 b: 128/255
 )
 
-showColorCube = (
-	"Show a 12x12x12 color cube."
-	"Color showColorCube"
-
-	0 to: 11 do: [:r |
-		0 to: 11 do: [:g |
-			0 to: 11 do: [:b |
-				Display fill: (((r*60) + (b*5)) @ (g*5) extent: 5@5)
-					fillColor: (Color r: r g: g b: b range: 11)]]].
-)
-
-showColors: colorList = (
-	"Display the given collection of colors across the top of the Display."
-
-	| w r |
-	w := Display width // colorList size.
-	r := 0@0 extent: w@((w min: 30) max: 10).
-	colorList do: [:c |
-		Display fill: r fillColor: c.
-		r := r translateBy: w@0].
-)
-
-showHSVPalettes = (
-	"Shows a palette of hues, varying the saturation and brightness for each one. Best results are with depths 16 and 32."
-	"Color showHSVPalettes"
-
-	| left top c |
-	left := top := 0.
-	0 to: 179 by: 15 do: [:h |
-		0 to: 10 do: [:s |
-			left := (h * 4) + (s * 4).
-			0 to: 10 do: [:v |
-				c := Color h: h s: s asFloat / 10.0 v: v asFloat / 10.0.
-				top := (v * 4).
-				Display fill: (left@top extent: 4@4) fillColor: c.
-
-				c := Color h: h + 180 s: s asFloat / 10.0 v: v asFloat / 10.0.
-				top := (v * 4) + 50.
-				Display fill: (left@top extent: 4@4) fillColor: c]]].
-)
-
-showHuesInteractively = (
-	"Shows a palette of hues at a (saturation, brightness) point determined by the mouse position. Click the mouse button to exit and return the selected (saturation, brightness) point."
-	"Color showHuesInteractively"
-
-	| p s v |
-	[Sensor anyButtonPressed] whileFalse: [
-		p := Sensor cursorPoint.
-		s := p x asFloat / 300.0.
-		v := p y asFloat / 300.0.
-		self showColors: (self wheel: 12 saturation: s brightness: v)].
-	^ (s min: 1.0) @ (v min: 1.0)
-)
-
-shutDown = (
-	"Color shutDown"
-
-	ColorChart := nil.		"Palette of colors for the user to pick from"
-	CachedColormaps := nil.	"Maps to translate between color depths"
-	MaskingMap := nil.		"Maps all colors except transparent to black for creating a mask"
-)
-
 silver = (
-
 	^ Color r: 204/255 g: 204/255 b: 204/255
 )
 
 sky = (
-
 	^ Color r: 102/255 g: 204/255 b: 1.0
 )
 
 snow = (
-
 	^ Color r: 1.0 g: 1.0 b: 1.0
 )
 
 spindrift = (
-
 	^ Color r: 102/255 g: 1.0 b: 204/255
 )
 
 spring = (
-
 	^ Color r: 0.0 g: 1.0 b: 0.0
 )
 
 steel = (
-
 	^ Color r: 102/255 g: 102/255 b: 102/255
 )
 
 strawberry = (
-
 	^ Color r: 1.0 g: 0.0 b: 128/255
 )
 
@@ -1358,71 +933,56 @@ tan = (
 )
 
 tangerine = (
-
 	^ Color r: 1.0 g: 128/255 b: 0.0
 )
 
 teal = (
-
 	^ Color r: 0.0 g: 128/255 b: 128/255
 )
 
 tin = (
-
 	^ Color r: 127/255 g: 127/255 b: 127/255
 )
 
-translucentMaskFor: alphaValue depth: d = (
-	"Return a pattern representing a mask usable for stipple transparency"
-	^(TranslucentPatterns at: d) at: ((alphaValue min: 1.0 max: 0.0) * 4) rounded + 1
-)
-
 transparent = (
-	^Transparent
+	^(TranslucentColor new alpha: 0.0)
 )
 
 tungsten = (
-
 	^ Color r: 51/255 g: 51/255 b: 51/255
 )
 
 turquoise = (
-
 	^ Color r: 0.0 g: 1.0 b: 1.0
 )
 
 veryDarkGray = (
-	^VeryDarkGray
+	^(Color r: 0.25 g: 0.25 b: 0.25)
 )
 
 veryLightGray = (
-	^VeryLightGray
+	^(Color r: 0.75 g: 0.75 b: 0.75)
 )
 
 veryPaleRed = (
-	^VeryPaleRed
+	^(Color r: 255 g: 242 b: 242 range: 255)
 )
 
 veryVeryDarkGray = (
-	^VeryVeryDarkGray
+	^(Color r: 0.125 g: 0.125 b: 0.125)
 )
 
 veryVeryLightGray = (
-	^VeryVeryLightGray
+	^(Color r: 0.875 g: 0.875 b: 0.875)x
 )
 
 wheel: thisMany = (
 	"Return a collection of thisMany colors evenly spaced around the color wheel."
-	"Color showColors: (Color wheel: 12)"
-
 	^ Color wheel: thisMany saturation: 0.9 brightness: 0.7
 )
 
 wheel: thisMany saturation: s brightness: v = (
 	"Return a collection of thisMany colors evenly spaced around the color wheel, all of the given saturation and brightness."
-	"Color showColors: (Color wheel: 12 saturation: 0.4 brightness: 1.0)"
-	"Color showColors: (Color wheel: 12 saturation: 0.8 brightness: 0.5)"
-
 	^ (Color h: 0.0 s: s v: v) wheel: thisMany
 )
 
@@ -1431,75 +991,41 @@ white = (
 )
 
 yellow = (
-	^Yellow
+	^(Color r: 1.0 g: 1.0 b: 0)
 )
 
-
 comment = (^'
-
-This class represents abstract color, regardless of the depth of bitmap it will be shown in.  At the very last moment a Color is converted to a pixelValue that depends on the depth of the actual Bitmap inside the Form it will be used with.  The supported depths (in bits) are 1, 2, 4, 8, 16, and 32.  The number of actual colors at these depths are: 2, 4, 16, 256, 32768, and 16 million.  (See comment in BitBlt.)  To change the depth of the Display and set how many colors you can see, execute: (Display newDepth: 8).  (See comment in DisplayMedium)
-	Color is represented as the amount of light in red, green, and blue.  White is (1.0, 1.0, 1.0) and black is (0, 0, 0).  Pure red is (1.0, 0, 0).  These colors are "additive".  Think of Color''s instance variables as:
+This class represents abstract color. Color is represented as the amount of light in red, green, and blue.  White is (1.0, 1.0, 1.0) and black is (0, 0, 0).  Pure red is (1.0, 0, 0).  These colors are "additive".  Think of Color''s instance variables as:
 	r	amount of red, a Float between 0.0 and 1.0.
 	g	amount of green, a Float between 0.0 and 1.0.
 	b	amount of blue, a Float between 0.0 and 1.0.
 (But, in fact, the three are encoded as values from 0 to 1023 and combined in a single integer, rgb.  The user does not need to know this.)
-	Many colors are named.  You find a color by name by sending a message to class Color, for example (Color lightBlue).  Also, (Color red: 0.2 green: 0.6 blue: 1.0) or (Color r: 0.2 g: 0.6 b: 1.0) creates a color. (see below)
+	Many colors are named.  You find a color by name by sending a message to class Color, for example (Color lightBlue).  Also (Color r: 0.2 g: 0.6 b: 1.0) creates a color. (see below)
 	A color is essentially immutable.  Once you set red, green, and blue, you cannot change them.  Instead, create a new Color and use it.
 	Applications such as contour maps and bar graphs will want to display one of a set of shades based on a number.  Convert the range of this number to an integer from 1 to N.  Then call (Color green lightShades: N) to get an Array of colors from white to green.  Use the Array messages at:, atPin:, or atWrap: to pull out the correct color from the array.  atPin: gives the first (or last) color if the index is out of range.  atWrap: wraps around to the other end if the index is out of range.
-	Here are some fun things to run in when your screen has color:
-		Pen new mandala: 30 diameter: Display height-100.
-		Pen new web  "Draw with the mouse, opt-click to end"
-		Display fillWhite.  Pen new hilberts: 5.
-		Form toothpaste: 30  "Draw with mouse, opt-click to end"
-You might also want to try the comment in
-	Form>class>examples>tinyText...
-
 
 Messages:
 	mixed: proportion with: aColor	Answer this color mixed with the given color additively. The proportion, a number between 0.0 and 1.0, determines what what fraction of the receiver to use in the mix.
-
 	+ 	add two colors
 	- 	subtract two colors
 	*	multiply the values of r, g, b by a number or an Array of factors.  ((Color named: #white) * 0.3) gives a darkish gray.  (aColor * #(0 0 0.9)) gives a color with slightly less blue.
 	/	divide a color by a factor or an array of three factors.
-
-	errorForDepth: d     How close the nearest color at this depth is to this abstract color.  Sum of the squares of the RGB differences, square rooted and normalized to 1.0.  Multiply by 100 to get percent.
-
 	hue			Returns the hue of the color. On a wheel from 0 to 360 with pure red at 0 and again at 360.
 	saturation	Returns the saturation of the color.  0.0 to 1.0
 	brightness	Returns the brightness of the color.  0.0 to 1.0
-
-	name    Look to see if this Color has a name.
-	display	Show a swatch of this color tracking the cursor.
-
 	lightShades: thisMany		An array of thisMany colors from white to the receiver.
 	darkShades: thisMany		An array of thisMany colors from black to the receiver.  Array is of length num.
 	mix: color2 shades: thisMany		An array of thisMany colors from the receiver to color2.
 	wheel: thisMany			An array of thisMany colors around the color wheel starting and ending at the receiver.
 
-	pixelValueForDepth: d    Returns the bits that appear be in a Bitmap of this depth for this color.  Represents the nearest available color at this depth.  Normal users do not need to know which pixelValue is used for which color.
-
 Messages to Class Color.
 	red: r green: g blue: b		Return a color with the given r, g, and b components.
 	r: g: b:		Same as above, for fast typing.
-
  	hue: h saturation: s brightness: b		Create a color with the given hue, saturation, and brightness.
-
 	pink
  	blue
 	red ...	Many colors have messages that return an instance of Color.
 	canUnderstand: #brown	  Returns true if #brown is a defined color.
-	names		An OrderedCollection of the names of the colors.
-	named: #notAllThatGray put: aColor    Add a new color to the list and create an access message and a class variable for it.
-	fromUser	Shows the palette of colors available at this display depth.  Click anywhere to return the color you clicked on.
-
-	hotColdShades: thisMany	An array of thisMany colors showing temperature from blue to red to white hot.
-
-    stdColorsForDepth: d        An Array of colors available at this depth.  For 16 bit and 32 bits, returns a ColorGenerator.  It responds to at: with a Color for that index, simulating a very big Array.
-
-   colorFromPixelValue: value depth: d    Returns a Color whose bit pattern (inside a Bitmap) at this depth is the number specified.  Normal users do not need to use this.
-
-(See also comments in these classes: Form, Bitmap, BitBlt, Pattern, MaskedForm.)
 ')
 
 )

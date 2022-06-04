@@ -1,4 +1,4 @@
-IntegerTest = TestCase (
+IntegerTest = ClassTestCase (
 
 testBenchFib = (
 	self assert: (0 benchFib = 1).

@@ -1,1 +1,2 @@
-Metaclass = Class ( )
+Metaclass = Class (
+)

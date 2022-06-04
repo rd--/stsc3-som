@@ -13,24 +13,25 @@ includesCode: anInteger = (
 
 ----------------------------
 
-| Ascii CrLf Separators |
+| Ascii CrLf Separators | "Write-once (cache)."
 
 ascii = (
-	"return a set containing all the ASCII characters"
+	"Return a set containing all the ASCII characters."
 	^Ascii ifNil: [ Ascii := self newFrom: ((1 to: 127) collect: [:code | code asCharacter]) ]
 )
 
 crlf = (
+	"Return a set containing the carriage return and line feed characters."
 	^CrLf ifNil: [ CrLf := self with: Character cr with: Character lf ]
 )
 
 empty = (
- 	"return an empty set of characters"
+ 	"Return an empty set of characters"
 	^self new
 )
 
 separators = (
-	"return a set containing just the whitespace characters"
+	"Return a set containing just the whitespace characters."
 	^Separators ifNil: [ Separators := self newFrom: Character separators ]
 )
 

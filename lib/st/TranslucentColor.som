@@ -1,0 +1,81 @@
+TranslucentColor = Color (
+
+| alpha |
+
+alpha = (
+	"Return my alpha value, a number between 0.0 and 1.0 where 0.0 is completely transparent and 1.0 is completely opaque."
+	^ alpha asFloat / 255.0
+)
+
+alpha: alphaValue = (
+	alphaValue = 1.0 ifTrue:
+		[^ Color basicNew
+			setPrivateRed: self privateRed
+			green: self privateGreen
+			blue: self privateBlue].
+	^ super alpha: alphaValue
+)
+
+asHTMLColor = (
+	^ super asHTMLColor
+		, (Character digitValue: ((alpha bitShift: -4) bitAnd: 15))
+		, (Character digitValue: (alpha bitAnd: 15))
+)
+
+asNontranslucentColor = (
+	^ self alpha: 1.0
+)
+
+hash = (
+	^ rgb bitXor: alpha
+)
+
+isOpaque = (
+	^alpha = 255
+)
+
+isTranslucent = (
+	^ alpha < 255
+)
+
+isTranslucentColor = (
+	"This means: self isTranslucent, but isTransparent not"
+	^ alpha > 0
+)
+
+isTransparent = (
+	^ alpha = 0
+)
+
+privateAlpha = (
+	"Return my raw alpha value, an integer in the range 0..255. Used for fast equality testing."
+	^ alpha
+)
+
+setRgb: rgbValue alpha: alphaValue = (
+	"Set the state of this translucent color. Alpha is represented internally by an integer in the range 0..255."
+	rgb == nil ifFalse: [self attemptToMutateError].
+	rgb := rgbValue.
+	alpha := (255.0 * alphaValue) asInteger min: 255 max: 0.
+)
+
+storeArrayValuesOn: aStream = (
+	self isTransparent ifTrue: [
+		^ aStream space].
+	super storeArrayValuesOn: aStream.
+	aStream
+		space;
+		print: self alpha maxDecimalPlaces: 3.
+)
+
+storeOn: aStream = (
+	self isTransparent ifTrue: [^ aStream nextPutAll: '(Color transparent)'].
+	super storeOn: aStream.
+	aStream
+		skip: -1;	  "get rid of trailing )"
+		nextPutAll: ' alpha: ';
+		print: self alpha maxDecimalPlaces: 3;
+		nextPutAll: ')'.
+)
+
+)

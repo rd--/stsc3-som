@@ -1,4 +1,5 @@
 Link = Object (
+
 | nextLink |
 
 asLink = (
@@ -15,18 +16,11 @@ nextLink: aLink = (
 	^ nextLink := aLink
 )
 
-
 ----------------------------
 
 nextLink: aLink = (
 	"Answer an instance of me referring to the argument, aLink."
 	^self new nextLink: aLink; yourself
 )
-
-
-comment = (^'
-No comment
-')
-
 
 )

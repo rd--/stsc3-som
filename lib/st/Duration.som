@@ -226,7 +226,6 @@ wait = (
 	^ delay
 )
 
-
 ----------------------------
 
 | OneDay Zero |
@@ -292,8 +291,7 @@ nanoSeconds: nanos = (
 
 oneDay = (
 	"Answer the canonicalized Duration representing length of 1 day.  Used by Dates."
-	OneDay ifNil: [ OneDay := 1 day ].
-	^OneDay
+	^OneDay ifNil: [ OneDay := 1 day ].
 )
 
 readDayHourMinuteSecondNanaFrom: aStream = (
@@ -367,8 +365,7 @@ weeks: aNumber = (
 
 zero = (
 	"Answer the canonicalized instance of Duration zero."
-	Zero ifNil: [ Zero := self basicNew seconds: 0 nanoSeconds: 0 ].
-	^Zero
+	^Zero ifNil: [ Zero := self basicNew seconds: 0 nanoSeconds: 0 ].
 )
 
 comment = (^'

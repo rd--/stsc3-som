@@ -1,0 +1,201 @@
+OrderedDictionary = Dictionary (
+
+| order |
+
+associationsDo: aBlock = (
+	"Iterate over the order instead of the internal array."
+	order from: 1 to: tally do: aBlock
+)
+
+atIndex: integer = (
+	integer > tally ifTrue: [ self error: 'indices are out of bounds' ].
+	^order at: integer
+)
+
+atIndex: integer ifAbsent: exceptionBlock = (
+	"As we are sequenceable, provide index-based access."
+	integer > tally ifTrue: [ ^exceptionBlock value ].
+	^order at: integer ifAbsent: exceptionBlock
+)
+
+atNewIndex: index put: anObject = (
+	super atNewIndex: index put: anObject.
+	order at: tally put: anObject
+)
+
+copyFrom: startIndex to: endIndex = (
+	"Answer a copy of the receiver that contains elements from position
+	startIndex to endIndex."
+	^ self shallowCopy postCopyFrom: startIndex to: endIndex
+)
+
+eighth = (
+	"Answer the eighth element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 8
+)
+
+explorerContents = (
+	^self keys replace: [ :key |
+		ObjectExplorerWrapper
+			with: (self at: key)
+			name: (key printString contractTo: 32)
+			model: self ]
+)
+
+fifth = (
+	"Answer the fifth element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 5
+)
+
+first = (
+	"Answer the first element of the receiver"
+	^ self atIndex: 1
+)
+
+first: n = (
+	"Answer the first n elements of the receiver.
+	Raise an error if there are not enough elements."
+	^ self copyFrom: 1 to: n
+)
+
+fourth = (
+	"Answer the fourth element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 4
+)
+
+growTo: anInteger = (
+	| oldOrder |
+	super growTo: anInteger.
+	oldOrder := order.
+	"Grow only to 75%. See #atNewIndex:put: in HashedCollection."
+	order := self class arrayType new: anInteger + 1 * 3 // 4.
+	order
+		replaceFrom: 1
+		to: tally
+		with: oldOrder
+		startingAt: 1
+)
+
+initialize: n = (
+	super initialize: n.
+	order := self class arrayType new: n + 1 * 3 // 4
+)
+
+isSorted = (
+	"Return true if the receiver is sorted by #<=."
+	^ order
+		isSortedBetween: 1
+		and: tally
+)
+
+keysInOrder = (
+	"Overridden.  Preserve the order of the receiver."
+	^ self keys
+)
+
+last = (
+	"Answer the last element of the receiver"
+	^ self atIndex: self size
+)
+
+last: n = (
+	"Answer the last n elements of the receiver.
+	Raise an error if there are not enough elements."
+	| size |
+	size := self size.
+	^ self copyFrom: size - n + 1 to: size
+)
+
+ninth = (
+	"Answer the ninth element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 9
+)
+
+postCopy = (
+	"We must not copy associations again but retrieve them from the array, which is already a copy. See super."
+	super postCopy.
+	order := order copy.
+	1 to: tally do: [ :index |
+		order at: index put: (array at: (self scanFor: (order at: index) key)) ]
+)
+
+postCopyFrom: startIndex to: endIndex = (
+	"Adapted from SequenceableCollection and OrderedCollection."
+	| oldOrder |
+	oldOrder := order.
+	array := self class arrayType
+		new: (self class goodPrimeAtLeast: endIndex - startIndex + 1 * 4 // 3). "fill 75% to 100%"
+	order := self class arrayType
+		new: array size + 1 * 3 // 4. "remove 25%"
+	startIndex to: endIndex do: [:index | | element |
+		element := (oldOrder at: index) copy.
+		order at: index - startIndex + 1 put: element.
+		array at: (self scanFor: element key) put: element].
+	tally := endIndex - startIndex + 1.
+)
+
+removeKey: key ifAbsent: aBlock = (
+	| result |
+	result := super removeKey: key ifAbsent: [ ^aBlock value ].
+	(self scanOrderFor: key) ifNotNil: [ :index |
+		order
+			replaceFrom: index
+			to: tally
+			with: order
+			startingAt: index + 1 ].
+	order at: tally + 1 put: nil.
+	^result
+)
+
+scanOrderFor: anObject = (
+	1 to: tally do: [ :index |
+		(order at: index) key = anObject ifTrue: [ ^index ] ].
+	^nil
+)
+
+second = (
+	"Answer the second element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 2
+)
+
+seventh = (
+	"Answer the seventh element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 7
+)
+
+sixth = (
+	"Answer the sixth element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 6
+)
+
+sort = (
+	self sort: nil
+)
+
+sort: aSortBlock = (
+	"Like in OrderedCollection, sort the associations according to the sort block."
+	tally <= 1 ifTrue: [ ^self ].
+	order
+		mergeSortFrom: 1
+		to: tally
+		by: aSortBlock
+)
+
+sorted: aSortBlockOrNil = (
+	^ self copy sort: aSortBlockOrNil
+)
+
+third = (
+	"Answer the third element of the receiver.
+	Raise an error if there are not enough elements."
+	^ self atIndex: 3
+)
+
+)

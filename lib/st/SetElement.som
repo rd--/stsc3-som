@@ -27,12 +27,7 @@ asSetElement = (
 | NilElement |
 
 withNil = (
-	NilElement isNil ifTrue: [ self initialize ].
-	^ NilElement
-)
-
-initialize = (
-	NilElement := self with: nil.
+	^NilElement isNil ifTrue: [ NilElement := self with: nil ].
 )
 
 with: anObject = (

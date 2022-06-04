@@ -41,8 +41,7 @@ value: anObject value: bObject = (
 | Default |
 
 default = (
-	Default ifNil: [ Default := DefaultSortFunction new ].
-	^ Default
+	^ Default ifNil: [ Default := DefaultSortFunction new ]
 )
 
 comment = (^'
