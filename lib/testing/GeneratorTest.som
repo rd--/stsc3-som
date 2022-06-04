@@ -1,4 +1,4 @@
-GeneratorTest = TestCase (
+GeneratorTest = ClassTestCase (
 
 fibonacciSequence = (
 	"Yields an infinite sequence of fibonacci numbers."
@@ -29,6 +29,7 @@ testAtEnd = (
 	self assert: generator atEnd
 )
 
+"
 testClose = (
 	| generator doEnsure notEnsure |
 	doEnsure := notEnsure := 0.
@@ -43,6 +44,7 @@ testClose = (
 		ensure: [ notEnsure := notEnsure + 1 ].
 	self assert: doEnsure = 1; assert: notEnsure = 1
 )
+"
 
 testContents = (
 	| generator |
@@ -58,6 +60,7 @@ testEmpty = (
 	self assert: generator next isNil
 )
 
+"
 testEnsure = (
 	| generator |
 	generator := Generator on: [ :g |
@@ -65,12 +68,15 @@ testEnsure = (
 			ensure: [ g yield: 3 ] ].
 	self assert: generator upToEnd asArray = #( 1 2 3 )
 )
+"
 
 testErrorPropagation = (
 	"Ensure that errors in the generator block are properly propagated"
+"
 	| generator |
 	generator := Generator on: [ :g | g yield: 1. g error: 'yo'].
 	self should:[generator next] raise: Error.
+"
 )
 
 testFibonacci = (
@@ -111,8 +117,8 @@ testReset = (
 	self assert: generator next = 1
 )
 
+"
 testResetUnwind = (
-	"Just like close, just using reset"
 	| generator doEnsure notEnsure |
 	doEnsure := notEnsure := 0.
 	[ generator := Generator on: [ :g |
@@ -126,6 +132,7 @@ testResetUnwind = (
 		ensure: [ notEnsure := notEnsure + 1 ].
 	self assert: doEnsure = 1; assert: notEnsure = 1
 )
+"
 
 testSimple = (
 	| generator |
@@ -133,8 +140,8 @@ testSimple = (
 	self assert: generator upToEnd asArray = #( 1 2 )
 )
 
+"
 testYieldLookAhead = (
-	"Check the look-ahead in our current implementation. See http://forum.world.st/Generators-td4941886.html."
 	| x gen result |
 	x := 0.
 	gen := Generator on: [:g |
@@ -149,5 +156,6 @@ testYieldLookAhead = (
 	self deny: (result hasEqualElements: #(1 2 3)).
 	self assert: (result hasEqualElements: #(2 3 3)).
 )
+"
 
 )

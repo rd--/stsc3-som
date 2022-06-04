@@ -6,6 +6,8 @@ It might be nice to also have an St-80 with just the adaptTo protocols added in.
 
 The St-80 class hierarchy is followed, even though there's only one Integer type (SmallInteger) and one floating point type (Double).
 
+Some of the naming is due to sharing with a Som implementation, i.e. Nil (for UndefinedObject) and Double (for BoxedFloat64).
+
 - Object
   - Behavior
     - ClassDescription*
@@ -29,15 +31,33 @@ The St-80 class hierarchy is followed, even though there's only one Integer type
     - SequenceableCollection
       - ArrayedCollection
         - Array
+        - ByteArray
         - String
           - Symbol
       - Interval
+      - LinkedList
       - OrderedCollection
         - SortedCollection
+  - Color
+    - TranslucentColor
+  - Delay
+  - Exception
+    - Error
+      - AssertionFailure
+      - EndOfStream
+      - KeyNotFound
+    - Halt
+    - Notification
+    - UnhandledError
   - InstructionStream*
-    - Context*
+    - Context
+  - Link
+    - ValueLink
   - Magnitude
     - Character
+    - DateAndTime
+      - TimeStamp
+    - Duration
     - LookupKey
       - Association
     - Number
@@ -45,9 +65,15 @@ The St-80 class hierarchy is followed, even though there's only one Integer type
         - Double
       - Integer
         - SmallInteger
-    - Time*
+    - Time
+    - Timespan
+      - Date
+      - Month
+      - Week
+      - Year
   - Message*
   - Method
+  - MVar
   - NumberParser
     - FortranNumberParser
     - SmalltalkNumberParser
@@ -55,10 +81,20 @@ The St-80 class hierarchy is followed, even though there's only one Integer type
   - Random
   - SetElement
   - SmalltalkImage
+  - SortFunction
+    - ComposedSortFunction
+      - ChainedSortFunction
+      - PropertySortFunction
+      - ReverseSortFunction
+      - UndefinedSortFunction
+    - DefaultSortFunction
+  - Stack
   - Stream
     - PositionableStream
       - ReadStream
       - WriteStream
         - ReadWriteStream
+  - Thread
+  - TimeZone
   - Transcript
   - UndefinedObject

@@ -1,11 +1,11 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SpaceshipOperatorTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SpaceshipOperatorTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
 
-allTests size = 45
-ClassTestCase subclasses size = 44
+allTests size = 48
+ClassTestCase subclasses size = 47
 TestCase subclasses size = (1 + 1) "ClassTestCase is a subclass of TestCase"
 
 "Individual tests"
@@ -33,6 +33,9 @@ CharacterTest suite run printOn: Transcript
 CollectionTest testSelectors do: [ :each | Transcript show: each; cr. CollectionTest run: each ]
 CollectionTest suite run printOn: Transcript
 
+ComplexTest testSelectors do: [ :each | Transcript show: each; cr. ComplexTest run: each ]
+ComplexTest suite run printOn: Transcript
+
 DateAndTimeTest testSelectors do: [ :each | Transcript show: each; cr. DateAndTimeTest run: each ]
 DateAndTimeTest suite run printOn: Transcript
 
@@ -53,6 +56,9 @@ FloatTest suite run printOn: Transcript
 
 FractionTest testSelectors do: [ :each | Transcript show: each; cr. FractionTest run: each ]
 FractionTest suite run printOn: Transcript
+
+GeneratorTest testSelectors do: [ :each | Transcript show: each; cr. GeneratorTest run: each ]
+GeneratorTest suite run printOn: Transcript
 
 HeapTest testSelectors do: [ :each | Transcript show: each; cr. HeapTest run: each ]
 HeapTest suite run printOn: Transcript
@@ -77,6 +83,9 @@ MonthTest suite run printOn: Transcript
 
 NumberTest testSelectors do: [ :each | Transcript show: each; cr. NumberTest run: each ]
 NumberTest suite run printOn: Transcript
+
+NumberParsingTest testSelectors do: [ :each | Transcript show: each; cr. NumberParsingTest run: each ]
+NumberParsingTest suite run printOn: Transcript
 
 ObjectTest testSelectors do: [ :each | Transcript show: each; cr. ObjectTest run: each ]
 ObjectTest suite run printOn: Transcript

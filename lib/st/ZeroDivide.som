@@ -1,0 +1,34 @@
+ZeroDivide = ArithmeticError (
+
+| dividend |
+
+dividend = (
+	"Answer the number that was being divided by zero."
+	^dividend
+)
+
+dividend: argument = (
+	"Specify the number that was being divided by zero."
+	dividend := argument
+)
+
+isResumable = (
+	"Determine whether an exception is resumable."
+	^true
+)
+
+----------------------------
+
+dividend: argument = (
+	^self new dividend: argument; yourself
+)
+
+signalWithDividend: aDividend = (
+	^(self dividend: aDividend) signal
+)
+
+comment = (^'
+ZeroDivide may be signaled when a mathematical division by 0 is attempted.
+')
+
+)

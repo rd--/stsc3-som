@@ -1,0 +1,170 @@
+NumberParsingTest = ClassTestCase (
+
+testFloatFromStreamAsNumber = (
+	"This covers parsing in Number>>readFrom:"
+	| rs aFloat |
+	rs := '-12.3456' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -12.3456 = aFloat.
+	self assert: rs atEnd.
+	rs := '-12.3456e2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '-12.3456e2e2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs upToEnd = 'e2'.
+"
+	rs := '-12.3456d2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '-12.3456q2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '-12.3456q2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '12.3456q2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1234.56 = aFloat.
+	self assert: rs atEnd.
+"
+	rs := '12.3456z2' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 12.3456 = aFloat.
+	self assert: rs upToEnd = 'z2'.
+)
+
+testFloatFromStreamWithExponent = (
+	"This covers parsing in Number>>readFrom:"
+	| rs aFloat |
+	rs := '1.0e-14' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs atEnd.
+	rs := '1.0e-14 1' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs upToEnd = ' 1'.
+	rs := '1.0e-14eee' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs upToEnd = 'eee'.
+	rs := '1.0e14e10' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1.0e14 = aFloat.
+	self assert: rs upToEnd = 'e10'.
+	rs := '1.0e+14e' readStream. "Plus sign is parseable too"
+	aFloat := Number readFrom: rs.
+	self assert: 1.0e14 = aFloat.
+	self assert: rs upToEnd = 'e'.
+	rs := '1.0e' readStream.
+	aFloat := Number readFrom: rs.
+	self assert: 1.0 = aFloat.
+	self assert: rs upToEnd = 'e'.
+)
+
+testFloatFromStringAsNumber = (
+	"This covers parsing in Number>>readFrom:"
+	| aFloat |
+	aFloat := '-12.3456' asNumber.
+	self assert: -12.3456 = aFloat.
+	aFloat := '-12.3456e2' asNumber.
+	self assert: -1234.56 = aFloat.
+"
+	aFloat := '-12.3456d2' asNumber.
+	self assert: -1234.56 = aFloat.
+	aFloat := '-12.3456q2' asNumber.
+	self assert: -1234.56 = aFloat.
+	aFloat := '-12.3456q2' asNumber.
+	self assert: -1234.56 = aFloat.
+	aFloat := '12.3456q2' asNumber.
+	self assert: 1234.56 = aFloat.
+"
+)
+
+testFloatFromStringWithExponent = (
+	"This covers parsing in Number>>readFrom:"
+	| aFloat |
+	aFloat := '1.0e-14' asNumber.
+	self assert: 1.0e-14 = aFloat.
+	aFloat := '1.0e-14 1' asNumber.
+	self assert: 1.0e-14 = aFloat.
+	aFloat := '1.0e-14e' asNumber.
+	self assert: 1.0e-14 = aFloat.
+	aFloat := '1.0e14e' asNumber.
+	self assert: 1.0e14 = aFloat.
+	aFloat := '1.0e+14e' asNumber. "Plus sign is parseable too"
+	self assert: 1.0e14 = aFloat.
+)
+
+testFloatReadWithImplicitLeadingZero = (
+	"Test support for implicit leading zeroes when reading numbers from Strings."
+	self should: [-0.22 = '-.22' asNumber].
+	self should: [0.22 = '.22' asNumber].
+)
+
+testIntegerFromString = (
+	"This covers parsing in Number>>readFrom:"
+	#(
+		('123'  123)
+		('-123'  -123)
+		('123.'  123.0)
+		('-123.'  -123.0)
+		('123This is not to be read'  123)
+"
+		('123s is a ScaledDecimal'  123s0)
+"
+		('123sin is not a ScaledDecimal, s could be part of message sin'  123)
+		('123e could be confused with a Float' 123)) do: [ :each |
+			[ :string :numericValue |
+				| result |
+				result := string asNumber.
+				self assert: result = numericValue.
+				self assert: result class = numericValue class] valueWithArguments: each ]
+)
+
+testIntegerReadFrom = (
+	"Ensure remaining characters in a stream are not lost when parsing an integer."
+	#(
+"
+		('13r96 has a radix specification'  123 ' has a radix specification')
+"
+		('123r is not a radix specification here'  123 'r is not a radix specification here')
+		('-123e has no exponent'  -123 'e has no exponent')
+		('-123.e has no exponent'  -123.0 'e has no exponent')
+		('-123e2 has an exponent'  -12300.0 ' has an exponent')
+		('123This is not to be read'  123 'This is not to be read')
+"
+		('123s is a ScaledDecimal'  123s0 ' is a ScaledDecimal')
+		('-123.s is a ScaledDecimal'  -123s0 ' is a ScaledDecimal')
+"
+		('123sin is not a ScaledDecimal, s could be part of message sin'  123 'sin is not a ScaledDecimal, s could be part of message sin')
+		('123.sin is not a ScaledDecimal, s could be part of message sin'  123.0 'sin is not a ScaledDecimal, s could be part of message sin')
+	) do: [ :each |
+			[ :string :numericValue :expectedRest |
+				| readStream result rest |
+				readStream := string readStream.
+				result := Number readFrom: readStream.
+				rest := readStream upToEnd.
+				self assert: result = numericValue.
+				self assert: result class = numericValue class.
+				self assert: rest = expectedRest] valueWithArguments: each ]
+)
+
+testNegativeZero = (
+	"This test ensure that -0.0 will produce a negativeZero"
+	| negativeZero |
+	negativeZero := Number readFrom: '-0.0' readStream.
+	"If it is a negative zero, it must behave like a negative zero... IEEE 754 tells how it should behave"
+"
+	self deny: (negativeZero at: 1) = 0 description: 'In IEEE 754, a negative zero has its sign bit set to 1'.
+"
+	self assert: negativeZero = 0 description: 'In IEEE 754, a negative zero cannot be distinguished from zero'.
+)
+
+)

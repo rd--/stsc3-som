@@ -50,7 +50,7 @@ nextPut: anObject = (
 
 peek = (
 	"Answer the upcoming object of the receiver."
-	^ next
+	^ self atEnd ifTrue: [ nil ] ifFalse: [ next ]
 )
 
 printOn: aStream = (

@@ -46,6 +46,11 @@ adaptToCollection: rcvr andSend: selector = (
 	^ rcvr collect: [:element | element perform: selector with: self]
 )
 
+adaptToComplex: rcvr andSend: selector = (
+	"If I am involved in arithmetic with a Complex number, convert me to a Complex number."
+	^ rcvr perform: selector with: self asComplex
+)
+
 adaptToFloat: rcvr andCompare: selector = (
 	rcvr isFinite
 		ifFalse: [
@@ -100,6 +105,11 @@ arcTan: denominator = (
 	^(self asFloat) arcTan: denominator.
 )
 
+asComplex = (
+	"Answer a Complex number that represents value of the receiver."
+	^ Complex real: self imaginary: 0
+)
+
 asDuration = (
 	^ Duration nanoSeconds: self asInteger
 )
@@ -144,6 +154,11 @@ copySignTo: aNumber = (
 
 cos = (
 	^self asFloat cos
+)
+
+cosh = (
+	"Answer receivers hyperbolic cosine."
+	^self asFloat cosh
 )
 
 day = (
@@ -223,6 +238,10 @@ hour = (
 
 hours = (
 	^ Duration hours: self
+)
+
+i = (
+	^ Complex real: 0 imaginary: self
 )
 
 integerPart = (
@@ -487,6 +506,16 @@ storeOn: aStream = (
 strictlyPositive = (
 	"Answer whether the receiver is mathematically positive."
 	^ self > 0
+)
+
+tan = (
+	"The receiver represents an angle measured in radians. Answer its tangent."
+	^self asFloat tan
+)
+
+tanh = (
+	"Answer receivers hyperbolic tangent"
+	^self asFloat tanh
 )
 
 to: stop = (
