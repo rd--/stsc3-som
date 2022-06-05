@@ -174,6 +174,10 @@ printAsLiteralOn: aStream = (
 	^self storeOn: aStream
 )
 
+printString = (
+	^String streamContents: [:str | self printOn: str]
+)
+
 radiansToDegrees = (
 	^self / Float radiansPerDegree
 )
