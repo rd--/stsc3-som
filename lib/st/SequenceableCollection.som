@@ -11,10 +11,6 @@ SequenceableCollection = Collection (
 "
 )
 
-< arg = (
-    ^arg adaptToCollection: self andSend: #<
-)
-
 = otherCollection = (
 	"Answer true if the receiver is equivalent to the otherCollection.
 	First test for identity, then rule out different class and sizes of
@@ -23,10 +19,6 @@ SequenceableCollection = Collection (
 	self == otherCollection ifTrue: [^ true].
 	self class = otherCollection class ifFalse: [^ false].
 	^ self hasEqualElements: otherCollection
-)
-
-> arg = (
-    ^arg adaptToCollection: self andSend: #>
 )
 
 @ aCollection = (
@@ -287,36 +279,9 @@ beginsWithAnyOf: aCollection = (
 	^aCollection anySatisfy:[:prefix| self beginsWith: prefix].
 )
 
-bitAnd: arg = (
-    ^arg adaptToCollection: self andSend: #bitAnd:
-)
-
-bitOr: arg = (
-    ^arg adaptToCollection: self andSend: #bitOr:
-)
-
 checkedAt: index = (
 	index > self size ifTrue: [self error: 'not enough elements'].
 	^ self at: index
-)
-
-clip2: arg = (
-    ^arg adaptToCollection: self andSend: #clip2:
-)
-
-clump: groupSize = (
-    "Array of myself partitioned into adjacent sequences of groupSize elements.  It is an error if I cannot be equally partitioned."
-    | answerSize answer start |
-    answerSize := (self size / groupSize) ceiling.
-    answer := Array new: answerSize.
-    start := 1.
-    (1 to: answerSize) do: [ :i |
-      | end |
-      end := start + groupSize - 1.
-      answer at: i put: (self copyFrom: start to: end).
-      start := end + 1
-    ].
-    ^answer
 )
 
 collect: aBlock = (
@@ -623,20 +588,6 @@ errorOutOfBounds = (
 	self error: 'indices are out of bounds'
 )
 
-extendCyclically: answerSize = (
-    "Myself extended to answerSize places by cycling"
-    self isEmpty ifTrue: [ self error: 'extendCyclically: empty?' ].
-    ^1 to: answerSize collect: [ :index | self atWrap: index ]
-)
-
-extendToBeOfEqualSize = (
-    "All of my elements extended to to be of the same size as my largest element.
-    "
-    | maximumSize |
-    maximumSize := (self collect: [ :item | item asArray size ]) max.
-    ^self collect: [ :item | item asArray extendCyclically: maximumSize ]
-)
-
 fifth = (
 	"Answer the fifth element of the receiver.
 	Raise an error if there are not enough elements."
@@ -849,10 +800,6 @@ flattened = (
 	^ self flatten
 )
 
-fold2: arg = (
-    ^arg adaptToCollection: self andSend: #fold2:
-)
-
 forceTo: length paddingStartWith: elem = (
 	"Force the length of the collection to length, padding
 	the beginning of the result if necessary with elem.
@@ -913,10 +860,6 @@ from: startIndex to: endIndex put: anObject = (
 	^anObject
 )
 
-gcd: arg = (
-    ^arg adaptToCollection: self andSend: #gcd:
-)
-
 groupsDo: aBlock = (
 	"Evaluate aBlock with my elements taken n at a time, where n is the number of arguments of aBlock. Ignore any leftovers at the end."
 	| index argumentArray numArgs endIndex |
@@ -938,11 +881,6 @@ groupsDo: aBlock = (
 			startingAt: index.
 		aBlock valueWithArguments: argumentArray.
 		index := index + numArgs ].
-)
-
-groupsOf: groupSize = (
-    "My elements taken groupSize at a time. Ignore any leftovers at the end."
-    ^groupSize to: self size by: groupSize collect: [ :index | self copyFrom: index - groupSize + 1 to: index ]
 )
 
 groupsOf: n atATimeCollect: aBlock = (
@@ -1113,6 +1051,7 @@ indexOfAnyOf: aCollection startingAt: start ifAbsent: exceptionBlock = (
 )
 
 indexOfNoneOf: aCollection startingAt: start = (
+	"Index of first element that is not in aCollection (rd)"
 	start to: self size do: [ :index |
 		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
 	^0
@@ -1199,18 +1138,6 @@ keysAndValuesDo: aBlock = (
 	1 to: self size do: [:index | aBlock value: index value: (self at: index)]
 )
 
-lag2: arg = (
-    ^arg adaptToCollection: self andSend: #lag2:
-)
-
-lag3: arg = (
-    ^arg adaptToCollection: self andSend: #lag3:
-)
-
-lag: arg = (
-    ^arg adaptToCollection: self andSend: #lag:
-)
-
 last = (
 	"Answer the last element of the receiver"
 	^ self at: self size
@@ -1292,32 +1219,22 @@ lastIndexOfAnyOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
 )
 
 lastIndexOfNoneOf: aCollection startingAt: lastIndex = (
+	"Index of  last element that is not in aCollection (rd)"
 	lastIndex to: 1 by: -1 do: [ :index |
 		(aCollection includes: (self at: index)) ifFalse: [ ^index ] ].
 	^0
 )
 
 lastIndexOfNoneOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = (
+	"Index of  last element that is not in aCollection (rd)"
 	| index |
 	(index := self lastIndexOfNoneOf: aCollection startingAt: lastIndex) = 0 ifFalse: [ ^index ].
-	^exceptionBlock value
-)
-
-lcm: arg = (
-    ^arg adaptToCollection: self andSend: #lcm:
-)
-
-max: arg = (
-    ^arg adaptToCollection: self andSend: #max:
+		^exceptionBlock value
 )
 
 middle = (
 	"Answer the middle element of the receiver."
 	^ self at: self size // 2 + 1
-)
-
-mrg: rhs = (
-    ^Mrg lhs: self rhs: rhs
 )
 
 nextToLast = (
@@ -1439,20 +1356,6 @@ polynomialEval: thisX = (
 	^sum
 )
 
-printHaskellArrayOn: fd = (
-    "Print my elements as a Haskell array."
-    '[' putOn: fd.
-    self do: [ :x | x printHaskellOn: fd. ] separatedBy: [ ',' putOn: fd ].
-    ']' putOn: fd
-)
-
-printHaskellOn: fd = (
-    "Print my hsc3 Mce representation."
-    '(mce ' putOn: fd.
-    self printHaskellArrayOn: fd.
-    ')' putOn: fd
-)
-
 putOn: aStream = (
 	self do: [ :each | each putOn: aStream ]
 )
@@ -1552,22 +1455,6 @@ reversed = (
 	src := n + 1.
 	1 to: n do: [:i | result at: i put: (self at: (src := src - 1))].
 	^ result
-)
-
-rotate: n = (
-    ^self rotateRight: n
-)
-
-rotateLeft: n = (
-    ^(1 + n to: self size + n) collect: [ :index | self atWrap: index ]
-)
-
-rotateRight: n = (
-    ^(1 - n to: self size - n) collect: [ :index | self atWrap: index ]
-)
-
-roundTo: arg = (
-    ^arg adaptToCollection: self andSend: #roundTo:
 )
 
 second = (
@@ -1670,16 +1557,6 @@ third = (
 	^ self at: 3
 )
 
-transpose = (
-    "Transpose my rows and columns (I am a two-dimensional array).
-     My number of columns is inferred from the size of the my first element."
-    ^1 to: self first size collect: [ :column | self collect: [ :row | row at: column ] ]
-)
-
-truncateTo: arg = (
-    ^arg adaptToCollection: self andSend: #truncateTo:
-)
-
 with: otherCollection collect: twoArgBlock = (
 	"Collect and return the result of evaluating twoArgBlock with corresponding elements from this collection and otherCollection."
 	| result |
@@ -1700,13 +1577,6 @@ with: otherCollection do: twoArgBlock = (
 		[:index |
 		twoArgBlock value: (self at: index)
 				value: (otherCollection at: index)]
-)
-
-withExtending: other collect: aBlock = (
-    "Like with:collect: but cycle shorter list."
-    | maximumSize |
-    maximumSize := self size max: other size.
-    ^1 to: maximumSize collect: [ :index | aBlock value: (self atWrap: index) value: (other atWrap: index) ]
 )
 
 withIndexCollect: elementAndIndexBlock = (
@@ -1745,6 +1615,7 @@ withoutDuplicates = (
 writeStream = (
 	^ WriteStream on: self
 )
+
 
 ----------------------------
 

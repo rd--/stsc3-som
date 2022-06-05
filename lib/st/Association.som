@@ -1,5 +1,4 @@
 Association = LookupKey (
-
 | value |
 
 = anAssociation = (
@@ -14,28 +13,52 @@ hash = (
 )
 
 key: aKey value: anObject = (
+	"Store the arguments as the variables of the receiver."
 	key := aKey.
 	value := anObject
 )
 
 printOn: aStream = (
+	| arrow |
 	super printOn: aStream.
-	aStream nextPutAll: '->'.
+	"If the key is a binary selector and we don't use whitespace, we will stream (key, '->') asSymbol."
+	arrow := (key isSymbol and: [key isBinary]) ifTrue: [' -> '] ifFalse: ['->'].
+	aStream nextPutAll: arrow.
 	value printOn: aStream
 )
 
+storeOn: aStream = (
+	| arrow |
+	"Store in the format (key->value)"
+	aStream nextPut: $(.
+	key storeOn: aStream.
+	"If the key is a binary selector and we don't use whitespace, we will stream (key, '->') asSymbol."
+	arrow := (key isSymbol and: [key isBinary]) ifTrue: [' -> '] ifFalse: ['->'].
+	aStream nextPutAll: arrow.
+	value storeOn: aStream.
+	aStream nextPut: $)
+)
+
 value = (
+	"Answer the value of the receiver."
 	^value
 )
 
 value: anObject = (
+	"Store the argument, anObject, as the value of the receiver."
 	value := anObject
 )
 
 ----------------------------
 
 key: newKey value: newValue = (
-	^(super key: newKey) value: newValue
+	"Answer an instance of me with the arguments as the key and value of
+	the association."
+	^self basicNew key: newKey value: newValue
 )
+
+comment = (^'
+I represent a pair of associated objects--a key and a value. My instances can serve as entries in a dictionary.
+')
 
 )

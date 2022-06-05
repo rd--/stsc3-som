@@ -179,6 +179,12 @@ className = (
 	^ self class name asString
 )
 
+compareSafely: anObject = (
+	^ self class = anObject class
+		ifTrue: [ self printString < anObject printString ]
+		ifFalse: [ self class name < anObject class name ]
+)
+
 copy = (
 	"Answer another instance just like the receiver. Subclasses typically override postCopy; they typically do not override shallowCopy."
 	^self shallowCopy postCopy

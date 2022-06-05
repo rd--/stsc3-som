@@ -6,6 +6,7 @@ Error handling and delegation is in the standard library.
 module Interpreter.Som.Primitives.Smalltalk where
 
 import Control.Concurrent {- base -}
+import qualified Control.Concurrent.MVar as MVar {- base -}
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
 import System.Exit {- base -}
@@ -230,8 +231,8 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (63, DataImmutableString str, [Object _ (DataSmallInteger ix)]) -> return (fmap characterObject (unicodeStringAt str ix))
     (63, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix)]) -> fmap (fmap characterObject) (vecRefAtMaybe ref (ix - 1))
     (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
-    (65, DataMVar mvar, []) -> fmap Just (liftIO (takeMVar mvar)) -- next
-    (66, DataMVar mvar, [obj]) -> liftIO (putMVar mvar obj) >> return (Just obj) -- nextPut:
+    (65, DataMVar mvar, []) -> fmap Just (liftIO (MVar.takeMVar mvar)) -- next
+    (66, DataMVar mvar, [obj]) -> liftIO (MVar.putMVar mvar obj) >> return (Just obj) -- nextPut:
     (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd) -- basicNew
     (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> classNewWithArg cd size -- basicNew:
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:

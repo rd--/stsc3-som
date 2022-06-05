@@ -2,15 +2,8 @@ LookupKey = Magnitude (
 
 | key |
 
-key = (
-	^key
-)
-
-key: anObject = (
-	key := anObject
-)
-
 < aLookupKey = (
+	"Refer to the comment in Magnitude|<."
 	^key < aLookupKey key
 )
 
@@ -20,18 +13,57 @@ key: anObject = (
 		ifFalse: [^false]
 )
 
+allLiteralsDo: aBlock = (
+	"Treat myself or my key as literal. Do not treat any value (i.e., in Association or Binding) as literal to avoid decending too thoroughly. As a consequence, for example, classes have to be resolved to their class bindings or class names before using them as input in this interface."
+	aBlock value: self.
+	self key allLiteralsDo: aBlock.
+)
+
 hash = (
+	"Hash is reimplemented because = is implemented."
 	^key hash
+)
+
+key = (
+	"Answer the lookup key of the receiver."
+	^key
+)
+
+key: anObject = (
+	"Store the argument, anObject, as the lookup key of the receiver."
+	key := anObject
+)
+
+literalEqual: otherLiteral = (
+	"Answer true if the receiver and otherLiteral represent the same literal.
+	By default, all lookup keys (such as variable bindings) are literally equal only if identical. This is how variable sharing works, by preserving identity and changing only the value.
+	Override if you want to be more flexible such as in class bindings."
+	^ self == otherLiteral
+)
+
+name = (
+	^ self key isString
+		ifTrue: [self key]
+		ifFalse: [self key printString]
 )
 
 printOn: aStream = (
 	key printOn: aStream
 )
 
+writeOnFilterStream: aStream = (
+	aStream write:key.
+)
+
 ----------------------------
 
 key: aKey = (
-	^self new key: aKey
+	"Answer an instance of me with the argument as the lookup up."
+	^self basicNew key: aKey
 )
+
+comment = (^'
+I represent a key for looking up entries in a data structure. Subclasses of me, such as Association, typically represent dictionary entries.
+')
 
 )

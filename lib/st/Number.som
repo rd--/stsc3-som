@@ -145,6 +145,12 @@ closeTo: num = (
 	^self = num
 )
 
+compareSafely: aNumber = (
+	^ aNumber isNumber
+		ifTrue: [ self < aNumber ]
+		ifFalse: [ super compareSafely: aNumber ]
+)
+
 copySignTo: aNumber = (
 	"Return a number with same magnitude as aNumber and same sign as self."
 	^ self signBit = 0

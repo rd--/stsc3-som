@@ -4,6 +4,7 @@
 module Interpreter.Som.Core where
 
 import Control.Concurrent {- base -}
+import qualified Control.Concurrent.MVar as MVar {- base -}
 import Control.Monad {- base -}
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
@@ -572,7 +573,7 @@ classAllVariableNamesFor cd isMeta =
 
 mvarObject :: Vm Object
 mvarObject = do
-  mvar <- liftIO newEmptyMVar
+  mvar <- liftIO MVar.newEmptyMVar
   return (Object "MVar" (DataMVar mvar))
 
 threadObject :: CoreOpt -> Object -> Vm Object

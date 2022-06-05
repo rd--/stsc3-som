@@ -4,7 +4,7 @@ Generator = Stream (
 
 atEnd = (
 	"Answer whether the receiver can access any more objects."
-	^ next isException
+	^ next = Generator endToken
 )
 
 close = (
@@ -23,9 +23,10 @@ contents = (
 )
 
 fork = (
-	| result |
+	| process result |
 	mvar := MVar new.
-	thread := [ block value: self. self nextPut: EndOfStream new ] fork. "append EndOfStream marker"
+	process := [ [ block value: self ] ifError: [ Transcript show: 'Generator error'; cr ]. self nextPut: Generator endToken ].
+	thread := process fork. "append endToken"
 	next := mvar next. "read initial value, self next checks for end of stream"
 	^ next
 )
@@ -37,7 +38,12 @@ initializeOn: aBlock = (
 
 next = (
 	"Generate and answer the next object in the receiver."
-	^ self atEnd ifTrue: [ nil ] ifFalse: [ | previous | previous := next. next := mvar next. previous ].
+	^ self atEnd ifTrue: [ nil ] ifFalse: [
+		| previous |
+		previous := next.
+		next := mvar next.
+		previous
+	]
 )
 
 nextPut: anObject = (
@@ -82,6 +88,10 @@ yield: anObject = (
 )
 
 ----------------------------
+
+endToken = (
+	^#endOfGeneratorToken
+)
 
 on: aBlock = (
 	^ self basicNew initializeOn: aBlock

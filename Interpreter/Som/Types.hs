@@ -8,6 +8,7 @@ and for a more traditional Smalltalk interpreter.
 module Interpreter.Som.Types where
 
 import Control.Concurrent {- base -}
+import qualified Control.Concurrent.MVar as MVar {- base -}
 import Control.Monad.IO.Class {- base -}
 import qualified Data.Char {- base -}
 import Data.List {- base -}
@@ -150,7 +151,7 @@ data ObjectData
   | DataCharacterArray Id (VecRef Char) -- ^ Character array
   | DataByteArray Id (VecRef Word8) -- ^ Byte array
   | DataThread ThreadId
-  | DataMVar (MVar Object)
+  | DataMVar (MVar.MVar Object)
   deriving (Eq)
 
 objectDataAsDouble :: ObjectData -> Maybe Double
@@ -364,7 +365,7 @@ objectToString (Object nm obj) =
     DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
     DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
     DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
-    DataReturn _ _ o -> "PrimitiveReturn: " ++ objectToString o
+    DataReturn pc rcv o -> printf "PrimitiveReturn: <pc=%d, blk=%s>" pc (maybe "nil" objectToString rcv) ++ objectToString o
     DataException e c -> "PrimitiveException: " ++ unwords (map objectToString [e, c])
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToString (vecToList vec)) ++ ")"
     _ -> "instance of " ++ fromSymbol nm

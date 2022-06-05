@@ -1,10 +1,26 @@
 CharacterSet = Set (
 
+"
+any: numberOfElements = (
+	^ self any: numberOfElements as: Array
+)
+
+any: numberOfElements as: aClass = (
+	self canBeEnumerated
+		ifTrue: [^ super any: numberOfElements as: aClass]
+		ifFalse: [self shouldNotImplement]
+)
+"
+
 asString = (
 	"Convert the receiver into a String"
 	^String new: self size streamContents:[:s|
 		self do:[:ch| s nextPut: ch].
 	].
+)
+
+canBeEnumerated = (
+	^true
 )
 
 includesCode: anInteger = (
