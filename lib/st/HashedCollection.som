@@ -15,10 +15,6 @@ add: newObject withOccurrences: anInteger = (
 	^self add: newObject
 )
 
-copyEmpty = (
-	^self species new
-)
-
 doWithIndex: aBlock2 = (
 	| index |
 	index := 0.

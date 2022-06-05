@@ -19,6 +19,8 @@ hash = (
 )
 
 asSetElement = (
+	"A receiver has to be included into a set, as a distinct object.
+	We need to wrap receiver in own turn, otherwise #enclosedSetElement will return wrong object for that set"
 	^ SetElement with: self
 )
 
@@ -27,7 +29,7 @@ asSetElement = (
 | NilElement |
 
 withNil = (
-	^NilElement isNil ifTrue: [ NilElement := self with: nil ].
+	^NilElement ifNil: [ NilElement := self with: nil ].
 )
 
 with: anObject = (

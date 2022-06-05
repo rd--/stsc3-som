@@ -1,12 +1,12 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SpaceshipOperatorTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SpaceshipOperatorTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
 
-allTests size = 48
-ClassTestCase subclasses size = 47
-TestCase subclasses size = (1 + 1) "ClassTestCase is a subclass of TestCase"
+allTests size = 50
+ClassTestCase subclasses size = 48
+TestCase subclasses size = (2 + 1) "ClassTestCase is a subclass of TestCase"
 
 "Individual tests"
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
@@ -72,6 +72,9 @@ IntegerTest suite run printOn: Transcript
 IntervalTest testSelectors do: [ :each | Transcript show: each; cr. IntervalTest run: each ]
 IntervalTest suite run printOn: Transcript
 
+KeyedSetTest testSelectors do: [ :each | Transcript show: each; cr. KeyedSetTest run: each ]
+KeyedSetTest suite run printOn: Transcript
+
 LinkedListTest testSelectors do: [ :each | Transcript show: each; cr. LinkedListTest run: each ]
 LinkedListTest suite run printOn: Transcript
 
@@ -107,6 +110,9 @@ SequenceableCollectionTest suite run printOn: Transcript
 
 SetTest testSelectors do: [ :each | Transcript show: each; cr. SetTest run: each ]
 SetTest suite run printOn: Transcript
+
+SetWithNilTest testSelectors do: [ :each | Transcript show: each; cr. SetWithNilTest run: each ]
+SetWithNilTest suite run printOn: Transcript
 
 SmallIntegerTest testSelectors do: [ :each | Transcript show: each; cr. SmallIntegerTest run: each ]
 SmallIntegerTest suite run printOn: Transcript

@@ -1,0 +1,51 @@
+SetWithNilTest = TestCase (
+
+runSetWithNilTestOf: newSet = (
+	"Run the common tests for the given set class"
+	| class collectClass |
+	class := newSet value class.
+	collectClass := class == WeakSet
+		ifTrue: [ WeakSet ]
+		ifFalse: [ Set ].
+	self assert: (newSet value add: nil; yourself) size = 1.
+	self assert: (newSet value addAll: #(nil nil nil); yourself) size = 1.
+	self assert: ((newSet value add: nil; yourself) includes: nil).
+	self assert: ((newSet value addAll: #(nil nil nil); yourself) includes: nil).
+	self assert: (newSet value add: nil; yourself) anyOne = nil.
+	self assert: ((newSet value add: nil; yourself) remove: nil) == nil.
+	self assert: ((newSet value add: nil; yourself) remove: nil; yourself) isEmpty.
+	self assert: (newSet value addAll: #(1 nil foo); yourself) size = 3.
+	self assert: ((newSet value addAll: #(1 nil foo); yourself) remove: nil; yourself) size = 2.
+	self assert: ((newSet value add: nil; yourself) collect:[:x| x]) = (collectClass with: nil).
+	self assert: ((newSet value add: nil; yourself) collect:[:x| x] as: Array) = #(nil).
+	self deny: ((newSet value) includes: nil).
+	self deny: ((newSet value add: 3; yourself) includes: nil).
+	self deny: ((newSet value add: 3; remove: 3; yourself) includes: nil).
+)
+
+testIdentitySetWithNil = (
+	self runSetWithNilTestOf: [IdentitySet new]
+)
+
+testKeyedIdentitySetWithNil = (
+	| set |
+	self runSetWithNilTestOf: [KeyedIdentitySet keyBlock:[:o| o]].
+	set := KeyedIdentitySet keyBlock:[:o| o].
+	set add: nil.
+	self assert: (set at: nil) == nil.
+)
+
+testKeyedSetWithNil = (
+	| set |
+	self runSetWithNilTestOf: [KeyedSet keyBlock:[:o| o]].
+	set := KeyedSet keyBlock:[:o| o].
+	set add: nil.
+	self assert: (set at: nil) == nil.
+	self assert: (set includes: nil)
+)
+
+testSetWithNil = (
+	self runSetWithNilTestOf: [Set new]
+)
+
+)
