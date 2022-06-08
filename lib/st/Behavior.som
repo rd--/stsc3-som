@@ -177,7 +177,7 @@ selectorsDo: selectorBlock = (
 
 subclasses = (
 	"Slow implementation since Behavior does not keep trace of subclasses."
-	^(Smalltalk globalKeys collect: [ :each | Smalltalk global: each ]) select: [ :each | (each isKindOf: Class) and: (each superclass = self) ]
+	^(Smalltalk globalKeys collect: [ :each | Smalltalk global: each ]) select: [ :each | (each isKindOf: Class) and: [ each superclass = self ] ]
 )
 
 superclass = (

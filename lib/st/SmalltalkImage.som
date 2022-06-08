@@ -1,4 +1,4 @@
-SmalltalkImage = Object (
+SmalltalkImage = (
 
 at: aKey = (
 	^self global: aKey

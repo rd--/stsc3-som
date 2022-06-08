@@ -1,7 +1,7 @@
 import System.Environment {- base -}
 
-import qualified Interpreter.Som.Core {- stsc3-som -}
 import qualified Interpreter.Som.Dir {- stsc3-som -}
+import qualified Interpreter.Som.Eval {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Som as Primitives.Som {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Smalltalk as Primitives.Smalltalk {- stsc3-som -}
 import qualified Interpreter.Som.Repl {- stsc3-som -}
@@ -13,11 +13,11 @@ help =
     ," run class arguments..."
     ]
 
-replOpt :: String -> Interpreter.Som.Core.CoreOpt
+replOpt :: String -> Interpreter.Som.Eval.EvalOpt
 replOpt typ =
   case typ  of
-    "som" -> Primitives.Som.somCoreOpt
-    "st" -> Primitives.Smalltalk.stCoreOpt
+    "som" -> Primitives.Som.somEvalOpt
+    "st" -> Primitives.Smalltalk.stEvalOpt
     _ -> error "replOpt?"
 
 main :: IO ()

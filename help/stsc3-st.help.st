@@ -159,7 +159,7 @@ WriteStreamTest suite run printOn: Transcript
 YearTest testSelectors do: [ :each | Transcript show: each; cr. YearTest run: each ]
 YearTest suite run printOn: Transcript
 
-Smalltalk globalKeys
+.Smalltalk globalKeys
 Smalltalk globals
 Smalltalk utcTime
 Smalltalk utcOffset

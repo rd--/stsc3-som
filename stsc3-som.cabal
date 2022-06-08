@@ -25,11 +25,12 @@ library
                     vector
   default-language: Haskell2010
   ghc-options:      -Wall -fwarn-tabs
-  exposed-modules:  Interpreter.Som.Core
+  exposed-modules:
                     Interpreter.Som.Dict
                     Interpreter.Som.DictRef
                     Interpreter.Som.Dir
                     Interpreter.Som.Error
+                    Interpreter.Som.Eval
                     Interpreter.Som.Int
                     Interpreter.Som.Primitives.Smalltalk
                     Interpreter.Som.Primitives.Som
@@ -40,6 +41,7 @@ library
                     Interpreter.Som.Sym
                     Interpreter.Som.Sys
                     Interpreter.Som.Tbl
+                    Interpreter.Som.Time
                     Interpreter.Som.Types
                     Interpreter.Som.Vec
 

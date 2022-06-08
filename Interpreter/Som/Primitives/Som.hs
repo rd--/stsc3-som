@@ -17,8 +17,7 @@ import System.Random {- random -}
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Som as Som {- stsc3 -}
 
-import Interpreter.Som.Core
-import Interpreter.Som.Error
+import Interpreter.Som.Eval
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
 import Interpreter.Som.Str
@@ -235,7 +234,7 @@ somPrimitivesV :: SomPrimitiveDispatcher
 somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("global:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> vmGlobalLookupOrNil (fromUnicodeString x)
-    ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssign (fromUnicodeString x) e
+    ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssignOrCreate (fromUnicodeString x) e
     ("hasGlobal:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
     ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromIndexedMap (classCachedMethods receiver)
     ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
@@ -250,7 +249,7 @@ This is Behaviour>>allInstVarNames and Class>>allClassVarNames in Smalltalk, whi
 prClassFields :: St.ClassDefinition -> Bool -> Vm Object
 prClassFields cd isMeta = arrayFromList . map symObject =<< classAllVariableNamesFor cd isMeta
 
-prMethodInvokeOnWith :: CoreOpt -> ObjectData -> Object -> Object -> Vm Object
+prMethodInvokeOnWith :: EvalOpt -> ObjectData -> Object -> Object -> Vm Object
 prMethodInvokeOnWith opt obj receiver argumentsArray = do
   arguments <- arrayElements argumentsArray
   evalMethodOrPrimitive opt obj receiver arguments
@@ -264,26 +263,26 @@ somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
     ("holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
     ("inspect", _, []) -> objectInspectAndPrint receiver
     ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
-    ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somCoreOpt rcv arg1 arg2
+    ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somEvalOpt rcv arg1 arg2
     ("load:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> systemLoadClassOrNil (fromUnicodeString x)
     ("new", DataClass (cd,_) _ _,[]) -> classNew cd
-    ("perform:", _, [Object "Symbol" (DataImmutableString sel)]) -> objectPerform somCoreOpt receiver sel
-    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), cl]) -> objectPerformInSuperclass somCoreOpt receiver sel cl
-    ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somCoreOpt receiver sel arg
-    ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somCoreOpt receiver sel arg cl
+    ("perform:", _, [Object "Symbol" (DataImmutableString sel)]) -> objectPerform somEvalOpt receiver sel
+    ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), cl]) -> objectPerformInSuperclass somEvalOpt receiver sel cl
+    ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somEvalOpt receiver sel arg
+    ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somEvalOpt receiver sel arg cl
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
     _ -> somPrimitivesV (prClass, prMethod) receiver arguments
 
 somPrimitives :: PrimitiveDispatcher
 somPrimitives hs@(_prClass, prMethod) _cd receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
-    ("value", DataBlockClosure {}, []) -> evalBlock somCoreOpt receiver []
-    ("value:", DataBlockClosure {}, [arg]) -> evalBlock somCoreOpt receiver [arg]
-    ("value:with:", DataBlockClosure {}, [arg1, arg2]) -> evalBlock somCoreOpt receiver [arg1, arg2]
+    ("value", DataBlockClosure {}, []) -> evalBlock somEvalOpt receiver []
+    ("value:", DataBlockClosure {}, [arg]) -> evalBlock somEvalOpt receiver [arg]
+    ("value:with:", DataBlockClosure {}, [arg1, arg2]) -> evalBlock somEvalOpt receiver [arg1, arg2]
     _ -> fmap Just (somPrimitivesC hs receiver arguments)
 
-somCoreOpt :: CoreOpt
-somCoreOpt = CoreOpt SomSystem (intObject, strObject, symObject . Som.somEscapedString) somPrimitives
+somEvalOpt :: EvalOpt
+somEvalOpt = EvalOpt SomSystem (intObject, strObject, symObject . Som.somEscapedString) somPrimitives
 
 {-
 > fromIntegral (maxBound::Int) >= ((2::Integer) ^ 62) -- True

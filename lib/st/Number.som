@@ -37,7 +37,12 @@ Number = Magnitude (
 )
 
 abs = (
-	^(self < 0) ifTrue: [ self negated ] ifFalse: [ self ]
+	"Answer a Number that is the absolute value (positive magnitude) of the
+	receiver."
+
+	self < 0
+		ifTrue: [^self negated]
+		ifFalse: [^self]
 )
 
 adaptToCollection: rcvr andSend: selector = (

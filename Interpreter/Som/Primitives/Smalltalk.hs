@@ -19,14 +19,14 @@ import qualified Music.Theory.Byte {- hmt-base -}
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as St {- stsc3 -}
 
-import Interpreter.Som.Core
-import Interpreter.Som.Error
+import Interpreter.Som.Eval
 import Interpreter.Som.Int
 import Interpreter.Som.Ref
 import Interpreter.Som.Str
 import Interpreter.Som.Sym
 import Interpreter.Som.Sys
 import Interpreter.Som.Tbl
+import Interpreter.Som.Time
 import Interpreter.Som.Types
 import Interpreter.Som.Vec
 
@@ -75,7 +75,7 @@ prClassFields cd isMeta =
       fld <- classAllVariableNames St.classVariableNames cd
       arrayFromList (map symObject fld)
 
-prMethodInvokeOnWith :: CoreOpt -> ObjectData -> Object -> Object -> Vm Object
+prMethodInvokeOnWith :: EvalOpt -> ObjectData -> Object -> Object -> Vm Object
 prMethodInvokeOnWith opt obj receiver argumentsArray = do
   arguments <- arrayElements argumentsArray
   evalMethodOrPrimitive opt obj receiver arguments
@@ -120,9 +120,9 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
-    ("evaluate:", DataSystem, [Object "String" str]) -> mapMMM (evalString stCoreOpt) (objectDataAsString str)
+    ("evaluate:", DataSystem, [Object "String" str]) -> mapMMM (evalString stEvalOpt) (objectDataAsString str)
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
-    ("fork", DataBlockClosure {}, []) -> fmap Just (threadObject stCoreOpt receiver)
+    ("fork", DataBlockClosure {}, []) -> fmap Just (threadObject stEvalOpt receiver)
     ("fromIEEE32Bit:", DataClass {}, [Object _ (DataSmallInteger x)]) -> return (Just (doubleObject (realToFrac (Music.Theory.Byte.castWord32ToFloat (fromIntegral x)))))
     ("fromString:", DataClass {}, [Object _ (DataImmutableString x)]) ->
       case prClass of
@@ -131,11 +131,11 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
         _ -> return Nothing
     ("garbageCollect", DataSystem, []) -> liftIO System.Mem.performMajorGC >> return (Just nilObject)
     ("global:", DataSystem, [Object "Symbol" str]) -> mapMMM vmGlobalLookupMaybe (objectDataAsString str)
-    ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssign sym e) (objectDataAsString str)
+    ("global:put:", DataSystem, [Object "Symbol" str, e]) -> mapMM (\sym -> vmGlobalAssignOrCreate sym e) (objectDataAsString str)
     ("globalKeys", DataSystem, []) -> fmap Just (arrayFromList . map symObject =<< vmGlobalDictAllKeys)
     ("hasGlobal:", DataSystem, [Object "Symbol" str]) -> mapMM (fmap booleanObject . vmHasGlobal) (objectDataAsString str)
     ("inspect", _, []) -> fmap Just (objectInspectAndPrint receiver)
-    ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stCoreOpt receiverObj arg1 arg2)
+    ("invokeOn:with:", DataMethod {}, [arg1, arg2]) -> fmap Just (prMethodInvokeOnWith stEvalOpt receiverObj arg1 arg2)
     ("kill", DataThread threadId, []) -> liftIO (killThread threadId) >> return (Just nilObject)
     ("load:", DataSystem, [Object "Symbol" str]) -> mapMM systemLoadClassOrNil (objectDataAsString str)
     ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
@@ -143,17 +143,17 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("methodClass", DataMethod methodClass _ _,[]) -> fmap Just (vmGlobalResolveOrError methodClass)
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
-    ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stCoreOpt receiver [] (Just (exception, handler))
+    ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stEvalOpt receiver [] (Just (exception, handler))
     ("threadDelayMicroseconds", DataSmallInteger x, []) -> liftIO (threadDelay x) >> return (Just receiver)
-    ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stCoreOpt receiver sym cl) (objectDataAsString str)
+    ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stEvalOpt receiver sym cl) (objectDataAsString str)
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
     ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
-    ("printContext", DataSystem, []) -> vmContext >>= vmContextPrint >> return (Just nilObject)
+    ("printContext", DataSystem, []) -> vmGetContext >>= vmPrintContext >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
     ("sender", DataContext ctx, []) -> return (fmap contextObject (contextSender ctx))
-    ("signal", _, []) -> vmContext >>= return . Just . exceptionObject receiver . contextObject
-    ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelector) (contextNearestMethod ctx))
+    ("signal", _, []) -> signalException receiver
+    ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelectorOrError) (contextNearestMethod ctx))
     ("selector", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
     ("utcOffset", DataSystem, []) -> fmap (Just . intObject) getSystemTimezoneInSeconds
@@ -177,7 +177,7 @@ prValueWithArguments :: Object -> Object -> Vm (Maybe Object)
 prValueWithArguments receiver (Object _ argumentsArray) = do
   maybeList <- objectDataAsArray argumentsArray
   case maybeList of
-    Just lst -> evalBlock stCoreOpt receiver lst
+    Just lst -> evalBlock stEvalOpt receiver lst
     Nothing -> return Nothing
 
 stPrimitives :: PrimitiveDispatcher
@@ -238,16 +238,16 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:
     (74, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> tblAtPutMaybe tbl (ix - 1) newObject -- instVarAt:put:
     (75, _, []) -> fmap (Just . intObject) (objectHash receiver) -- identityHash
-    (81, DataBlockClosure {}, []) -> evalBlock stCoreOpt receiver [] -- value value: &etc.
-    (81, DataBlockClosure {}, [arg1]) -> evalBlock stCoreOpt receiver [arg1]
-    (81, DataBlockClosure {}, [arg1, arg2]) -> evalBlock stCoreOpt receiver [arg1, arg2]
-    (81, DataBlockClosure {}, [arg1, arg2, arg3]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3]
-    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4]
-    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4, arg5]) -> evalBlock stCoreOpt receiver [arg1, arg2, arg3, arg4, arg5]
+    (81, DataBlockClosure {}, []) -> evalBlock stEvalOpt receiver [] -- value value: &etc.
+    (81, DataBlockClosure {}, [arg1]) -> evalBlock stEvalOpt receiver [arg1]
+    (81, DataBlockClosure {}, [arg1, arg2]) -> evalBlock stEvalOpt receiver [arg1, arg2]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3]) -> evalBlock stEvalOpt receiver [arg1, arg2, arg3]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4]) -> evalBlock stEvalOpt receiver [arg1, arg2, arg3, arg4]
+    (81, DataBlockClosure {}, [arg1, arg2, arg3, arg4, arg5]) -> evalBlock stEvalOpt receiver [arg1, arg2, arg3, arg4, arg5]
     (82, DataBlockClosure {}, [argumentsArray]) -> prValueWithArguments receiver argumentsArray -- value:withArguments:
-    (83, _, [Object "Symbol" (DataImmutableString sel)]) -> fmap Just (objectPerform stCoreOpt receiver sel) -- perform: perform:with:
-    (84, _, [Object "Symbol" (DataImmutableString sel), arg]) -> fmap Just (objectPerformWithArguments stCoreOpt receiver sel arg) -- perform:withArguments:
-    (100, _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stCoreOpt receiver sel arg cl) -- perform:withArguments:inSuperclass:
+    (83, _, [Object "Symbol" (DataImmutableString sel)]) -> fmap Just (objectPerform stEvalOpt receiver sel) -- perform: perform:with:
+    (84, _, [Object "Symbol" (DataImmutableString sel), arg]) -> fmap Just (objectPerformWithArguments stEvalOpt receiver sel arg) -- perform:withArguments:
+    (100, _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> fmap Just (objectPerformWithArgumentsInSuperclass stEvalOpt receiver sel arg cl) -- perform:withArguments:inSuperclass:
     (110, _, [arg]) -> fmap (Just . booleanObject) (objectIdentical receiver arg) -- ==
     (111, _, []) -> fmap Just (objectClass receiver) -- class species
     (113, DataSystem, []) -> fmap Just (prQuit 0)
@@ -262,5 +262,5 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
 stLiteralConstructors :: LiteralConstructors
 stLiteralConstructors = (intObject . fromInteger, strObject, symObject)
 
-stCoreOpt :: CoreOpt
-stCoreOpt = CoreOpt SmalltalkSystem stLiteralConstructors stPrimitives
+stEvalOpt :: EvalOpt
+stEvalOpt = EvalOpt SmalltalkSystem stLiteralConstructors stPrimitives

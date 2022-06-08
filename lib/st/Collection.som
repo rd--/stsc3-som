@@ -67,7 +67,6 @@ any: numberOfElements as: aClass = (
 	index := 0.
 	result := aClass new: numberOfElements.
 	result fillFrom: self with: [:each |
-Transcript show: {'ANY:AS:'. numberOfElements. index. index >= numberOfElements. each}; cr.
 		(index := index + 1) > numberOfElements
 			ifTrue: [^ result]
 			ifFalse: [each]].

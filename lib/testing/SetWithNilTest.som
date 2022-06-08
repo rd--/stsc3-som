@@ -4,9 +4,12 @@ runSetWithNilTestOf: newSet = (
 	"Run the common tests for the given set class"
 	| class collectClass |
 	class := newSet value class.
+"
 	collectClass := class == WeakSet
 		ifTrue: [ WeakSet ]
 		ifFalse: [ Set ].
+"
+        collectClass := Set.
 	self assert: (newSet value add: nil; yourself) size = 1.
 	self assert: (newSet value addAll: #(nil nil nil); yourself) size = 1.
 	self assert: ((newSet value add: nil; yourself) includes: nil).

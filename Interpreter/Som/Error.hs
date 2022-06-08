@@ -22,11 +22,3 @@ somErrorIO errorText = throwIO (SomError errorText)
 
 type StError m = Except.MonadError String m
 
-stError :: StError m => String -> m t
-stError = Except.throwError
-
-prError :: StError m => String -> m t
-prError txt = stError ("Primitive error: " ++ txt)
-
-vmError :: StError m => String -> m t
-vmError txt = stError ("Virtual machine error: " ++ txt)
