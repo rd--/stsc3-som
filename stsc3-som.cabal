@@ -28,7 +28,6 @@ library
   exposed-modules:
                     Interpreter.Som.Dict
                     Interpreter.Som.DictRef
-                    Interpreter.Som.Dir
                     Interpreter.Som.Error
                     Interpreter.Som.Eval
                     Interpreter.Som.Int
@@ -47,6 +46,7 @@ library
 
 executable stsc3-som
   build-depends:    base >= 4.8 && < 5,
+                    hmt-base == 0.20.*,
                     stsc3 == 0.20.*,
                     stsc3-som
   hs-source-dirs:   cmd

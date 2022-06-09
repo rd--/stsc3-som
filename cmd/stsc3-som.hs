@@ -1,6 +1,7 @@
 import System.Environment {- base -}
 
-import qualified Interpreter.Som.Dir {- stsc3-som -}
+import qualified Music.Theory.Directory {- hmt-base -}
+
 import qualified Interpreter.Som.Eval {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Som as Primitives.Som {- stsc3-som -}
 import qualified Interpreter.Som.Primitives.Smalltalk as Primitives.Smalltalk {- stsc3-som -}
@@ -8,7 +9,7 @@ import qualified Interpreter.Som.Repl {- stsc3-som -}
 
 help :: [String]
 help =
-    ["stsc3-som command [arguments]"
+    ["stsc3-som -cp <classpath> command [arguments]"
     ," {som | st } repl"
     ," run class arguments..."
     ]
@@ -22,9 +23,8 @@ replOpt typ =
 
 main :: IO ()
 main = do
-  somDirectory <- Interpreter.Som.Dir.somSystemClassPath
   a <- getArgs
   case a of
-    [typ, "repl"] -> Interpreter.Som.Repl.replMain (replOpt typ) somDirectory
-    "run":cl:arg -> Interpreter.Som.Repl.loadAndRunClass (replOpt "som") somDirectory cl arg
+    ["-cp", cp, typ, "repl"] -> Interpreter.Som.Repl.replInitAndContinue (replOpt typ) (Music.Theory.Directory.path_split cp)
+    "-cp":cp:"run":cl:arg -> Interpreter.Som.Repl.loadAndRunClass (replOpt "som") (Music.Theory.Directory.path_split cp) cl arg
     _ -> putStrLn (unlines help)

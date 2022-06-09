@@ -156,7 +156,7 @@ When a non-local return arrives at it's home context the answer is unpacked and 
 When an exception value arrives at a handler (exception handlers are at Block contexts) it is handled.
 
 -}
-evalMethod :: EvalOpt -> St.MethodDefinition -> [Symbol] -> St.Temporaries -> ([StExpr], Maybe StExpr) -> Object -> [Object] -> Vm Object
+evalMethod :: EvalOpt -> St.MethodDefinition -> [Symbol] -> [St.Identifier] -> ([StExpr], Maybe StExpr) -> Object -> [Object] -> Vm Object
 evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
   let requiredArguments = length methodArguments
       providedArguments = length arguments
@@ -238,13 +238,13 @@ evalExpr opt expr =
       pc <- vmIncrementProgramCounter
       return (Object (closureClass (evalOptTyp opt) (length arg)) (DataBlockClosure pc blockContext expr))
     Expr.Array exprList -> mapM (evalExpr opt) exprList >>= arrayFromList
-    Expr.Init _ (St.Temporaries tmp) exprList -> vmAssignAllToNil tmp >> evalExprSequence opt exprList
+    Expr.Init _ tmp exprList -> vmAssignAllToNil tmp >> evalExprSequence opt exprList
 
 evalString :: EvalOpt -> String -> Vm (Maybe Object)
 evalString opt txt = do
-  case St.stParseMaybe St.programInitializerDefinition txt of
-    Nothing -> return Nothing
-    Just st -> fmap Just (evalExpr opt (Expr.initializerDefinitionExpr st))
+  case St.stParseEither St.programInitializerDefinition txt of
+    Left err -> liftIO (putStrLn ("Parse error: " ++ err)) >> return Nothing
+    Right st -> fmap Just (evalExpr opt (Expr.initializerDefinitionExpr st))
 
 -- | Parse string as a Smalltalk program, convert to Expr form, run evalExpr and return an Object.
 evalStringOrError :: EvalOpt -> String -> Vm Object
@@ -253,11 +253,6 @@ evalStringOrError opt txt = do
   case maybeAnswer of
     Nothing -> vmError "evalString"
     Just answer -> return answer
-
-{-
-case answer of
-        Object _ (DataException exc (Object _ (DataContext ctx))) -> objectInspectAndPrint exc >> vmPrintContext ctx >> return answer
--}
 
 vmRun :: VmState -> Vm Object -> IO (Either ExceptionOrNonLocalReturn Object, VmState)
 vmRun vmState f = State.runStateT (Except.runExceptT f) vmState

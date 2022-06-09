@@ -37,7 +37,15 @@ adaptToNumber: rcvr andSend: selector = (
 	^ self collect: [:element | rcvr perform: selector with: element]
 )
 
+add: newObject = (
+	"Include newObject as one of the receiver's elements. Answer newObject.
+	ArrayedCollections cannot respond to this message."
+	self subclassResponsibility
+)
+
 addAll: aCollection = (
+	"Include all the elements of aCollection as the receiver's elements. Answer
+	aCollection. Actually, any object responding to #do: can be used as argument."
 	aCollection do: [:each | self add: each].
 	^ aCollection
 )

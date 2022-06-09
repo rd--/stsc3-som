@@ -149,7 +149,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
     ("primSubstringFrom:to:", _, [Object _ (DataSmallInteger int1), Object _ (DataSmallInteger int2)]) -> mapMM (\str -> return (strObject (unicodeStringSubstringFromTo str int1 int2))) (objectDataAsString receiverObj)
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
-    ("printContext", DataSystem, []) -> vmGetContext >>= vmPrintContext >> return (Just nilObject)
+    ("printContext", DataSystem, []) -> vmGetContext >>= contextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
     ("sender", DataContext ctx, []) -> return (fmap contextObject (contextSender ctx))
     ("signal", _, []) -> signalException receiver
