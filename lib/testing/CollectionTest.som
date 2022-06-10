@@ -7,7 +7,6 @@ setUp = (
 	nonEmpty := OrderedCollection with: #x
 )
 
-"
 testAny = (
 	{
 		{ 2. Array withAll: #(1 2 3 4) }.
@@ -24,9 +23,7 @@ testAny = (
 			assert: spec first equals: result size;
 			assert: spec second class equals: result class].
 )
-"
 
-"
 testAnyAs = (
 	{
 		{ 2. 2. OrderedCollection. Array withAll: #(1 2 3 4) }.
@@ -40,9 +37,7 @@ testAnyAs = (
 			assert: spec second equals: result size;
 			assert: spec third equals: result class].
 )
-"
 
-"
 testAnyStreams = (
 	{
 		{ 2. 2. Array withAll: #(1 2 3 4) }.
@@ -57,7 +52,6 @@ testAnyStreams = (
 			assert: spec second equals: result size;
 			assert: spec third class equals: result class].
 )
-"
 
 testCollectAs = (
 	| classes collection newCollection |
@@ -97,7 +91,6 @@ testDetectIfNone = (
 	self assert: 42 equals:  (nonEmpty detect: [:ea | ea isNumber] ifNone: [42]).
 )
 
-"
 testEmptyOfLiteralCollections = (
 	| literalCollections |
 	literalCollections := Collection withAllSubclasses select:
@@ -111,7 +104,6 @@ testEmptyOfLiteralCollections = (
 			identical: coll empty species
 			description: 'Empty instance of literal collection should be canonical']
 )
-"
 
 testHistogramOf = (
 	| baseCollection collection |

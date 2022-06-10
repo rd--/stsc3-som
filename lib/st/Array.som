@@ -123,6 +123,13 @@ sorted: aSortBlockOrNil = (
 	^self copy sort: aSortBlockOrNil
 )
 
+storeOn: aStream = (
+	"Use the literal form if possible."
+	self shouldBePrintedAsLiteral
+		ifTrue:  [self printAsLiteralOn: aStream]
+		ifFalse: [super storeOn: aStream]
+)
+
 ----------------------------
 
 empty = (

@@ -1044,12 +1044,12 @@ classNew cd =
 arrayNewWithArg :: Int -> Vm Object
 arrayNewWithArg size = arrayFromList (replicate size nilObject)
 
-stringNewWithArg :: SmallInteger -> Vm Object
-stringNewWithArg size = do
+stringOrSymbolNewWithArg :: Symbol -> SmallInteger -> Vm Object
+stringOrSymbolNewWithArg typ size = do
   pc <- vmIncrementProgramCounter
   let vec = vecFromList (replicate size '\0')
   ref <- liftIO (toRef vec)
-  return (Object "String" (DataCharacterArray pc ref))
+  return (Object typ (DataCharacterArray pc ref))
 
 byteArrayNewWithArg :: SmallInteger -> Vm Object
 byteArrayNewWithArg size = do
@@ -1058,6 +1058,7 @@ byteArrayNewWithArg size = do
   ref <- liftIO (toRef vec)
   return (Object "ByteArray" (DataByteArray pc ref))
 
+-- | This isn't correct.  Subclasses should be allowed, Symbol is special cased for now...
 classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm (Maybe Object)
 classNewWithArg cd size =
   if size < 0
@@ -1065,7 +1066,8 @@ classNewWithArg cd size =
   else case St.className cd of
          "Array" -> fmap Just (arrayNewWithArg size)
          "ByteArray" -> fmap Just (byteArrayNewWithArg size)
-         "String" -> fmap Just (stringNewWithArg size)
+         "String" -> fmap Just (stringOrSymbolNewWithArg "String" size)
+         "Symbol" -> fmap Just (stringOrSymbolNewWithArg "Symbol" size)
          _ -> return Nothing
 
 classSuperclassOf :: Object -> Vm Object

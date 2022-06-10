@@ -19,7 +19,7 @@ testHash = (
 		assert: (a hash = a copy hash)
 )
 
-"
+
 testStoreStringEvaluatesToEqualValue = (
 	self assert: 1 -> 2 equals: (Compiler evaluate: (1 -> 2) storeString).
 	self assert: false -> true equals: (Compiler evaluate: (false -> true) storeString).
@@ -27,6 +27,5 @@ testStoreStringEvaluatesToEqualValue = (
 	self assert: #foo -> #+ equals: (Compiler evaluate: (#foo -> #+) storeString).
 	self assert: #+ -> #bar equals: (Compiler evaluate: (#+ -> #bar) storeString).
 )
-"
 
 )

@@ -28,8 +28,6 @@ testAddAll = (
 )
 
 testAddAssociation = (
-	"self run:#testAddAssociation"
-	"self debug:#testAddAssociation"
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 1.
@@ -44,17 +42,12 @@ testAddAssociation = (
 )
 
 testAsSet = (
-	"Non regression test for http://bugs.squeak.org/view.php?id=7258"
 	| aDictionary aSet assoc0 assoc1 |
-	"Create a dictionary"
 	aDictionary := Dictionary new.
-	"Convert it to a Set"
 	aSet := aDictionary asSet.
-	"Add two associations to it"
 	assoc0 := #first -> 0.
 	assoc1 := #first -> 1.
 	aSet add: assoc0 copy; add: assoc1.
-	"Check if the two associations were added (that should happen if they are different)"
 	self
 		assert: (assoc0 copy ~= assoc1) ==> (aSet size > 1)
 		description:
@@ -137,18 +130,6 @@ testAtIfPresentIfAbsentPut = (
 )
 
 testAtNil = (
-	"(self run: #testAtNil)"
-	"nil is a valid key in squeak. In VW nil is not a valid key"
-	"Ansi 1.9 p, 168
-    		5.7.2.5 Message: at: key put: newElement
-    		Synopsis
-    			Store newElement at key in the receiver. Answer newElement.
-    		Definition: <abstractDictionary>
-    		If lookup succeeds for key, then newElement replaces the element previously stored at key.
-    		Otherwise, the newElement is stored at the new key. In either case, subsequent successful
-    		lookups for key will answer newElement.  Answer newElement.
-    		The result is undefined if the key is nil.
-		This clearly indicates that different smalltalks where doing different assumptions."
 	| dict1  |
 	dict1 := Dictionary new.
 	dict1 at: nil put: #none.
@@ -156,8 +137,6 @@ testAtNil = (
 )
 
 testAtPut = (
-	"self run: #testAtPut"
-	"self debug: #testAtPut"
 	| adictionary |
 	adictionary := Dictionary new.
 	adictionary at: #a put: 3.
@@ -170,8 +149,6 @@ testAtPut = (
 )
 
 testAtPutNil = (
-	"self run: #testAtPut"
-	"self debug: #testAtPut"
 	| dict |
 	dict := Dictionary new.
 	dict at: nil put: 1.
@@ -183,7 +160,6 @@ testAtPutNil = (
 )
 
 testCapcityOfNew = (
-	"Test the special cases implemented in HashedCollection class >> #new and #new: using Dictionary as an example because HashedCollection is abstract."
 	| goodPrimes |
 	goodPrimes := HashedCollection goodPrimes.
 	self assert: (goodPrimes includes: Dictionary new capacity).
@@ -194,7 +170,6 @@ testCapcityOfNew = (
 )
 
 testCollect = (
-	"Ensure that Dictionary>>collect: answers a dictionary not something else"
 	| dict expected result |
 	dict := Dictionary newFromPairs:{
 		#first.		1.
@@ -238,7 +213,6 @@ testComma = (
 )
 
 testDictionaryConcatenation = (
-	"self run: #testDictionaryConcatenation"
 	| dict1 dict2 dict3 |
 	dict1 := Dictionary new.
 	dict1 at: #a put: 'Nicolas' ; at: #b put: 'Damien'.
@@ -251,7 +225,6 @@ testDictionaryConcatenation = (
 )
 
 testIncludesAssociation = (
-	"self run:#testIncludesAssociation"
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 1.
@@ -261,8 +234,6 @@ testIncludesAssociation = (
 )
 
 testIncludesAssociationNoValue = (
-	"self run:#testIncludesAssociationNoValue"
-	"self debug:#testIncludesAssociationNoValue"
 	| dict a1 a3 |
 	a1 := Association key: #Italie.
 	a3 := Association key: #France value: 'Paris'.
@@ -278,8 +249,6 @@ testIncludesAssociationNoValue = (
 )
 
 testIncludesKey = (
-	"self run:#testIncludesKey"
-	"self debug:#testIncludesKey"
 	| dict a1 a2 a3 |
 	a1 := Association key: 'Italie'.
 	a2 := Association new.
@@ -296,22 +265,17 @@ testIncludesKey = (
 )
 
 testKeyAtValue = (
-	"self run: #testKeyAtValue"
-	"self debug: #testKeyAtValue"
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 1.
 	dict at: #b put: 2.
 	dict at: #c put: 1.
 	self assert: (dict keyAtValue: 2) = #b.
-	"which ever is answered depends on hashing, and hashing is improved in Spur."
 	self assert: ((dict keyAtValue: 1) = #a or: [(dict keyAtValue: 1) = #c]).
-	"ugly may be a bug, why not have a set #a and #c?  cuz that would be keys at value."
 	self should: [dict keyAtValue: 0] raise: Error
 )
 
 testKeys = (
-	"self run:#testKeys "
 	| a1 a2  dict |
 	a1 := Association key: 'France' value: 'Paris'.
 	a2 := Association key: 'Italie' value: 'Rome'.
@@ -324,8 +288,6 @@ testKeys = (
 )
 
 testKeysDo = (
-	"self run: #testKeysDo"
-	"self debug: #testKeysDo"
 	| dict res |
 	dict := Dictionary new.
 	dict at: #a put: 33.
@@ -336,9 +298,6 @@ testKeysDo = (
 )
 
 testNewFromIsolation = (
-	"self run:#testNewFromIsolation"
-	"self debug:#testNewFromIsolation"
-
 	| dict1 dict2 |
 	dict1 := Dictionary new.
 	dict1 at: #one put: 'foo'; at: #two put: 0@0.
@@ -350,10 +309,9 @@ testNewFromIsolation = (
 )
 
 testNilHashCollision = (
-	"Ensures that fixCollisionsFrom: does the right thing in the presence of a nil key"
 	| dict key |
 	dict := Dictionary new.
-	key := nil hash. "any key with same hash as nil"
+	key := nil hash.
 	dict at: key hash put: 1.
 	dict at: nil put: 2.
 	self assert: (dict includesKey: nil).
@@ -362,7 +320,6 @@ testNilHashCollision = (
 )
 
 testOccurrencesOf = (
-	"self run:#testOccurrencesOf"
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 1.
@@ -376,8 +333,6 @@ testOccurrencesOf = (
 )
 
 testPseudoVariablesAreValidKeys = (
-	"(self run: #testPseudoVariablesAreValidKeys)"
-	"true and false are valid keys"
 	| dict1  |
 	dict1 := Dictionary new.
 	dict1 at: true put: #true.
@@ -387,7 +342,6 @@ testPseudoVariablesAreValidKeys = (
 )
 
 testReject = (
-	"Ensure that Dictionary>>reject: answers a dictionary not something else"
 	| dict expected result |
 	dict := Dictionary newFromPairs:{
 		#first.		1.
@@ -405,7 +359,6 @@ testReject = (
 )
 
 testRemoveAll = (
-	"Allows one to remove all elements of a collection"
 	| dict1 dict2 s2 |
 	dict1 := Dictionary new.
 	dict1 at: #a put:1 ; at: #b put: 2.
@@ -417,7 +370,6 @@ testRemoveAll = (
 )
 
 testRemoveKey = (
-	"self run:#testRemoveKey "
 	| dict |
 	dict := Dictionary new.
 	dict at: #a put: 1.
@@ -430,7 +382,6 @@ testRemoveKey = (
 )
 
 testSelect = (
-	"Ensure that Dictionary>>select: answers a dictionary not something else"
 	| dict expected result |
 	dict := Dictionary newFromPairs:{
 		#first.		1.
@@ -447,13 +398,11 @@ testSelect = (
 	}.
 	self assert: result = expected.
 	result at: #first put: 0.
-	self assert: (dict at: #first) = 1 "No side effects"
+	self assert: (dict at: #first) = 1
 
 )
 
 testValues = (
-	"self run:#testValues "
-
 	| a1 a2 a3 dict |
 	a1 := Association key: 'France' value: 'Paris'.
 	a2 := Association key: 'Italie' value: 'Rome'.

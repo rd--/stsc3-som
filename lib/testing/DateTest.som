@@ -100,8 +100,7 @@ testConvertingFromIso8601 = (
 )
 
 testDateAndTimeNow = (
-	"Not a great test: could falsely fail if midnight come in between the two executions and doesnt catch time errors"
-	"self assert: Date dateAndTimeNow first  = Date today"
+	self assert: Date dateAndTimeNow first  = Date today
 )
 
 testDayMonthYearDo = (
@@ -173,12 +172,10 @@ testGeneralInquiries = (
 	indices := shuffled collect: [ :m | Date dayOfWeek: m ].
 	names := indices collect: [ :i | Date nameOfDay: i ].
 	self assert: names = shuffled.
-"
 	now  := Date dateAndTimeNow.
 	self
 		assert: now size = 2;
 		assert: now first = Date today.
-"
 	self assert: (Date firstWeekdayOfMonth: #June year: 1973) = 6.
 	self
 		assert: (Date leapYear: 1973) = 0;
@@ -347,7 +344,6 @@ testSubtractDays = (
 )
 
 testTomorrow = (
-	"Not a great test: could falsely fail if midnight come in between the two executions and doesnt catch many errors"
 	self assert: Date tomorrow  > Date today
 )
 
@@ -359,7 +355,6 @@ testWeekday = (
 )
 
 testYesterday = (
-	"Not a great test:  doesnt catch many errors"
 	self assert: Date yesterday  < Date today
 )
 

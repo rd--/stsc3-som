@@ -1,17 +1,14 @@
 ComplexTest = ClassTestCase (
 
 testAbs = (
-	"self run: #testAbs"
-	"self debug: #testAbs"
 	| c |
 	c := (6 - 6 i).
 	self assert: c abs  = 72 sqrt.
 )
 
 testAdding = (
-	"self run: #testAdding"
 	| c |
-	c := (5 - 6 i) + (-5 + 8 i).     "Complex with Complex"
+	c := (5 - 6 i) + (-5 + 8 i).
 	self assert: (c =  (0 + 2 i)).
 )
 
@@ -98,8 +95,6 @@ testArcTan = (
 )
 
 testArg = (
-	"self run: #testArg"
-	"self debug: #testArg"
 	| c |
 	c := (0 + 5 i) .
 	self assert: c arg  = (Float pi/ 2).
@@ -110,8 +105,6 @@ testBug1 = (
 )
 
 testComplexCollection = (
-	"self run: #testComplexCollection"
-	"self debug: #testComplexCollection"
 	| array array2 |
 	array := Array with: 1 + 2i with:  3 + 4i with: 5 + 6i.
 	array2 := 2 * array.
@@ -127,8 +120,6 @@ testConjugated = (
 )
 
 testConversion = (
-	"self run: #testConversion"
-	"self debug: #testConversion"
 	self assert: ((1 + 2i) + 1) =  (2 + 2 i).
 	self assert: (1 + (1 + 2i)) =  (2 + 2 i).
 	self assert: ((1 + 2i) + 1.0) =  (2.0 + 2 i).
@@ -181,7 +172,6 @@ testCosh2MinusSinh2 = (
 )
 
 testCreation = (
-	"self run: #testCreation"
 	| c |
 	c := 5 i.
 	self assert: (c real = 0).
@@ -201,8 +191,6 @@ testCreation = (
 )
 
 testDivision1 = (
-	"self run: #testDivision1"
-	"self debug: #testDivision1"
 	| c1 c2 quotient |
 	c1 := 2.0e252 + 3.0e70 i.
 	c2 := c1.
@@ -214,14 +202,11 @@ testDivision1 = (
 )
 
 testEquality = (
-	"self run: #testEquality"
-	"self debug: #testEquality"
 	self assert: 0i = 0.
 	self assert: (2 - 5i) = ((1 -4 i) + (1 - 1i)).
 	self assert: 0i isZero.
 	self deny: (1 + 3 i) = 1.
 	self deny: (1 + 3 i) = (1 + 2i).
-"Some more stuff"
 	self deny: (1 i) = nil.
 	self deny: nil = (1 i).
 	self deny: (1 i) = #(1 2 3).
@@ -237,7 +222,7 @@ testEquality = (
 )
 
 testLn = (
-	self assert: (Float e + 0 i) ln = Float e ln "See Bug 1815 on Mantis"
+	self assert: (Float e + 0 i) ln = Float e ln
 )
 
 testMultiplyByI = (
@@ -247,8 +232,6 @@ testMultiplyByI = (
 )
 
 testNegated = (
-	"self run: #testNegated"
-	"self debug: #testNegated"
 	| c |
 	c := (2 + 5 i) .
 	self assert: c negated  = (-2 - 5i).
@@ -271,24 +254,18 @@ testRaisedToInteger = (
 )
 
 testReciprocal = (
-	"self run: #testReciprocal"
-	"self debug: #testReciprocal"
 	| c |
 	c := (2 + 5 i).
 	self assert: c reciprocal  = ((2/29) - (5/29)i).
 )
 
 testReciprocalError = (
-	"self run: #testReciprocalError"
-	"self debug: #testReciprocalError"
 	| c |
 	c := (0 i).
 	self should: [c reciprocal] raise: ZeroDivide
 )
 
 testSecureDivision1 = (
-	"self run: #testSecureDivision1"
-	"self debug: #testSecureDivision1"
 	| c1 c2 quotient |
 	c1 := 2.0e252 + 3.0e70 i.
 	c2 := c1.
@@ -297,8 +274,6 @@ testSecureDivision1 = (
 )
 
 testSecureDivision2 = (
-	"self run: #testSecureDivision2"
-	"self debug: #testSecureDivision2"
 	| c1 c2 quotient |
  	c1 := 2.0e252 + 3.0e70 i.
  	c2 := c1.
@@ -335,8 +310,6 @@ testSinh = (
 )
 
 testSquared = (
-	"self run: #testSquared"
-	"self debug: #testSquared"
 	| c c2 |
 	c := (6 - 6 i).
 	c2 := (c squared).

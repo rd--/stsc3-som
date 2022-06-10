@@ -492,6 +492,12 @@ printElementsOn: aStream separatedBy: delimiter = (
 		separatedBy: [aStream nextPutAll: delimiter asString].
 )
 
+printOn: aStream = (
+	"Append a sequence of characters that identify the receiver to aStream."
+	self printNameOn: aStream.
+	self printElementsOn: aStream
+)
+
 printNameOn: aStream = (
 	super printOn: aStream
 )
@@ -578,6 +584,24 @@ sorted = (
 sorted: aSortBlockOrNil = (
 	"Return a new sequenceable collection which contains the same elements as self but its elements are sorted by aSortBlockOrNil. The block should take two arguments and return true if the first element should preceed the second one. If aSortBlock is nil then <= is used for comparison."
 	^self asArray sort: aSortBlockOrNil
+)
+
+storeOn: aStream = (
+	"Refer to the comment in Object|storeOn:."
+	| noneYet |
+	aStream nextPutAll: '(('.
+	aStream nextPutAll: self class name.
+	aStream nextPutAll: ' new)'.
+	noneYet := true.
+	self do:
+		[:each |
+		noneYet
+			ifTrue: [noneYet := false]
+			ifFalse: [aStream nextPut: $;].
+		aStream nextPutAll: ' add: '.
+		aStream store: each].
+	noneYet ifFalse: [aStream nextPutAll: '; yourself'].
+	aStream nextPut: $)
 )
 
 sqrt = (

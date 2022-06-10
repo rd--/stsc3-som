@@ -70,4 +70,10 @@ unwindTo: aContext = (
 	].
 )
 
+----
+
+initializedInstance = (
+	^ nil
+)
+
 )

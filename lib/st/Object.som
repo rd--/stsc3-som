@@ -358,12 +358,13 @@ ifNotNil: notNilBlock ifNil: nilBlock = (
 	^ notNilBlock cull: self
 )
 
-initialize = (
-)
-
 in: aBlock = (
 	"Evaluate the given block with the receiver as its argument."
 	^ aBlock value: self
+)
+
+initialize = (
+	"Subclasses should redefine this method to perform initializations on instance creation"
 )
 
 inspect = (
@@ -720,5 +721,18 @@ yourself = (
 ----
 
 | DependentsFields |
+
+initialize = (
+	DependentsFields ifNil:[self initializeDependentsFields].
+)
+
+initializeDependentsFields = (
+	DependentsFields := IdentityDictionary new: 4.
+)
+
+initializedInstance = (
+	self isAbstract ifTrue: [^nil].
+	^ self new
+)
 
 )

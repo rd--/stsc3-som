@@ -598,6 +598,7 @@ startingAt: keyStart match: text startingAt: textStart = (
 )
 
 storeOn: aStream = (
+	"Print inside string quotes, doubling embedded quotes."
 	| x |
 	aStream nextPut: $'.
 	1 to: self size do:

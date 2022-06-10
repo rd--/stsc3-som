@@ -47,13 +47,13 @@ allSuperclasses = (
 basicNew = (
 	<primitive: 70>
 	self isVariable ifTrue: [^self basicNew: 0].
-	self primitiveFailed
+	self primitiveFailed: 'Behaviour.basicNew'
 )
 
 basicNew: sizeRequested = (
 	<primitive: 71>
 	self isVariable ifFalse: [self error: self asString , ' cannot have variable sized instances'].
-	self primitiveFailed
+	self primitiveFailed: 'Behaviour.basicNew:'
 )
 
 canUnderstand: selector = (
@@ -185,6 +185,13 @@ superclass = (
 	self primitiveFailed
 )
 
+withAllSubclasses = (
+	"Answer a Collection of the receiver, the receiver's descendent's, and the
+	receiver's descendent's subclasses."
+	^ self allSubclasses addFirst: self;
+		 yourself
+)
+
 withAllSuperclasses = (
 	"Answer an OrderedCollection of the receiver and the receiver's
 	superclasses. The first element is the receiver,
@@ -200,6 +207,14 @@ withAllSuperclassesDo: aBlock = (
 	aBlock value: self.
 	self superclass == nil
 		ifFalse: [self superclass withAllSuperclassesDo: aBlock]
+)
+
+----
+
+initializedInstance = (
+	"Answer an instance of the receiver which in some sense is initialized.
+	Return nil if the receiver is reluctant for some reason to return such a thing"
+	^ self new
 )
 
 )

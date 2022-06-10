@@ -61,4 +61,10 @@ xor: aBoolean = (
 	^aBoolean value ifTrue: [ false ] ifFalse: [ true ]
 )
 
+----
+
+initializedInstance = (
+	^ nil
+)
+
 )
