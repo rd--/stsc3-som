@@ -1,8 +1,43 @@
 SmallIntegerTest = ClassTestCase (
 
+testBasicNew = (
+	self should: [SmallInteger basicNew] raise: Error.
+)
+
+testDecimalDigitLength = (
+	| x length random |
+	x := 1.
+	length := 1.
+	[ length <= 19 ] whileTrue: [
+		self
+			assert: length equals: x decimalDigitLength;
+			assert: (length - 1 max: 1) equals: (x - 1) decimalDigitLength.
+		x := x * 10.
+		length := length + 1 ].
+	#(
+		0 1
+		4 1
+		12 2
+		123 3
+		1234 4
+		56789 5
+		657483 6
+		6571483 7
+		65174383 8
+		625744831 9
+		1000001111 10
+	), {
+		SmallInteger maxVal. Smalltalk wordSize = 8 ifTrue: [ 19 ] ifFalse: [ 10 ]
+	} groupsDo: [ :input :expectedOutput |
+		self assert: expectedOutput equals: input decimalDigitLength ].
+	100 timesRepeat: [
+		x := SmallInteger maxVal atRandom.
+		self assert: x asString size equals: x decimalDigitLength ]
+)
+
 testDivide = (
 	self assert: 2 / 1 = 2.
-	"self assert: (3 / 2) isFraction."
+	self assert: (3 / 2) isFraction.
 	self assert: 4 / 2 = 2.
 )
 
@@ -16,6 +51,10 @@ testEven = (
 	self assert: (2 even).
 	self assert: (-2 even).
 	self assert: (0 even).
+)
+
+testNew = (
+	self should: [SmallInteger new] raise: Error.
 )
 
 testOdd = (

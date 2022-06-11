@@ -47,7 +47,7 @@ testDirectionToggling = (
 
 testPropertyWithOddCollator = (
 	| function |
-	function := #y collatedBy: [:a :b | "sort the odd first" (b bitAnd: 1) - (a bitAnd: 1)].
+	function := #y collatedBy: [:a :b | (b bitAnd: 1) - (a bitAnd: 1)].
 	self assert: (function value: 0@1 value: 0@0).
 	self assert: (function value: 0@1 value: 0@2).
 	self deny: (function value: 0@2 value: 0@1).

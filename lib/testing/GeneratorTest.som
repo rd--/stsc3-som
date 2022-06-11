@@ -1,7 +1,6 @@
 GeneratorTest = ClassTestCase (
 
 fibonacciSequence = (
-	"Yields an infinite sequence of fibonacci numbers."
 	^ Generator on: [ :generator |
 		| a b |
 		a := 0. b := 1.
@@ -11,7 +10,6 @@ fibonacciSequence = (
 )
 
 numbersBetween: aStartInteger and: aStopInteger = (
-	"Yields the numbers between aStartInteger and aStopInteger."
 	^ Generator on: [ :generator |
 		aStartInteger to: aStopInteger
 			do: [ :value | generator yield: value ] ]
@@ -71,7 +69,6 @@ testEnsure = (
 "
 
 testErrorPropagation = (
-	"Ensure that errors in the generator block are properly propagated"
 	| generator |
 	generator := Generator on: [ :g | g yield: 1. g error: 'yo'].
 	"self should:[generator next] raise: Error."

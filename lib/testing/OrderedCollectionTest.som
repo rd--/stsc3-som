@@ -19,7 +19,6 @@ testAddAfter = (
 )
 
 testAddAfterIndex = (
-	"self run: #testAddAfterIndex"
 	| l |
 	l := #(1 2 3 4) asOrderedCollection.
 	l add: 77 afterIndex: 0.
@@ -30,17 +29,12 @@ testAddAfterIndex = (
 	self assert: (l =  #(77 1 88 2 3 4 99) asOrderedCollection).
 	self should:[l add: 666 afterIndex: -1] raise: Error.
 	self should:[l add: 666 afterIndex: l size+1] raise: Error.
-	"Now make room by removing first two and last two elements,
-	and see if the illegal bounds test still fails"
 	(l first: 2) , (l last: 2) reversed do: [:e | l remove: e].
 	self should: [l add: 666 afterIndex: -1] raise: Error.
 	self should: [l add: 666 afterIndex: l size+1] raise: Error.
 )
 
 testAddAll = (
-	"Allows one to add each element of an orderedCollection at the end of another
-	orderedCollection "
-	"self run:#testAddAll"
 	| c1 c2 |
 	c1 := #(1 2 3 4 ) asOrderedCollection.
 	c2 := #(5 6 7 8 9 ) asOrderedCollection.
@@ -49,9 +43,6 @@ testAddAll = (
 )
 
 testAddAllFirst = (
-	"Allows one to add each element of an orderedCollection at the beginning of another
-	orderedCollection "
-	"self run:#testAddAllFirst"
 	| c1 c2 |
 	c1 := #(1 2 3 4 ) asOrderedCollection.
 	c2 := #(5 6 7 8 9 ) asOrderedCollection.
@@ -60,9 +51,6 @@ testAddAllFirst = (
 )
 
 testAddAllFirstUnlessAlreadyPresent = (
-	"Allows one to add each element of an orderedCollection at the beginning of
-	another orderedCollection preserving the order but no duplicate element"
-	"self run:#testAddAllFirstUnlessAlreadyPresent"
 	| c1 c2 c3 |
 	c1 := #(1 2 3 4 ) asOrderedCollection.
 	c2 := #(5 6 7 8 9 ) asOrderedCollection.
@@ -75,9 +63,6 @@ testAddAllFirstUnlessAlreadyPresent = (
 )
 
 testAddAllLast = (
-	"Allows one to add each element of an orderedCollection at the beginning of another
-	orderedCollection "
-	"self run:#testAddAllLast"
 	| c1 c2 |
 	c1 := #(1 2 3 4 ) asOrderedCollection.
 	c2 := #(5 6 7 8 9 ) asOrderedCollection.
@@ -108,7 +93,6 @@ testAddBeforeAndRemove = (
 )
 
 testAddBeforeIndex = (
-	"self run: #testAddBeforeIndex"
 	| l |
 	l := #(1 2 3 4) asOrderedCollection.
 	l add: 77 beforeIndex: 1.
@@ -119,8 +103,6 @@ testAddBeforeIndex = (
 	self assert: (l =  #(77 1 88 2 3 4 99) asOrderedCollection).
 	self should:[l add: 666 beforeIndex: 0] raise: Error.
 	self should:[l add: 666 beforeIndex: l size+2] raise: Error.
-	"Now make room by removing first two and last two elements,
-	and see if the illegal bounds test still fails"
 	(l first: 2) , (l last: 2) reversed do: [:e | l remove: e].
 	self should:[l add: 666 beforeIndex: 0] raise: Error.
 	self should:[l add: 666 beforeIndex: l size+2] raise: Error.
@@ -187,8 +169,6 @@ testAt = (
 )
 
 testAtIfAbsentPut = (
-	"Allows one to add an element at an index if no element exist at this index"
-	"self run:#testAtIfAbsentPut"
 	| c |
 	c := #(1 2 3 4 ) asOrderedCollection.
 	c at: 2 ifAbsentPut: [5].
@@ -200,8 +180,6 @@ testAtIfAbsentPut = (
 )
 
 testAtPut = (
-	"Allows one to replace an element but not at an off range index"
-	"self run:#testAtPut"
 	| c |
 	c := #(1 2 3 4 ) asOrderedCollection.
 	c at: 2 put: 5.
@@ -213,8 +191,6 @@ testAtPut = (
 )
 
 testCapacity = (
-	"Allows one to check the current capacity of an Ordered collection"
-	"self run:#testCapacity"
 	| c1 c2 c3 |
 	c1 := #(1 2 ) asOrderedCollection.
 	self assert: (c1 capacity =  2).
@@ -226,8 +202,6 @@ testCapacity = (
 )
 
 testCollect = (
-	"Allows one to collect some element of a collection into another collection"
-	"self run: #testCollect"
 	| c1 c2 res |
 	c1 := #(-1 2 -3 4) asOrderedCollection.
 	c2 := #(1 2 3 4) asOrderedCollection.
@@ -236,8 +210,6 @@ testCollect = (
 )
 
 testCollectFromTo = (
-	"Allows one to collect some element of a collection into another collection between a first index and an end index for the collect"
-	"self run: #testCollectFromTo"
 	| c1 res |
 	c1 := #(-1 2 -3 4 -5 6 -7 8) asOrderedCollection.
 	res := c1 collect: [:each | each abs] from: 1 to: 3.
@@ -247,8 +219,6 @@ testCollectFromTo = (
 )
 
 testCopyEmpty = (
-	"Allows one to create a copy of the receiver that contains no elements"
-	"self run:#testCopyEmpty"
 	| c1 c2 |
 	c1 := #(1 2 3 4 ) asOrderedCollection.
 	c2 := c1 copyEmpty.
@@ -256,8 +226,6 @@ testCopyEmpty = (
 )
 
 testCopyFromTo = (
-	"Allows one to create a copy of the receiver that contains elements from position start to end"
-	"self run: #testCopyFromTo"
 	| c1 c2 c3 |
 	c1 := #(1 2 3 4) asOrderedCollection.
 	c2 := (c1 copyFrom: 1 to: 2).
@@ -269,8 +237,6 @@ testCopyFromTo = (
 )
 
 testCopyReplaceFromToWith = (
-	"Allows one to create a copy from the receiver which elements between start and end of the 	receiver being replace by 	element of the collection after with:"
-	"self run:#testCopyReplaceFromToWith"
 	| c1 c2 c3 c4 |
 	c1 := #(1 2 3 4) asOrderedCollection.
 	c2 := #(5 6 7 8 9) asOrderedCollection.
@@ -282,8 +248,6 @@ testCopyReplaceFromToWith = (
 )
 
 testCopyWith = (
-	"Allows one to create a copy of the receiver that contains the new element at the end"
-	"self run: #testCopyWith"
 	| c1 |
 	c1 := #(1 2 3 4) asOrderedCollection.
 	c1 := c1 copyWith: 6.
@@ -291,30 +255,23 @@ testCopyWith = (
 )
 
 testForceToPadding = (
-	"This is a non regression bug for http://bugs.squeak.org/view.php?id=7296"
 	| c1 c2 paddingElement |
-	"source collection"
 	c1 := #(5 3 7 2 ) asOrderedCollection.
 	paddingElement := nil.
-	"force length to longer"
 	c2 := c1 forceTo: 10 paddingWith: paddingElement.
 	self assert: (c1 ~~ c2) description: 'forceTo:paddingWith: should modify a copy'.
 	self assert: (c2 size = 10).
 	self assert: (c2 copyFrom: 1 to: c1 size) = c1.
 	self assert: ((c1 size + 1 to: c2 size) allSatisfy: [:i | (c2 at: i) = paddingElement]).
-	"force length to shorter"
 	c2 := c1 forceTo: 3 paddingWith: paddingElement.
 	self assert: (c1 ~~ c2) description: 'forceTo:paddingWith: should modify a copy'.
 	self assert: (c2 size = 3).
 	self assert: (c2 copyFrom: 1 to: 3) = (c1 copyFrom: 1 to: 3).
-	"SAME TEST BUT PADDING AT START FOLLOWING..."
-	"force length to longer"
 	c2 := c1 forceTo: 10 paddingStartWith: paddingElement.
 	self assert: (c1 ~~ c2) description: 'forceTo:paddingStartWith: should modify a copy'.
 	self assert: (c2 size = 10).
 	self assert: (c2 copyFrom: c2 size - c1 size + 1 to: c2 size) = c1.
 	self assert: ((1 to: c2 size - c1 size) allSatisfy: [:i | (c2 at: i) = paddingElement]).
-	"force length to shorter"
 	c2 := c1 forceTo: 3 paddingStartWith: paddingElement.
 	self assert: (c1 ~~ c2) description: 'forceTo:paddingStartWith: should modify a copy'.
 	self assert: (c2 size = 3).
@@ -351,7 +308,6 @@ testOverlappingPairsCollect = (
 )
 
 testRemoveAll = (
-	"Allows one to remove all elements of a collection"
 	| c1 c2 s2 |
 	c1 := #(2 3 4 6) asOrderedCollection.
 	c1 addAll: (1 to: 200).
@@ -371,8 +327,6 @@ testRemoveAllSuchThat = (
 )
 
 testRemoveAt = (
-	"Allows one to remove an element from a collection at an index"
-	"self run:#testRemoveAt"
 	| c1 |
 	c1 := #(2 3 4 6) asOrderedCollection.
 	c1 removeAt: 2.
@@ -382,8 +336,6 @@ testRemoveAt = (
 )
 
 testRemoveFirst = (
-	"Allows one to remove n element of a collection at the first"
-	"self run:#testRemoveFirst"
 	| c1 |
 	c1 := #(2 3 4 6) asOrderedCollection.
 	c1 removeFirst: 1.
@@ -394,9 +346,6 @@ testRemoveFirst = (
 )
 
 testRemoveIfAbsent = (
-	"Allows one to remove an element from a collection and to copy it in another collection."
-	"If the element isn't in the first collection, the second collection copy the element after ifAbsent"
-	"self run:#testRemoveIfAbsent"
 	| c1 c2 |
 	c1 := #(1 2 3 4) asOrderedCollection.
 	c2 := OrderedCollection new.
@@ -409,8 +358,6 @@ testRemoveIfAbsent = (
 )
 
 testRemoveLast = (
-	"Allows one to remove n element of a collection at the end"
-	"self run:#testRemoveLast"
 	| c1 |
 	c1 := #(2 3 4 6) asOrderedCollection.
 	c1 removeLast: 1.
@@ -429,8 +376,6 @@ testReversed = (
 )
 
 testSize = (
-	"Allows one to check the size of an Ordered collection"
-	"self run:#testSize"
 	| c1 c2 |
 	c1 := #(1 2 ) asOrderedCollection.
 	self assert: (c1 size =  2).
@@ -446,8 +391,6 @@ testStreamContents = (
 )
 
 testWithCollect = (
-	"Allows one to collect some element of two collections into another collection with element corresponding to the condition in the blocks"
-	"self run: #testWithCollect"
 	| c1 c2 res |
 	c1 := #(-1 2 -3 4 -5 6 -7 8) asOrderedCollection.
 	c2 := #(-9 10 -11 12 -13 14 -15 16) asOrderedCollection.

@@ -24,7 +24,6 @@ testBeforeIfAbsent = (
 )
 
 testBeginsWith = (
-	"We can''t test SequenceableCollection directly. However, we can test a sampling of its descendants."
 	| la prefix oc |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
@@ -50,7 +49,6 @@ testBeginsWith = (
 )
 
 testBeginsWithAnyOf = (
-	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
 	| la oc |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
@@ -80,7 +78,6 @@ testCopyWith = (
 )
 
 testEndsWith = (
-	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
 	| la oc suffix |
 	la := #(1 2 3 4 5 6).
 	oc := OrderedCollection new.
@@ -103,7 +100,6 @@ testEndsWith = (
 )
 
 testEndsWithAnyOf = (
-	"We can't test SequenceableCollection directly. However, we can test a sampling of its descendants."
 	| la oc |
 	la := #(6 5 4 3 2 1).
 	oc := OrderedCollection new.
@@ -116,7 +112,6 @@ testEndsWithAnyOf = (
 	self deny: (la endsWithAnyOf: #((42))).
 )
 
-"
 testEvalStrings = (
 	| table |
 	table := #('String new' 'Array with: 3 with: $a' '15+4').
@@ -128,7 +123,6 @@ testEvalStrings = (
 	self assert: table second second = $a.
 	self assert: table third = 19.
 )
-"
 
 testFlatten = (
 	self
@@ -141,14 +135,12 @@ testFlatten = (
 		description: '#flatten of one-level collection-nesting should be the same as its concatenation'.
 )
 
-"
 testFlatten2 = (
 	self
 		assert: {3 .4 .2 .4 .'hi' .'ho'}
 		equals: {3 .4 .{2 .4 .{'hi'} .'ho'} readStream } flatten
 		description: '#flatten should deeply inline all collection-like elements and work with streams'.
 )
-"
 
 testFlattened = (
 	| randomCollection |
@@ -160,7 +152,6 @@ testFlattened = (
 		assert: #( (1 2) (3 4) ) concatenation
 		equals: #( (1 2) (3 4) ) flattened
 		description: '#flattened of one-level collection-nesting should be the same as its concatenation'.
-	" ensure that #flatten and #flattened are compatible "
 	randomCollection := OrderedCollection new: 10.
 	10 timesRepeat: [randomCollection add: 50 atRandom].
 	self
@@ -199,7 +190,7 @@ testGroupsDo = (
 
 testIndexOfSubCollectionStartingAt = (
 	| c |
-	c := 'abcdefg' asArray. "NB. As of Collections-topa.733, String already permitted out-of-bounds start indexes, so we are careful here to select the SequenceableCollection implementation by using asArray."
+	c := 'abcdefg' asArray.
 	self assert: (c indexOfSubCollection: 'cde' startingAt: 400) = 0.
 	self assert: (c indexOfSubCollection: 'cde' startingAt: 4) = 0.
 	self assert: (c indexOfSubCollection: 'cde' startingAt: 1) = 3.
@@ -230,7 +221,6 @@ testPreMultiplyByArray = (
 	self should:[array preMultiplyByArray: 2] raise:Error.
 )
 
-"
 testPreMultiplyByMatrix = (
 	| array matrix result|
 	array := #(1 2 3 4 5).
@@ -244,16 +234,13 @@ testPreMultiplyByMatrix = (
 	self assert: result first = 55.
 	self assert: result second = 550.
 )
-"
 
-"
 testPreMultiplyByMatrix2 = (
 	| array matrix|
 	array := #(1 2 3 4 5).
 	matrix := Matrix rows:1 columns:4 tabulate: [:row :column | column].
 	self should:[array preMultiplyByMatrix: matrix] raise: Error.
 )
-"
 
 testReplaceFromToWithStartingAt = (
 	| string |
@@ -273,7 +260,6 @@ testSplitAndJoin = (
 )
 
 testSplitBy = (
-	"Tests for  splitBy: and splitBy:do:"
 	self assert: ('a/b' splitBy: '/') = #('a' 'b').
 	self assert: ('a/b/' splitBy: '/') = #('a' 'b' '').
 	self assert: ('/a/b/' splitBy: '/') = #('' 'a' 'b' '').

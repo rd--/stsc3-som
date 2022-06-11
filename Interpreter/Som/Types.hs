@@ -380,11 +380,11 @@ objectInspect = objectExamine (return "VmState") objectInspect -- todo: recursio
 objectInspectAndPrint :: MonadIO m => Object -> m Object
 objectInspectAndPrint rcv = objectInspect rcv >>= liftIO . putStrLn >> return rcv
 
-blockObjectArity :: Object -> Int
+blockObjectArity :: Object -> Maybe Int
 blockObjectArity obj =
   case obj of
-    Object _ (DataBlockClosure _ _ (Expr.Lambda _ blockArguments _ _)) -> length blockArguments
-    _ -> error "blockObjectArity: not block object?"
+    Object _ (DataBlockClosure _ _ (Expr.Lambda _ blockArguments _ _)) -> Just (length blockArguments)
+    _ -> Nothing
 
 -- * VmState
 
@@ -770,6 +770,12 @@ arrayLiteralElemObject opt e =
 
 isNil :: Object -> Bool
 isNil = (==) nilObject
+
+isBlock :: Object -> Bool
+isBlock = isJust . blockObjectArity
+
+isBlockOfArity :: Int -> Object -> Bool
+isBlockOfArity k = (==) (Just k) . blockObjectArity
 
 -- * Context
 

@@ -89,7 +89,6 @@ testFromSeconds = (
 )
 
 testFromString = (
-	"This should signal an exception in 3.6beta as Time>>fromString: does not exist."
 	self should: [ timestamp = (TimeStamp fromString: '1-10-2000 11:55:00 am') ]
 )
 
@@ -112,7 +111,6 @@ testMinusSeconds = (
 testMinusSecondsOverMidnight = (
 	self assert: (aTimeStamp minusSeconds: 34 * 60 + 57) dateAndTime
 			= (Array with: '01-01-2004' asDate with: '23:59:59' asTime)
-	"Bug The results are actual results are: #(1 January 2005 11:25:03 pm)"
 )
 
 testPlusDays = (
@@ -144,8 +142,6 @@ testPrinting = (
 )
 
 testReadFromA1 = (
-	"Conversion to and from a string (with implied UTC offset) is equal if
-	and only if the time stamp has zero offset."
 	|ts|
 	ts := TimeStamp current offset: Duration zero. "current as UTC"
 	self assert: (ts = (TimeStamp fromString: ts asString)).

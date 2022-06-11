@@ -1,8 +1,6 @@
 SortedCollectionTest = ClassTestCase (
 
 testAdd = (
-	"self run: #testAdd"
-	"self debug: #testAdd"
 	| collection |
 	collection := #(10 9 8 7 5 4 4 2) asSortedCollection.
 	self assert: collection first = 2.
@@ -17,8 +15,6 @@ testAdd = (
 )
 
 testAddAll = (
-	"self run: #testAddAll"
-	"self debug: #testAddAll"
 	| sorted2 sorted|
 	sorted2 := SortedCollection new.
 	sorted2 add: 'brochet'; add:'truitelle'.
@@ -28,8 +24,6 @@ testAddAll = (
 )
 
 testAddAll2 = (
-	"self run: #testAddAll2"
-	"self debug: #testAddAll2"
 	| sorted2 sorted|
 	sorted2 := SortedCollection new.
 	sorted2 add: 'brochet'; add:'truitelle'.
@@ -42,7 +36,6 @@ testAddAll2 = (
 )
 
 testCollect = (
-	"self run: #testCollect"
 	|result aSortedCollection|
 	result := OrderedCollection new add:true ; add: true ; add: true ; add: false ; add: false; yourself.
 	aSortedCollection := (1 to: 5) asSortedCollection.
@@ -50,8 +43,6 @@ testCollect = (
 )
 
 testCopy = (
-	"self run: #testCopy"
-	"self debug: #testCopy"
 	|aSortedCollection copySorted|
 	aSortedCollection := SortedCollection new.
 	aSortedCollection sortBlock: [:a :b | a < b].
@@ -60,24 +51,17 @@ testCopy = (
 	copySorted := aSortedCollection copy.
 	self assert: (copySorted  hasEqualElements: aSortedCollection).
 	self assert: (copySorted  species = aSortedCollection species).
-"
-There is a copying error.  Possibly because OrderedCollection is an St-80 / Squeak hybrid...
 	self assert: (copySorted  sortBlock = aSortedCollection sortBlock).
-"
 	self assert: copySorted first = 'brochet'.
 )
 
 testCreation = (
-	"self run: #testCreation"
-	"self debug: #testCreation"
 	| collection |
 	collection := #(10 9 3 6 1 8 7 5 4 2) asSortedCollection.
 	self assert: collection = (1 to: 10) asSortedCollection.
 )
 
 testEquals = (
-	"self run: #testEquals"
-	"self debug: #testEquals"
 	|aSortedCollection|
 	aSortedCollection := SortedCollection new.
 	aSortedCollection add:'truite' ; add: 'brochet'.
@@ -85,8 +69,6 @@ testEquals = (
 )
 
 testMedian = (
-	"self run: #testMedian"
-	"self debug: #testMedian"
 	|aSortedCollection|
 	aSortedCollection := (1 to: 10) asSortedCollection.
 	self assert: aSortedCollection median=5.
@@ -96,7 +78,6 @@ testMedian = (
 )
 
 testRemoveAll = (
-	"Allows one to remove all elements of a collection"
 	| c1 c2 s2 |
 	c1 := #(10 9 8 7 5 4 4 2) asSortedCollection: [:a :b | a >= b].
 	c2 := c1 copy.
@@ -104,10 +85,8 @@ testRemoveAll = (
 	c1 removeAll.
 	self assert: c1 size = 0.
 	self assert: c2 size = s2 description: 'the copy has not been modified'.
-"
 	c1 add: 13; add: 14.
 	self assert: (c1 first = 14 and: [c1 second = 13])  description: 'the sortBlock has been preserved'.
-"
 )
 
 testReversed = (
@@ -128,7 +107,6 @@ testReversed = (
 )
 
 testShouldPrecede = (
-	"self run: #testShouldPrecede"
 	|aSortedCollection|
 	aSortedCollection := SortedCollection new.
 	self assert: (aSortedCollection should: 'za' precede: 'zb').
@@ -144,7 +122,7 @@ testSort = (
 	| s |
 	s := SortedCollection withAll: #(3 2 1).
 	self assert: s asArray = #(1 2 3).
-	s sort: #>=. "This should change the sortBlock too"
+	s sort: #>=.
 	self assert: s asArray = #(3 2 1).
 	s add: 4.
 	self assert: s asArray = #(4 3 2 1).
@@ -160,8 +138,6 @@ testSort = (
 )
 
 testSortBlock = (
-	"self run: #testSortBlock"
-	"self debug: #testSortBlock"
 	|aSortedCollection|
 	aSortedCollection := SortedCollection new.
 	aSortedCollection sortBlock: [:a :b | a < b].
@@ -174,21 +150,17 @@ testSortBlock = (
 )
 
 testSpeciesLooseSortBlock = (
-	"This is a non regression test for http://bugs.squeak.org/view.php?id=6535"
 	| numbers reverseOrder firstThree |
 	numbers := #(1 2 3 4 5).
 	reverseOrder := SortedCollection sortBlock: [:x :y | x > y].
 	reverseOrder addAll: numbers.
-	"The elements are inverted"
 	self assert: [reverseOrder asArray = #(5 4 3 2 1)].
-	"Copy the first 3 elements"
-	"firstThree := reverseOrder copyFrom: 1 to: 3."
-	"It appears to work"
-	"self assert: [firstThree asArray = #(5 4 3)]."
-	"but we have lost the sort block"
-	"firstThree add: 1."
-	" firstThree is now #(1 5 4 3)! "
-	"self assert: [firstThree asArray = #(5 4 3 1)]" "fails"
+	firstThree := reverseOrder copyFrom: 1 to: 3.
+"
+	self assert: [firstThree asArray = #(5 4 3)].
+	firstThree add: 1.
+	self assert: [firstThree asArray = #(5 4 3 1)]
+"
 )
 
 )

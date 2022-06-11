@@ -417,6 +417,14 @@ threeDigitName = (
 
 ----
 
+basicNew = (
+	self error: 'SmallIntegers can only be created by performing arithmetic'
+)
+
+basicNew: sizeRequested = (
+	self error: 'SmallIntegers can only be created by performing arithmetic'
+)
+
 fromString: aString = (
 	<primitive: -1>
         self primitiveFailed: #fromString:
@@ -430,6 +438,10 @@ maxVal = (
 minVal = (
 	"minBound :: Int"
 	^ -9223372036854775808
+)
+
+new = (
+	self basicNew	"generates an error"
 )
 
 )

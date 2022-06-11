@@ -7,11 +7,6 @@ defaultAction = (
 	self subclassResponsibility
 )
 
-defaultResumeValue = (
-	"Answer the value that by default should be returned if the exception is resumed"
-	^nil
-)
-
 defaultReturnValue = (
 	"Answer the value that by default should be returned if the exception is returned"
 	^nil
@@ -65,7 +60,7 @@ printVerboseOn: aStream = (
 )
 
 receiver = (
-	^ self signalerContext receiver
+	^ nil
 )
 
 return = (
@@ -88,6 +83,11 @@ signal: signalerText = (
 	"Signal the occurrence of an exceptional condition with a specified textual description."
 	self messageText: signalerText.
 	^ self signal
+)
+
+signalerContext = (
+	"Find the first sender of signal(:)"
+	^ nil
 )
 
 ----------------------------

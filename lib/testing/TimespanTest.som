@@ -4,7 +4,6 @@ TimespanTest = ClassTestCase (
 
 setUp = (
 	| startTime jan01HereSomeWhereElseOnEarth |
-	"100 hours starting noon 22 March 2003 GMT"
 	startTime := DateAndTime year: 2003 month: 03 day: 22 hour: 12 minute: 0 second: 0.
 	timespan := (Timespan starting: startTime duration: (Duration hours: 100)). "makeUTC"
 	dec31 := (DateAndTime year: 2004 month: 12 day: 31 hour: 0 minute: 0 second: 0).
@@ -50,12 +49,10 @@ testArithmetic = (
 
 testAsDate = (
 	self assert: aTimespan asDate =   jan01 asDate.
-	"MessageNotUnderstood: Date class>>starting:"
 )
 
 testAsDateAndTime = (
 	self assert: aTimespan asDateAndTime =   jan01.
-	"MessageNotUnderstood: Date class>>starting:"
 )
 
 testAsDuration = (
@@ -68,19 +65,14 @@ testAsMonth = (
 
 testAsTime = (
 	self assert: aTimespan asTime =  jan01 asTime
-	"MessageNotUnderstood: Time class>>seconds:nanoSeconds:"
 )
 
-"
 testAsTimeStamp = (
 	self assert: aTimespan asTimeStamp =  ((TimeStamp readFrom: '1-01-2005 0:00 am' readStream) offset: 0 hours).
 )
-"
 
 testAsWeek = (
 	self assert: aTimespan asWeek =   jan01 asWeek.
-	"DateAndTime new asWeek
-	 MessageNotUnderstood: Week class>>starting:"
 )
 
 testAsYear = (
@@ -151,22 +143,18 @@ testDayOfWeek = (
 
 testDayOfYear = (
 	self assert: aTimespan  dayOfYear  = 1.
-	"MessageNotUnderstood: UndefinedObject>>year:, Undefined object is Year class"
 )
 
 testDaysInMonth = (
 	self assert: aTimespan  daysInMonth  = 31.
-	"MessageNotUnderstood: Month class>>starting:"
 )
 
 testDaysInYear = (
 	self assert: aTimespan  daysInYear  = 365.
-	"MessageNotUnderstood: UndefinedObject>>starting:  UndefinedObject is Year class"
 )
 
 testDaysLeftInYear = (
 	self assert: aTimespan  daysLeftInYear  = 364.
-	"MessageNotUnderstood: UndefinedObject>>starting:  UndefinedObject is Year class"
 )
 
 testDoWith = (
@@ -194,12 +182,10 @@ testDuration = (
 	self assert: aTimespan duration =  aDay.
 )
 
-"
 testEnd = (
 	self assert: aTimespan end + (Duration  nanoSeconds:1)  =  aDisjointTimespan start.
 	self assert: aTimespan end = (DateAndTime year: 2005 month: 1 day: 7 hour: 23 minute: 59 second: 59 nanoSecond: 999999999 offset: 0 hours)
 )
-"
 
 testEveryDo = (
 	| count duration |
@@ -233,12 +219,6 @@ testIncludesAllOf = (
 testIncludesAnyOf = (
 	self deny: (aTimespan includesAnyOf: (Bag with: dec31)).
 	self assert: (aTimespan includesAnyOf: (Bag with: jan01 with: jan08))
-	"Error is due to bug in Timespan
-includesAnyOf: aCollection "
-	"Answer whether any element of aCollection is included in the receiver"
-	"aCollection do: [ :elem | (self includes: elem) ifTrue: [^ true]].
-Shouldn't this return false if none are included?
-"
 )
 
 testInclusion = (
@@ -250,19 +230,7 @@ testInclusion = (
 	self
 		assert: (timespan includes: t1);
 		assert: (timespan includes: t2);
-		assert: (timespan includes: t3)";
-		deny: (timespan includes: t4).
-	self
-		assert: (timespan includes: (t1 to: t2));
-		assert: (timespan includes: (t1 to: t4));
-		deny: (timespan includes: (Timespan starting: t2 duration: (timespan duration * 2))).
-	self
-		assert: (timespan includesAllOf: { t1. t2. t3 } );
-		deny: (timespan includesAllOf: { t1. t2. t3. t4} ).
-	self
-		assert: (timespan includesAnyOf: { t1. t2. t3 } );
-		deny: (timespan includesAnyOf: { t4 } ).
-"
+		assert: (timespan includes: t3)
 )
 
 testIntersectionWithDisjoint = (
@@ -295,8 +263,6 @@ testIntersectionWithSeparate = (
 )
 
 testIsLeapYear = (
-	"self assert: anOverlappingTimespan isLeapYear."
-	"not sure why this fails"
 	self deny: aTimespan isLeapYear
 )
 
@@ -310,13 +276,11 @@ testLessThan = (
 )
 
 testMinusADateAndTime = (
-	"It appears that subtracting a date from a Timespan gives you a duration = to the difference between the start of the timespan and the date "
 	self assert: aTimespan - dec31 =  aDay.
 	self assert: aDisjointTimespan - jan01 =  aWeek.
 )
 
 testMinusADuration = (
-	"It appears that subtracting a duration from a Timespan gives you a Timespan shifted by the duration"
 	self assert: aTimespan - aDay =  anOverlappingTimespan.
 	self assert: aDisjointTimespan - aWeek =  aTimespan.
 )

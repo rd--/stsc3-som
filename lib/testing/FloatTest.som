@@ -27,7 +27,7 @@ testArSinh = (
 
 testArTanh = (
 	self assert: 0.0 arTanh = 0.0.
-	"self deny: 1 arTanh isFinite."
+	self deny: 1 arTanh isFinite.
 	self assert: (0.5 arTanh negated closeTo: 0.5 negated arTanh).
 	self assert: (0.5 arTanh tanh closeTo: 0.5).
 	self assert: (-0.5 arTanh tanh closeTo: -0.5).
@@ -53,10 +53,8 @@ testCeiling = (
 )
 
 testCharacterization = (
-	"Test the relative precision"
 	self assert: Float one + Float epsilon > Float one.
 	self assert: Float one + Float epsilon = Float one successor.
-	"Test sucessors and predecessors"
 	self assert: Float one predecessor successor = Float one.
 	self assert: Float one successor predecessor = Float one.
 	self assert: Float one negated predecessor successor = Float one negated.
@@ -107,10 +105,8 @@ testComparisonWhenPrimitiveFails = (
 )
 
 testCopy = (
-	"Elementary tests"
 	self assert: 2.0 copy = 2.0.
 	self assert: -0.5 copy = -0.5.
-	"Are exceptional Floats preserved by the copy ?"
 	self assert: Float nan copy isNaN.
 	self assert: Float infinity copy = Float infinity.
 	self assert: Float negativeInfinity copy = Float negativeInfinity.
@@ -128,7 +124,6 @@ testCosh = (
 )
 
 testDegreeCos = (
-	"Following tests use approximate equality, because cosine are generally evaluated using inexact Floating point arithmetic"
 	self assert: (45.0 degreeCos squared - 0.5) abs <= Float epsilon.
 	self assert: (60.0 degreeCos - 0.5) abs <= Float epsilon.
 	self assert: (120.0 degreeCos + 0.5) abs <= Float epsilon.
@@ -143,7 +138,6 @@ testDegreeCosForExceptionalValues = (
 )
 
 testDegreeSin = (
-	"Following tests use approximate equality, because sine are generally evaluated using inexact Floating point arithmetic"
 	self assert: (45.0 degreeSin squared - 0.5) abs <= Float epsilon.
 	self assert: (30.0 degreeSin - 0.5) abs <= Float epsilon.
 	self assert: (-30.0 degreeSin + 0.5) abs <= Float epsilon.
@@ -170,28 +164,22 @@ testFloor = (
 )
 
 testInfinity1 = (
-   "FloatTest new testInfinity1"
 	| i1  i2 |
 	i1 := 10000 exp.
 	i2 := 1000000000 exp.
 	self assert: i1 isInfinite & i2 isInfinite & (i1 = i2).
-	"All infinities are equal. (This is a very substantial difference to NaN's, which are never equal."
 )
 
 testInfinity2 = (
-   "FloatTest new testInfinity2"
 	| i1  i2 |
 	i1 := 10000 exp.
 	i2 := 1000000000 exp.
-	i2 := 0 - i2. " this is entirely ok. You can compute with infinite values."
+	i2 := 0 - i2.
 	self assert: i1 isInfinite & i2 isInfinite & i1 positive & i2 negative.
 	self deny: i1 = i2.
-  	"All infinities are signed. Negative infinity is not equal to Infinity"
 )
 
 testInfinityCloseTo = (
-	"This is a test for bug http://bugs.squeak.org/view.php?id=6729:"
- 	"FloatTest new testInfinityCloseTo"
 	self deny: (Float infinity closeTo: Float negativeInfinity).
 	self deny: (Float negativeInfinity closeTo: Float infinity).
 )
@@ -203,28 +191,24 @@ testIsZero = (
 )
 
 testNaN1 = (
-   	"FloatTest new testNaN1"
-	"self assert: Float nan == Float nan."
+"
+	self assert: Float nan == Float nan.
+"
 	self deny: Float nan = Float nan.
-	"a NaN is not equal to itself."
 )
 
 testNaN3 = (
-   "FloatTest new testNaN3"
    	| set item identitySet |
 	set := Set new.
 	set add: (item := Float nan).
 	self deny: (set includes: item).
-	"as a NaN is not equal to itself, it can not be retrieved from a set"
 )
 
 testNaN4 = (
-   	"FloatTest new testNaN4"
 	| dict |
 	dict := Dictionary new.
 	dict at: Float nan put: #NaN.
 	self deny: (dict includes: Float nan).
-	"as a NaN is not equal to itself, it can not be retrieved when it is used as a dictionary key"
 )
 
 testNaNisLiteral = (
@@ -246,14 +230,11 @@ testRounded = (
 	self assert: -1.9 rounded = -2.
 	self assert: -2.0 rounded = -2.
 	self assert: -2.1 rounded = -2.
-	"In case of tie, round to upper magnitude"
 	self assert: 1.5 rounded = 2.
 	self assert: -1.5 rounded = -2.
 )
 
 testSetOfFloat = (
-	"Classical disagreement between hash and = did lead to a bug.
-	This is a non regression test from http://bugs.squeak.org/view.php?id=3360"
 	| size3 size4 |
 	size3 := (Set new: 3) add: 3; add: 3.0; size.
 	size4 := (Set new: 4) add: 3; add: 3.0; size.
@@ -261,19 +242,15 @@ testSetOfFloat = (
 )
 
 testSign = (
-	"Set up"
 	| negatives positives strictNegatives strictPositives zero |
 	strictPositives := {2. 2.5. Float infinity}.
 	strictNegatives := {-3. -3.25. Float negativeInfinity}.
 	zero := 0.0.
 	positives := strictPositives copyWith: zero.
 	negatives := strictNegatives.
-	"The sign of non zeros"
 	strictPositives do: [:aPositive | self assert: aPositive sign = 1].
 	strictNegatives do: [:aNegative | self assert: aNegative sign = -1].
-	"The sign of zeros"
 	self assert: zero sign = 0.
-	"Test the copy sign functions"
 	positives do: [:aPositiveSign |
 		positives do: [:aPositive |
 			self assert: (aPositive sign: aPositiveSign) = aPositive].
@@ -297,7 +274,6 @@ testSinh = (
 )
 
 testStringAsNumber = (
-	"This covers parsing in Number>>readFrom:"
 	| aFloat |
 	aFloat := '-12.3456' asNumber.
 	self assert: -12.3456 = aFloat.
@@ -320,7 +296,6 @@ testTruncated = (
 )
 
 testZero1 = (
-	"FloatTest new testZero1"
 	self assert: Float negativeZero = 0 asFloat.
 )
 

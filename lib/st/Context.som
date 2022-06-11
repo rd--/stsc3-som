@@ -1,41 +1,16 @@
 Context = InstructionStream (
 
-findNextHandlerContextStarting = (
-	"Return the next handler marked context, returning nil if there is none.  Search starts with self and proceeds up to nil."
-	<primitive: 197>
-	| ctx |
-	ctx := self.
-		[ctx isHandlerContext ifTrue:[^ctx].
-		(ctx := ctx sender) == nil ] whileFalse.
-	^nil
-)
-
-findNextUnwindContextUpTo: aContext = (
-	"Return the next unwind marked above the receiver, returning nil if there is none.  Search proceeds up to but not including aContext."
-	<primitive: 195>
-	| ctx |
-	ctx := self.
-	[(ctx := ctx sender) == nil or: [ctx == aContext]] whileFalse:
-		[ ctx isUnwindContext ifTrue: [^ctx]].
-	^nil
-)
-
 isContext = (
 	^true
 )
 
-isHandlerContext  = (
-	"is this context for method that is marked?"
-	^self method primitive = 199
+longStack = (
+	^'not implemented'
 )
 
 method = (
 	<primitive: -1>
 	self primitiveFailed
-)
-
-nextHandlerContext = (
-	^ self sender findNextHandlerContextStarting
 )
 
 selector = (
@@ -46,28 +21,6 @@ selector = (
 sender = (
 	<primitive: -1>
 	^ nil
-)
-
-swapSender: coroutine = (
-	"Replace the receiver's sender with coroutine and answer the receiver's
-	previous sender. For use in coroutining."
-	| oldSender |
-	self error: 'swapSender:'.
-	oldSender := sender.
-	sender := coroutine.
-	^oldSender
-)
-
-unwindTo: aContext = (
-	| ctx unwindBlock |
-	self error: 'unwindTo:'.
-	ctx := self.
-	[(ctx := ctx findNextUnwindContextUpTo: aContext) isNil] whileFalse: [
-		(ctx tempAt: 2) ifNil:[
-			ctx tempAt: 2 put: true.
-			unwindBlock := ctx tempAt: 1.
-			unwindBlock value]
-	].
 )
 
 ----

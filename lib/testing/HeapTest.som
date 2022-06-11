@@ -2,9 +2,7 @@ HeapTest = ClassTestCase (
 
 test1 = (
 	| data |
-	"The first element of each array is the sort value, and the second will be updated by the heap with the index of the element within the heap."
 	data :=  (1 to: 8) collect: [:i | {i*2. 0}].
-	"Repeat with different data ordering."
 	5 timesRepeat: [ | h |
 		h := Heap new sortBlock: [:e1 :e2 | e1 first < e2 first].
 		h indexUpdateBlock: [:array :index | array at: 2 put: index].
@@ -168,7 +166,6 @@ testRemove = (
 	self should: [heap removeAt: 2] raise: Error.
 )
 
-"
 testSort = (
 	self testSortUsing: Heap new.
 	{
@@ -208,7 +205,7 @@ testSortWithIndexUpdateBlock = (
 			and: [ heap isValidHeap
 			and: [ heap do: [ :each | self assert: (heap at: each second) == each ] ] ] ].
 	validateHeap value.
-	1000 timesRepeat: [
+	100 timesRepeat: [
 		heap add: { Random next. nil }.
 		validateHeap value ].
 	self deny: (heap asArray isSortedBy: heap sortBlock).
@@ -216,6 +213,5 @@ testSortWithIndexUpdateBlock = (
 	validateHeap value.
 	self assert: (heap asArray isSortedBy: heap sortBlock)
 )
-"
 
 )

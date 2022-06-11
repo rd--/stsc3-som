@@ -27,7 +27,6 @@ testIsBinaryReturnsTrueForOperatorLikeSymbols = (
 )
 
 testNumArgs2 = (
-    "TODO: need to be extended to support shrinking and for selectors like #+ "
 	self assert: (#test numArgs: 0) = #test.
 	self assert: (#test numArgs: 1) = #test:.
 	self assert: (#test numArgs: 2) = #test:with:.

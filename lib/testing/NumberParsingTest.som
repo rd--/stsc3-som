@@ -1,7 +1,6 @@
 NumberParsingTest = ClassTestCase (
 
 testFloatFromStreamAsNumber = (
-	"This covers parsing in Number>>readFrom:"
 	| rs aFloat |
 	rs := '-12.3456' readStream.
 	aFloat := Number readFrom: rs.
@@ -40,7 +39,6 @@ testFloatFromStreamAsNumber = (
 )
 
 testFloatFromStreamWithExponent = (
-	"This covers parsing in Number>>readFrom:"
 	| rs aFloat |
 	rs := '1.0e-14' readStream.
 	aFloat := Number readFrom: rs.
@@ -58,7 +56,7 @@ testFloatFromStreamWithExponent = (
 	aFloat := Number readFrom: rs.
 	self assert: 1.0e14 = aFloat.
 	self assert: rs upToEnd = 'e10'.
-	rs := '1.0e+14e' readStream. "Plus sign is parseable too"
+	rs := '1.0e+14e' readStream.
 	aFloat := Number readFrom: rs.
 	self assert: 1.0e14 = aFloat.
 	self assert: rs upToEnd = 'e'.
@@ -69,7 +67,6 @@ testFloatFromStreamWithExponent = (
 )
 
 testFloatFromStringAsNumber = (
-	"This covers parsing in Number>>readFrom:"
 	| aFloat |
 	aFloat := '-12.3456' asNumber.
 	self assert: -12.3456 = aFloat.
@@ -88,7 +85,6 @@ testFloatFromStringAsNumber = (
 )
 
 testFloatFromStringWithExponent = (
-	"This covers parsing in Number>>readFrom:"
 	| aFloat |
 	aFloat := '1.0e-14' asNumber.
 	self assert: 1.0e-14 = aFloat.
@@ -98,18 +94,16 @@ testFloatFromStringWithExponent = (
 	self assert: 1.0e-14 = aFloat.
 	aFloat := '1.0e14e' asNumber.
 	self assert: 1.0e14 = aFloat.
-	aFloat := '1.0e+14e' asNumber. "Plus sign is parseable too"
+	aFloat := '1.0e+14e' asNumber.
 	self assert: 1.0e14 = aFloat.
 )
 
 testFloatReadWithImplicitLeadingZero = (
-	"Test support for implicit leading zeroes when reading numbers from Strings."
 	self should: [-0.22 = '-.22' asNumber].
 	self should: [0.22 = '.22' asNumber].
 )
 
 testIntegerFromString = (
-	"This covers parsing in Number>>readFrom:"
 	#(
 		('123'  123)
 		('-123'  -123)
@@ -129,7 +123,6 @@ testIntegerFromString = (
 )
 
 testIntegerReadFrom = (
-	"Ensure remaining characters in a stream are not lost when parsing an integer."
 	#(
 "
 		('13r96 has a radix specification'  123 ' has a radix specification')
@@ -157,10 +150,8 @@ testIntegerReadFrom = (
 )
 
 testNegativeZero = (
-	"This test ensure that -0.0 will produce a negativeZero"
 	| negativeZero |
 	negativeZero := Number readFrom: '-0.0' readStream.
-	"If it is a negative zero, it must behave like a negative zero... IEEE 754 tells how it should behave"
 "
 	self deny: (negativeZero at: 1) = 0 description: 'In IEEE 754, a negative zero has its sign bit set to 1'.
 "

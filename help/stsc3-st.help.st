@@ -117,11 +117,11 @@ SetWithNilTest suite run printOn: Transcript
 SmallIntegerTest testSelectors do: [ :each | Transcript show: each; cr. SmallIntegerTest run: each ]
 SmallIntegerTest suite run printOn: Transcript
 
-SortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. SortFunctionTest run: each ]
-SortFunctionTest suite run printOn: Transcript
-
 SortedCollectionTest testSelectors do: [ :each | Transcript show: each; cr. SortedCollectionTest run: each ]
 SortedCollectionTest suite run printOn: Transcript
+
+SortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. SortFunctionTest run: each ]
+SortFunctionTest suite run printOn: Transcript
 
 SpaceshipOperatorTest testSelectors do: [ :each | Transcript show: each; cr. SpaceshipOperatorTest run: each ]
 SpaceshipOperatorTest suite run printOn: Transcript
@@ -159,7 +159,7 @@ WriteStreamTest suite run printOn: Transcript
 YearTest testSelectors do: [ :each | Transcript show: each; cr. YearTest run: each ]
 YearTest suite run printOn: Transcript
 
-.Smalltalk globalKeys
+Smalltalk globalKeys
 Smalltalk globals
 Smalltalk utcTime
 Smalltalk utcOffset

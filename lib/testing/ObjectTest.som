@@ -50,7 +50,7 @@ testBecomeForward = (
 "
 
 testHaltIf = (
-	self should: [self haltIf: true] raise: Halt.
+	self should: [1 haltIf: true] raise: Halt.
 	self haltIf: false.
 	self should: [self haltIf: [true]] raise: Halt.
 	self haltIf: [false].

@@ -133,6 +133,14 @@ truncated = (
 
 ----
 
+basicNew = (
+	self error: 'SmallFloat64s can only be created by performing arithmetic'
+)
+
+basicNew: anInteger = (
+	^self basicNew
+)
+
 fromIEEE32Bit: anInteger = (
 	<primitive: -1>
 	^ self primitiveFailed

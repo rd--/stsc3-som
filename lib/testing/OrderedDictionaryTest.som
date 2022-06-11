@@ -82,7 +82,6 @@ testIsSorted = (
 )
 
 testOrder = (
-	"We use integers as keys to match hash values."
 	| dict |
 	dict := Dictionary new.
 	1 to: 10 do: [:ea |
@@ -101,14 +100,12 @@ testOrder = (
 )
 
 testOverflow = (
-	"Check whether repeated additions of the same alternating keys causes an error."
 	self
 		shouldnt: [20 timesRepeat: [sut at: 1 put: nil; removeKey: 1]]
 		raise: Error.
 )
 
 testOverwriteValue = (
-	"First write wins wrt. order in the dictionary."
 	1 to: 5 do: [:ea |
 		sut at: ea put: nil].
 	sut at: 3 put: nil.

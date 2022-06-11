@@ -1,4 +1,5 @@
 DurationTest = ClassTestCase (
+
 | aDuration |
 
 classToBeTested = (
@@ -28,11 +29,9 @@ testAgo = (
 	self assert: (0 seconds ago - DateAndTime now < 1 second).
 )
 
-"
 testAsDelay = (
 	self deny: aDuration asDelay =   aDuration.
 )
-"
 
 testAsDuration = (
 	self assert: aDuration asDuration =  aDuration
@@ -91,7 +90,6 @@ testDivide = (
 	self assert: aDuration / (1/2) = (Duration days: 2 hours: 4 minutes: 6 seconds: 8 nanoSeconds: 10).
 )
 
-"
 testFromNow = (
 	self assert: ((10 seconds fromNow) > DateAndTime now).
 	self assert: ((0 days fromNow - DateAndTime now) < 1 second).
@@ -100,7 +98,6 @@ testFromNow = (
 	self assert: ((250 hours fromNow) > DateAndTime now).
 	self assert: ((-50 minutes fromNow) < DateAndTime now).
 )
-"
 
 testFromString = (
 	self assert: aDuration = (Duration fromString: '1:02:03:04.000000005').
@@ -109,7 +106,6 @@ testFromString = (
 testHash = (
 	self assert: aDuration hash =    	(Duration days: 1 hours: 2 minutes: 3 seconds: 4 nanoSeconds: 5) hash.
 	self assert: aDuration hash =     93789
-	"must be a more meaningful test?"
 )
 
 testHours = (
@@ -120,7 +116,6 @@ testHours = (
 testIntegerDivision = (
 	self assert: aDuration // aDuration = 1.
 	self assert: aDuration // 2 =  (aDuration / 2).
-	"is there ever a case where this is not true, since precision is always to the nano second?"
 )
 
 testLessThan = (
@@ -130,7 +125,6 @@ testLessThan = (
 
 testMilliSeconds = (
 	#(
-		"argument (milliseconds)	seconds	nanoseconds"
 		(5							0			5000000)
 		(1005						1			5000000)
 		(-5							0			-5000000)
@@ -206,19 +200,14 @@ testNew = (
 )
 
 testNormalizeNanoSeconds = (
-	"Subtraction of two DateAndTime values may result in a request to
-	create a Duration with negative nanoseconds and positive seconds.
-	The resulting Duration should be normalized, otherwise its printString
-	will be invalid."
 	| d t1 t2 |
 	t1 := '2004-01-07T11:55:01+00:00' asDateAndTime.
 	t2 := '2004-01-07T11:55:00.9+00:00' asDateAndTime.
-	d := t1 - t2. "100 millisecond difference"
+	d := t1 - t2.
 	self assert: d nanoSeconds > 0.
 	self assert: d seconds = 0.
 	self assert: d nanoSeconds = 100000000.
 	self assert: d asString = '0:00:00:00.100'.
-	"Verify that other combinations produces reasonable printString values"
 	self assert: (Duration seconds: 1 nanoSeconds: 100000000) printString = '0:00:00:01.100'.
 	self assert: (Duration seconds: -1 nanoSeconds: -100000000) printString = '-0:00:00:01.100'.
 	self assert: (Duration seconds: 1 nanoSeconds: -100000000) printString = '0:00:00:00.900'.
@@ -276,7 +265,6 @@ testReadFrom = (
 )
 
 testReadFromTrailingDigits = (
-	"http://bugs.squeak.org/view.php?id=6764"
 	self should:  (Duration readFrom: '0:00:00:00.001 ' readStream) nanoSeconds = 1000000.
 )
 
@@ -302,13 +290,11 @@ testSeconds = (
 
 testSecondsNanoSeconds = (
 	self assert: (Duration   seconds: 0 nanoSeconds: 5)  = (Duration  nanoSeconds: 5).
-	"not sure I should include in sunit since its Private "
 	self assert: (aDuration seconds: 0 nanoSeconds: 1) = (Duration nanoSeconds: 1).
 )
 
 testStoreOn = (
      self assert: (aDuration storeOn: (WriteStream on:'')) asString ='1:02:03:04.000000005'.
-     "storeOn: returns a duration (self) not a stream"
 )
 
 testTicks = (
@@ -325,14 +311,12 @@ testTruncateTo = (
 	               (Duration days: 1 hours: 2 minutes: 3 seconds: 0 nanoSeconds: 0).
 )
 
-"
 testWait = (
 	| start |
 	start := DateAndTime new.
 	(Duration milliSeconds: 500) wait.
 	self assert: DateAndTime now - start > (Duration milliSeconds: 500).
 )
-"
 
 testWeeks = (
 	self assert: (Duration  weeks: 1) days= 7.
@@ -341,6 +325,5 @@ testWeeks = (
 testZero = (
 	self assert: (Duration zero) = (Duration seconds: 0).
 )
-
 
 )

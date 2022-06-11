@@ -20,7 +20,6 @@ testIfNil = (
 	object := Object new.
 	self should: [ nil ifNil: [ self halt ] ] raise: Halt.
 	self assert: (nil ifNil: [ object ]) == object.
-	"Now the same without inlining."
 	block := [ self halt ].
 	self should: [ nil ifNil: block ] raise: Halt.
 	block := [ object ].
@@ -34,7 +33,6 @@ testIfNilIfNotNil = (
 	self should: [ nil ifNil: [ self halt ] ifNotNil: [ :o | self error ] ] raise: Halt.
 	self assert: (nil ifNil: [ object ] ifNotNil: [ 1 ]) == object.
 	self assert: (nil ifNil: [ object ] ifNotNil: [ :o | 1 ]) == object.
-	"Now the same without inlining."
 	block := [ self halt ].
 	self should: [ nil ifNil: block ifNotNil: [ self error ] ] raise: Halt.
 	self should: [ nil ifNil: block ifNotNil: [ :o | self error ] ] raise: Halt.
@@ -50,7 +48,6 @@ testIfNotNil = (
 	self shouldnt: [ nil ifNotNil: [ :object | self halt ] ] raise: Halt.
 	self assert: (nil ifNotNil: [ 1 ]) == nil.
 	self assert: (nil ifNotNil: [ :o | 1 ]) == nil.
-	"Now the same without inlining."
 	block := [ self halt ].
 	self shouldnt: [ nil ifNotNil: block ] raise: Halt.
 	block := [ :object | self halt ].
@@ -68,7 +65,6 @@ testIfNotNilIfNil = (
 	self should: [ nil ifNotNil: [ :o | self error] ifNil: [ self halt ] ] raise: Halt.
 	self assert: (nil ifNotNil: [ 1 ] ifNil: [ object ]) == object.
 	self assert: (nil ifNotNil: [ :o | 1 ] ifNil: [ object ]) == object.
-	"Now the same without inlining."
 	block := [ self error ].
 	self should: [ nil ifNotNil: block ifNil: [ self halt ] ] raise: Halt.
 	block := [ :o | self error].
@@ -111,13 +107,13 @@ testShallowCopy = (
 	self assert: (nil shallowCopy = nil).
 )
 
-"
 testStoreOn = (
 	| string |
 	string := String streamContents: [:stream | nil storeOn: stream].
 	self assert: ((Compiler evaluate: string) = nil).
 )
 
+"
 testVeryDeepCopyWith = (
 	self assert: ((nil veryDeepCopyWith: nil) = nil).
 )

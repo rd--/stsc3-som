@@ -7,29 +7,17 @@ testBenchFib = (
 )
 
 testBitLogic = (
-	"This little suite of tests is designed to verify correct operation of most
-	of Squeak's bit manipulation code, including two's complement
-	representation of negative values.  It was written in a hurry and
-	is probably lacking several important checks."
-	"self run: #testBitLogic"
 	| n |
-	"Shift 1 bit left then right and test for 1"
 	1 to: 60 do: [:i | self assert: ((1 bitShift: i) bitShift: i negated) = 1].
-	"Shift -1 left then right and test for 1"
 	1 to: 60 do: [:i | self assert: ((-1 bitShift: i) bitShift: i negated) = -1].
-	"And a single bit with -1 and test for same value"
 	1 to: 60 do: [:i | self assert: ((1 bitShift: i) bitAnd: -1) = (1 bitShift: i)].
-	"Verify that (n bitAnd: n negated) = n for single bits"
 	1 to: 60 do: [:i |  n := 1 bitShift: i. self assert: (n bitAnd: n negated) = n].
-	"Verify that n negated = (n complemented + 1) for single bits"
 	1 to: 60 do: [:i |
 					n := 1 bitShift: i.
 					self assert: n negated = ((n bitXor: -1) + 1)].
-	"Verify that (n + n complemented) = -1 for single bits"
 	1 to: 60 do: [:i |
 					n := 1 bitShift: i.
 					self assert: (n + (n bitXor: -1)) = -1].
-	"Verify that n negated = (n complemented +1) for single bits"
 	1 to: 60 do: [:i |
 					n := 1 bitShift: i.
 					self assert: n negated = ((n bitXor: -1) + 1)].
@@ -37,7 +25,6 @@ testBitLogic = (
 )
 
 testCrossSumBase = (
-	"self run: #testCrossSumBase"
 	self assert: (
 		((-20 to: 20) collect: [:each | each crossSumBase: 10]) asArray =
 		#(2 10 9 8 7 6 5 4 3 2 1 9 8 7 6 5 4 3 2 1 0 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 10 2)).
@@ -47,14 +34,11 @@ testCrossSumBase = (
 )
 
 testDegreeCos = (
-	"self run: #testDegreeCos"
-	"Following tests use approximate equality, because cosine are generally evaluated using inexact Floating point arithmetic"
 	self assert: (45 degreeCos squared - (1/2)) abs <= Float epsilon.
 	self assert: (60 degreeCos - (1/2)) abs <= Float epsilon.
 	self assert: (120 degreeCos + (1/2)) abs <= Float epsilon.
 	-360 to: 360 do: [:i |
 		self assert: (i degreeCos closeTo: i degreesToRadians cos)].
-	"Following tests use strict equality which is a requested property of degreeCos"
 	-10 to: 10 do: [:k |
 		self assert: (k*360 + 90) degreeCos = 0.
 		self assert: (k*360 - 90) degreeCos = 0.
@@ -63,14 +47,11 @@ testDegreeCos = (
 )
 
 testDegreeSin = (
-	"self run: #testDegreeSin"
-	"Following tests use approximate equality, because sine are generally evaluated using inexact Floating point arithmetic"
 	self assert: (45 degreeSin squared - (1/2)) abs <= Float epsilon.
 	self assert: (30 degreeSin - (1/2)) abs <= Float epsilon.
 	self assert: (-30 degreeSin + (1/2)) abs <= Float epsilon.
 	-360 to: 360 do: [:i |
 		self assert: (i degreeSin closeTo: i degreesToRadians sin)].
-	"Following tests use strict equality which is a requested property of degreeSin"
 	-10 to: 10 do: [:k |
 		self assert: (k*360 + 90) degreeSin - 1 = 0.
 		self assert: (k*360 - 90) degreeSin + 1= 0.
@@ -126,9 +107,7 @@ testIsPowerOfTwo = (
 
 testIsPrime = (
 	| i |
-	"Not primes:"
 	#(-1000000000000000 -100 -5 -3 -2 -1 0 1) do: [ :each | self deny: each isPrime ].
-	"Check all non-negative integers up to one thousand."
 	i := 0.
 	Integer primesUpTo: 1000 do: [ :prime |
 		[ i < prime ] whileTrue: [
@@ -139,22 +118,17 @@ testIsPrime = (
 	[ i <= 1000 ] whileTrue: [
 		self deny: i isPrime.
 		i := i + 1 ].
-	"The following tests should return 'true'"
 	#(17 78901 104729 15485863 2038074743) do: [ :each |
 		self assert: each isPrime ].
-	"The following tests should return 'false' (first 5 are Carmichael numbers)"
 	#(561 2821 6601 10585 15841 256) do: [ :each |
 		self deny: each isPrime ].
 )
 
 testIsProbablyPrime = (
-	"Not primes:"
 	#(-100 -5 -3 -2 -1 0 1) do: [ :each |
 		self deny: each isProbablyPrime ].
-	"The following tests should return 'true'"
 	#(17 78901 104729 15485863 2038074743) do: [ :each |
 		self assert: each isProbablyPrime ].
-	"The following tests should return 'false' (first 5 are Carmichael integers)"
 	#(561 2821 6601 10585 15841 256) do: [ :each |
 		self deny: each isProbablyPrime ].
 )
@@ -183,10 +157,8 @@ testPrimesUpTo = (
 	| primes nn|
 	primes := Integer primesUpTo: 100.
 	self assert: primes = #(2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97).
-	"upTo: semantics means 'non-inclusive'"
 	primes := Integer primesUpTo: 5.
 	self assert: primes = #(2 3).
-	"this test is green for nn>25000, see #testLargePrimesUpTo"
 	nn := 5.
 	self deny: (Integer primesUpTo: nn) last = nn.
 	self assert: (Integer primesUpTo: nn + 1) last  = nn.
@@ -207,7 +179,6 @@ testQuoRem = (
 )
 
 testReadFrom = (
-	"Ensure remaining characters in a stream are not lost when parsing an integer."
 	#(
 		('12' 12 '')
 		('-350' -350 '')
@@ -248,17 +219,10 @@ testSqrtRem = (
 )
 
 testTwoComplementBitLogicWithCarry = (
-	"This is non regression test for http://bugs.squeak.org/view.php?id=6874"
-	"By property of two complement, following operation is:
-	...111110000 this is -16
-	...111101111 this is -16-1
-	...111100000 this is -32, the result of bitAnd: on two complement
-	This test used to fail with n=31 39 47.... because of bug 6874"
 	self assert: ((2 to: 80) allSatisfy: [:n | ((2 raisedTo: n) negated bitAnd: (2 raisedTo: n) negated - 1) = (2 raisedTo: n + 1) negated]).
 )
 
 testTwoComplementRightShift = (
-	"self run: #testTwoComplementRightShift"
 	| large small |
 	small := 2 << 16.
 	large := 2 << 32.

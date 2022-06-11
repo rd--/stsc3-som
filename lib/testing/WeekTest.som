@@ -15,7 +15,6 @@ selectorsToBeIgnored = (
 )
 
 setUp = (
-	"June 1998, 5th week"
 	super setUp.
 	restoredStartDay := Week startDay.
 	Week startDay: #Sunday.
@@ -44,7 +43,6 @@ testIndexOfDay = (
 	| days |
 	days := #(#Sunday #Monday #Tuesday #Wednesday #Thursday #Friday #Saturday).
 	days withIndexDo: [:item :index | self assert: (Week indexOfDay: item) = index].
-	"This should probably raise an error rather than returning 0."
 	self assert: (Week indexOfDay: 0) = 0.
 	self assert: (Week indexOfDay: 1) = 0.
 	self assert: (Week indexOfDay: 7) = 0.

@@ -26,6 +26,22 @@ doIndexes: block = (
 	1 to: self size do: [:i | block value: i. ]
 )
 
+evalStrings = (
+	   "Allows you to construct literal arrays.
+    #(true false nil '5@6' 'Set new' '''text string''') evalStrings
+    gives an array with true, false, nil, a Point, a Set, and a String
+    instead of just a bunch of Symbols"
+    ^ self collect: [:each | | it |
+        it := each.
+        each == #true ifTrue: [it := true].
+		      each == #false ifTrue: [it := false].
+        each == #nil ifTrue: [it := nil].
+        (each isString and:[each isSymbol not]) ifTrue: [
+			it := Compiler evaluate: each].
+        each class == Array ifTrue: [it := it evalStrings].
+        it]
+)
+
 extendedWith: val = (
 	| result |
 	result := Array new: self size + 1.
@@ -67,6 +83,16 @@ preMultiplyByArray: a = (
 	 so an n element Array is an n*1 Array.  This multiplication is legal iff self size = 1."
 	self size = 1 ifFalse: [self error: 'dimensions do not conform'].
 	^a * self first
+)
+
+preMultiplyByMatrix: m = (
+	"Answer m+*self where m is a Matrix."
+	m columnCount = self size ifFalse: [self error: 'dimensions do not conform'].
+	^(1 to: m rowCount) collect: [:row |
+		| s |
+		s := 0.
+		1 to: self size do: [:k | s := (m at: row at: k) * (self at: k) + s].
+		s]
 )
 
 prependedWith: val = (

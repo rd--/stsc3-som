@@ -11,13 +11,11 @@ testCeiling = (
 )
 
 testDegreeCos = (
-	"self run: #testDegreeCos"
 	-361/3 to: 359/3 do: [:i |
 		self assert: (i degreeCos closeTo: i degreesToRadians cos)].
 )
 
 testDegreeSin = (
-	"self run: #testDegreeSin"
 	-361/3 to: 359/3 do: [:i |
 		self assert: (i degreeSin closeTo: i degreesToRadians sin)].
 )
@@ -32,7 +30,6 @@ testFractionPrinting = (
 	self assert: ((59/61) printString) = '(59/61)'.
 )
 
-"
 testFractionReading = (
 	self assert: (Fraction readFrom: '4') equals: 4.
 	self assert: (Fraction readFrom: '45') equals: 45.
@@ -42,7 +39,6 @@ testFractionReading = (
 	self assert: (Fraction readFrom: '23/17') equals: 23/17.
 	self assert: (Fraction readFrom: '-122/17') equals: -122/17.
 )
-"
 
 testIntegerWholeDivision = (
 	self assert: 4 / (2/3) classAndValueEquals: 6.
@@ -71,7 +67,6 @@ testRounded = (
 	self assert: (6 / 5) rounded = 1.
 	self assert: (-4 / 5) rounded = -1.
 	self assert: (-6 / 5) rounded = -1.
-	"In case of tie, round to upper magnitude"
 	self assert: (3 / 2) rounded = 2.
 	self assert: (-3 / 2) rounded = -2.
 )
@@ -89,8 +84,6 @@ testThatFractionIsReduced = (
 	self assert: (4 / 6) numerator equals: 2.
 	self assert: (4 / 6) denominator equals: 3.
 	self assert: (4 / 2) classAndValueEquals: 2.
-	"Fraction class>>#numerator:denominator: does not automatically reduce the Fraction.
-	Since it does not guaranty above invariant, it must be used with care."
 	self assert: (Fraction numerator: 4 denominator: 6) numerator equals: 4.
 	self assert: (Fraction numerator: 4 denominator: 6) denominator equals: 6.
 	self assert: (Fraction numerator: 4 denominator: 6) reduced numerator equals: 2.

@@ -1,7 +1,7 @@
 WriteStreamTest = ClassTestCase (
 
 testCr = (
-	"self debug: #testCr"
+
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream cr.
@@ -9,7 +9,6 @@ testCr = (
 )
 
 testCrLf = (
-	"self debug: #testCrLf"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream crlf.
@@ -17,7 +16,6 @@ testCrLf = (
 )
 
 testCrTab = (
-	"self debug: #testCrTab"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream crtab.
@@ -25,7 +23,6 @@ testCrTab = (
 )
 
 testCrTabs = (
-	"self debug: #testCrTabs"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream crtab: 2.
@@ -33,14 +30,12 @@ testCrTabs = (
 )
 
 testEnsureASpace = (
-	"self debug: #testEnsureASpace"
 	| stream |
 	stream := WriteStream on: String new.
 	stream nextPutAll: 'this is a test'.
 	stream ensureASpace.
 	stream nextPutAll: 'for WriteStreamTest'.
 	self assert: stream contents = 'this is a test for WriteStreamTest'.
-	"Manually put a space and verify there are no 2 consecutive spaces"
 	stream := WriteStream on: String new.
 	stream nextPutAll: 'this is a test '.
 	stream ensureASpace.
@@ -49,7 +44,6 @@ testEnsureASpace = (
 )
 
 testEnsureASpace2 = (
-	"self debug: #testEnsureASpace2"
 	| stream |
 	stream := WriteStream on: String new.
 	stream ensureASpace.
@@ -57,7 +51,6 @@ testEnsureASpace2 = (
 )
 
 testEnsureNoSpace = (
-	"self debug: #testEnsureNoSpace"
 	| stream |
 	stream := WriteStream with: 'stream'.
 	stream ensureNoSpace.
@@ -71,7 +64,6 @@ testEnsureNoSpace = (
 )
 
 testInstanciationUsingOn = (
-	"self debug: #testInstanciationUsingOn"
 	| stream |
 	stream := WriteStream on: #(1 2) copy.
 	stream nextPut: 3.
@@ -79,7 +71,6 @@ testInstanciationUsingOn = (
 )
 
 testInstanciationUsingWith = (
-	"self debug: #testInstanciationUsingWith"
 	| stream |
 	stream := WriteStream with: #(1 2).
 	stream nextPut: 3.
@@ -101,7 +92,6 @@ testIsEmpty2 = (
 )
 
 testLf = (
-	"self debug: #testLf"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream lf.
@@ -109,7 +99,6 @@ testLf = (
 )
 
 testNextPut = (
-	"self debug: #testNextPut"
 	| stream |
 	stream := WriteStream on: String new.
 	stream
@@ -121,7 +110,6 @@ testNextPut = (
 )
 
 testNextPut2 = (
-	"self debug: #testNextPut2"
 	| stream |
 	stream := WriteStream with: 'test'.
 	stream nextPut: $s.
@@ -129,7 +117,6 @@ testNextPut2 = (
 )
 
 testNextPutAll = (
-	"self debug: #testNextPutAll"
 	| stream |
 	stream := WriteStream on: String new.
 	stream
@@ -138,22 +125,16 @@ testNextPutAll = (
 )
 
 testNextPutAllDifferentFromNextPuts = (
-	"self debug: #testNextPutAllDifferentFromNextPuts"
-
-	"When a stream is created on a collection, it tries to keep using that collection instead of copying. See thread with title 'Very strange bug on Streams and probably compiler' (Feb 14 2007) on the squeak-dev mailing list."
-
-	"nextPutAll verifies the size of the parameter and directly grows the underlying collection of the required size."
 	|string stream|
-
 	string := String withAll: 'z'.
 	stream := WriteStream on: string.
 	stream nextPutAll: 'abc'.
-	self assert: string = 'z'. "string hasn't been modified because #nextPutAll: detects that 'abc' is bigger than the underlying collection. Thus, it starts by creating a new collection and doesn't modify our variable."
+	self assert: string = 'z'.
 
 	string := String withAll: 'z'.
 	stream := WriteStream on: string.
 	stream nextPut: $a; nextPut: $b; nextPut: $c.
-	self assert: string = 'a'. "The first #nextPut: has no problem and replaces $z by $a in the string. Others will detect that string is too small."
+	self assert: string = 'a'.
 )
 
 testOnFromTo = (
@@ -169,8 +150,6 @@ testOnFromTo = (
 )
 
 testPosition = (
-	"self debug: #testPosition"
-
 	| stream |
 	stream := WriteStream with: 'an elephant'.
 	stream position: 6.
@@ -181,7 +160,6 @@ testPosition = (
 )
 
 testReset = (
-	"self debug: #testReset"
 	|stream stream2|
 	stream := WriteStream with: 'a test ' copy.
 	stream reset.
@@ -204,7 +182,6 @@ testSetToEnd = (
 )
 
 testSize = (
-	"self debug: #testSize"
 	| string streamEmpty streamFull |
 	string := 'a string'.
 	streamEmpty := WriteStream on: string.
@@ -218,7 +195,6 @@ testSize = (
 )
 
 testSpace = (
-	"self debug: #testSpace"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream space.
@@ -226,7 +202,6 @@ testSpace = (
 )
 
 testSpaces = (
-	"self debug: #testSpaces"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream space: 3.
@@ -234,26 +209,15 @@ testSpaces = (
 )
 
 testStreamAlwaysUseGivenCollection = (
-	"self debug: #testStreamUseGivenCollection"
-	"When a stream is created on a collection, it tries to keep using that collection instead of copying,
-	even in the case of mutation of the original collection."
-	"To implement this WriteStream>>#nextPut: might want to use becomeForward for replacing the original
-	string with the new widestring object. Another option might be to throw an exception --pre"
 	|string stream|
 	string := String withAll: 'xy'.
 	stream := WriteStream on: string.
 	stream nextPut: $a.
-	stream nextPut: (Character codePoint: 269). "wide."
+	stream nextPut: (Character codePoint: 269).
 	self assert: string = (String with: $a with: (Character codePoint: 269)).
 )
 
 testStreamContentsPositioning = (
-	"String class>>new:streamContents: optimizes performance by answering the
-	originalCollection in the case of a stream positioned to the size of the original
-	collection. Verify that the optimization is performed if and only if the result string
-	is the original stream colllection. In particular, ensure that positioning the stream
-	backwards to the original collection size prooduces the expected result."
-	"(OrderedCollectionTest selector: #testStreamContentsPositioning) debug"
 	| s s1 s2 |
 	s := String new: 10 streamContents: [ :strm |
 			strm nextPutAll: 'XXXXX'.
@@ -271,39 +235,35 @@ testStreamContentsPositioning = (
 		].
 	self assert: 10 equals: s size.
 	self assert: 'XXXXXXXXXX' equals: s.
-	"Verify that the performance optimization in #new:streamContents: is happening"
 	s2 := String new: s size streamContents: [ :strm |
 		s1 := strm originalContents.
 		strm nextPutAll: s ].
 	self assert: s equals: s2.
 	self assert: s equals: s1.
-	self assert: s1 == s2. "answer the original collection in this case only"
+	self assert: s1 == s2.
 	s2 := String new: s size - 1 streamContents: [ :strm |
 		s1 := strm originalContents.
 		strm nextPutAll: s ].
 	self assert: s equals: s2.
-	self deny: s1 == s2. "normal case, contents not matching original stream collection"
+	self deny: s1 == s2.
 	s2 := String new: s size - 2 streamContents: [ :strm |
 		s1 := strm originalContents.
 		strm nextPutAll: s ].
 	self assert: s equals: s2.
-	self deny: s1 == s2. "normal case, contents not matching original stream collection"
+	self deny: s1 == s2.
 
 )
 
 testStreamUseGivenCollection = (
-	"self debug: #testStreamUseGivenCollection"
-	"When a stream is created on a collection, it tries to keep using that collection instead of copying. See thread with title 'Very strange bug on Streams and probably compiler' (Feb 14 2007) on the squeak-dev mailing list."
 	|string stream|
 	string := String withAll: 'erased'.
 	stream := WriteStream on: string.
 	self assert: string = 'erased'.
 	stream nextPutAll: 'test'.
-	self assert: string = 'tested'. "Begining of erased has been replaced by test"
+	self assert: string = 'tested'.
 )
 
 testTab = (
-	"self debug: #testTab"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream tab.
@@ -311,7 +271,6 @@ testTab = (
 )
 
 testTabs = (
-	"self debug: #testTabs"
 	| stream |
 	stream := WriteStream on: 'stream'.
 	stream tab: 3.

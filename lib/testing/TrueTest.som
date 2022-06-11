@@ -31,11 +31,9 @@ testIfTrueIfFalse = (
                       ifFalse: ['falseAlternativeBlock']) = 'trueAlternativeBlock'.
 )
 
-"
 testNew = (
 	self should: [True new] raise: Error.
 )
-"
 
 testNot = (
 	self assert: (true not = false).
@@ -59,11 +57,8 @@ testXor = (
 	self assert: (true xor: false) = true.
 	self assert: (true xor: [true]) = false.
 	self assert: (true xor: [false]) = true.
-	"Verify that boolean with non-boolean raise errors."
-"
 	self should: [true xor: [1]] raise: Error.
 	self should: [true xor: 1] raise: Error.
-"
 )
 
 )

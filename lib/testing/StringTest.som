@@ -51,10 +51,8 @@ testAsSmalltalkComment = (
 		'abc"hello"abc'
 		'abc"'
 		'"abc' ).
-	"check that the result has the same non-quote characters as the original"
 	exampleStrings do: [ :s |
 		self assert: ( (s copyWithout: $") = (s asSmalltalkComment copyWithout: $"))].
-	"finnaly, test for some common kinds of inputs"
 	self assert: ( 'abc' asSmalltalkComment = '"abc"').
 	self assert: ( 'abc"abc' asSmalltalkComment = '"abc""abc"').
 	self assert: ('abc""abc' asSmalltalkComment = '"abc""abc"' ).
@@ -81,7 +79,6 @@ testCapitalized = (
 	empty := ' '.
 	self assert:  lc capitalized = uc.
 	self assert: uc capitalized = uc.
-	"the string gets copied"
 	self deny: uc capitalized == uc.
 	self deny: empty capitalized == empty.
 )
@@ -140,7 +137,6 @@ testFormat = (
 "
 
 testIndexOf = (
-	"test for http://bugs.impara.de/view.php?id=3574"
 	self assert: ((String with: 803 asCharacter with: 811 asCharacter) indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: 812 asCharacter))) = 2.
 	self assert: ('abc' indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: 812 asCharacter))) = 0.
 	self assert: ('abc' indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: $c))) = 3.
@@ -255,16 +251,15 @@ testMatch = (
 )
 
 testSpace = (
-	"self debug: #testSpace"
 	string := String new.
-	self assert: string size = 0. "instead of #isEmpty to be consistent with the following test"
+	self assert: string size = 0.
 	string := String space.
 	self assert: string size = 1.
 	self assert: string = ' '
 )
 
 testSubStrings = (
-	#("receiver (argument expectedResult argument expectedResult ...) ..."
+	#(
 		'' ('' () ($a) () 'a' () 'ab' () 'aaa' ())
 		'a' ('' ('a') ($a) () 'a' () 'ab' () 'aaa' () ($b) ('a') 'b' ('a') 'bc' ('a'))
 		'aa' ('' ('aa') ($a) () 'a' () 'ab' () 'aaa' () ($b) ('aa') 'b' ('aa') 'bc' ('aa'))
@@ -302,7 +297,6 @@ testWithFirstCharacterDownshifted = (
 	empty := ' '.
 	self assert:  uc withFirstCharacterDownshifted = lc.
 	self assert: lc withFirstCharacterDownshifted = lc.
-	"the string gets copied"
 	self deny: lc withFirstCharacterDownshifted == lc.
 	self deny: empty withFirstCharacterDownshifted == empty.
 )

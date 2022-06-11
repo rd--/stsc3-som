@@ -93,7 +93,7 @@ blockHandler :: EvalOpt -> Bool -> ExceptionHandler -> ExceptionOrNonLocalReturn
 blockHandler opt hasReturn (_exc, hnd) exception = do
   case exception of
     SystemError _msg -> Except.throwError exception
-    Exception obj _ -> fmap (\r -> (hasReturn, r)) (evalBlockOfCorrectArity opt hnd [obj] Nothing) -- should match on exception...
+    Exception obj _ -> fmap (\r -> (hasReturn, r)) (if isBlock hnd then evalBlockOfCorrectArity opt hnd [obj] Nothing else vmError "blockHandler: illegal block") -- should match on exception...
     NonLocalReturn _pc _blk _obj -> Except.throwError exception
 
 evalBlockOfCorrectArity :: EvalOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm Object
@@ -113,9 +113,9 @@ evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler = do
 
 evalBlockWithMaybeExceptionHandler :: EvalOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm (Maybe Object)
 evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler =
-  if blockObjectArity blockObject /= length arguments
-  then return Nothing
-  else fmap Just (evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler)
+  if isBlockOfArity (length arguments) blockObject
+  then fmap Just (evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler)
+  else return Nothing
 
 {- | evalBlock works by:
    1. extending the stored (block) context with a context frame

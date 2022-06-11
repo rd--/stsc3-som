@@ -1,7 +1,6 @@
 SetWithNilTest = TestCase (
 
 runSetWithNilTestOf: newSet = (
-	"Run the common tests for the given set class"
 	| class collectClass |
 	class := newSet value class.
 "

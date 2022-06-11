@@ -175,6 +175,11 @@ utcTime = (
 	self primitiveFailed
 )
 
+wordSize = (
+	"64-bit"
+	^8
+)
+
 ----
 
 new = (

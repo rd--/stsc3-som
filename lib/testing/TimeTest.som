@@ -260,7 +260,6 @@ testPrinting = (
 		assert: time hhmm24 = '0402'.
 )
 
-"
 testPrintingNanos = (
 	self
 		assert: timeWithNanos printString = '4:02:47.42 am';
@@ -269,7 +268,6 @@ testPrintingNanos = (
 		assert: timeWithNanos printMinutes = '4:02 am';
 		assert: timeWithNanos hhmm24 = '0402'.
 )
-"
 
 testReadFrom = (
 	| t1 t2 |

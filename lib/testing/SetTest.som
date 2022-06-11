@@ -22,7 +22,6 @@ testAddWithOccurences = (
 )
 
 testAsSet = (
-	"could be moved in Array or Collection"
 	| newFull |
 	newFull := #(#abc 5) asSet.
 	newFull add: 5.
@@ -134,7 +133,6 @@ testRemove = (
 )
 
 testRemoveAll = (
-	"Allows one to remove all elements of a collection"
 	| c1 c2 s2 |
 	c1 := full.
 	c2 := c1 copy.
