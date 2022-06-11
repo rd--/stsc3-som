@@ -4,13 +4,6 @@ TestResult = Object (
 
 classesTested = (
 	^ (self tests collect: [ :testCase | testCase class ]) asSet
-
-)
-
-correctCount = (
-	"depreciated - use #passedCount"
-
-	^self passedCount
 )
 
 defects = (
@@ -25,91 +18,72 @@ diff: aTestResult = (
 	passed1Selectors := self passed collect: [:testCase | testCase selector].
 	failed1Selectors := self failures collect: [:testCase | testCase selector].
 	errors1Selectors := self errors collect: [:testCase | testCase selector].
-
 	passed2Selectors := aTestResult passed collect: [:testCase | testCase selector].
 	failed2Selectors := aTestResult failures collect: [:testCase | testCase selector].
 	errors2Selectors := aTestResult errors collect: [:testCase | testCase selector].
-
 	^ {passed1Selectors copyWithoutAll: passed2Selectors .
 		failed1Selectors copyWithoutAll: failed2Selectors .
 		errors1Selectors copyWithoutAll: errors2Selectors}
-
 )
 
 dispatchResultsIntoHistory = (
-
 	self classesTested do:
 		[ :testClass |
 		self class
 			historyAt: testClass
 			put: (self selectResultsForTestCase: testClass) ].
-
 )
 
 duration = (
-
 	^ self durations inject: 0 into: [:sum :each | sum + (each ifNil: [0])]
-
 )
 
 durations = (
 	^ durations
-
 )
 
 errorCount = (
-
 	^self errors size
 )
 
 errors = (
 	^ self unexpectedErrors
-
 )
 
 expectedDefectCount = (
 	^ self expectedDefects size
-
 )
 
 expectedDefects = (
 	^ (errors, failures asOrderedCollection) select: [:each | each shouldPass not]
-
 )
 
 expectedPassCount = (
 	^ self expectedPasses size
-
 )
 
 expectedPasses = (
 	^ passed select: [:each | each shouldPass]
-
 )
 
 failureCount = (
-
 	^self failures size
 )
 
 failures = (
 	^ self unexpectedFailures, self unexpectedPasses
-
 )
 
 hasErrors = (
-
 	^self errors size > 0
 )
 
 hasFailures = (
-
 	^self failures size > 0
 )
 
 hasPassed = (
 	^ self hasErrors not and: [ self hasFailures not ]
-
 )
 
 initialize = (
@@ -119,17 +93,14 @@ initialize = (
 	errors := OrderedCollection new.
 	timeStamp := nil. "TimeStamp now."
 	durations := Dictionary new.
-
 )
 
 isError: aTestCase = (
-
 	^self errors includes: aTestCase
 )
 
 isErrorFor: class selector: selector = (
 	^ self errors anySatisfy: [:testCase | testCase class == class and: [testCase selector == selector]]
-
 )
 
 isFailure: aTestCase = (
@@ -138,26 +109,21 @@ isFailure: aTestCase = (
 
 isFailureFor: class selector: selector = (
 	^ self failures anySatisfy: [:testCase | testCase class == class and: [testCase selector == selector]]
-
 )
 
 isPassed: aTestCase = (
-
 	^self passed includes: aTestCase
 )
 
 isPassedFor: class selector: selector = (
 	^ self passed anySatisfy: [:testCase | testCase class == class and: [testCase selector == selector]]
-
 )
 
 passed = (
 	^ self expectedPasses, self expectedDefects
-
 )
 
 passedCount = (
-
 	^self passed size
 )
 
@@ -175,16 +141,12 @@ printOn: aStream = (
 
 resetErrors = (
 	"clear the errors list ready to re-run those tests"
-
 	errors := OrderedCollection new
-
 )
 
 resetFailures = (
 	"clear the failures list ready to re-run those tests"
-
 	failures := Set new
-
 )
 
 runCase: aTestCase = (
@@ -194,10 +156,8 @@ runCase: aTestCase = (
 )
 
 runCaseWithExceptions: aTestCase = (
-
 	| testCasePassed timeToRun |
 	testCasePassed := true.
-
 	[timeToRun := [aTestCase runCase] timeToRunWithoutGC]
 		on: self class failure
 		do: [:signal |
@@ -209,31 +169,25 @@ runCaseWithExceptions: aTestCase = (
 				errors add: aTestCase.
 				testCasePassed := false.
 				signal return: false].
-
 	testCasePassed ifTrue: [passed add: aTestCase].
 	self durations at: aTestCase put: timeToRun.
-
 )
 
 runCount = (
 	^ passed size + failures size + errors size
-
 )
 
 selectResultsForTestCase: aTestCaseClass = (
 	| passedSelectors errorsSelectors failuresSelectors testCaseDurations |
-
 	passedSelectors := self passed
 						select: [:testCase | testCase class == aTestCaseClass ] thenCollect: [:testCase | testCase selector].
 	errorsSelectors := self errors
 						select: [:testCase | testCase class == aTestCaseClass ] thenCollect:  [:testCase | testCase selector].
 	failuresSelectors := self failures
 						select: [:testCase | testCase class == aTestCaseClass ] thenCollect:  [:testCase | testCase selector].
-
 	testCaseDurations := Dictionary new.
 	self durations keysAndValuesDo: [:testCase :milliseconds |
 		testCase class == aTestCaseClass ifTrue: [testCaseDurations at: testCase selector put: milliseconds]].
-
 	^ self class newTestDictionary
 		at: #timeStamp put: self timeStamp; "Keep this result's time stamp."
 		at: #passed put: passedSelectors asSet;
@@ -242,8 +196,6 @@ selectResultsForTestCase: aTestCaseClass = (
 		at: #durations put: testCaseDurations;
 		at: #duration put: (testCaseDurations inject: 0 into: [:sum :each | sum + (each ifNil: [0])]);
 		yourself
-
-
 )
 
 tests = (
@@ -252,55 +204,44 @@ tests = (
 		addAll: failures;
 		addAll: errors;
 		yourself
-
 )
 
 timeStamp = (
 	^ timeStamp
-
 )
 
 timeStamp: anObject = (
 	timeStamp := anObject
-
 )
 
 unexpectedErrorCount = (
 	^ self unexpectedErrors size
-
 )
 
 unexpectedErrors = (
 	^ errors select: [:each | each shouldPass]
-
 )
 
 unexpectedFailureCount = (
 	^ self unexpectedFailures size
-
 )
 
 unexpectedFailures = (
 	^ failures select: [:each | each shouldPass]
-
 )
 
 unexpectedPassCount = (
 	^ self unexpectedPasses size
-
 )
 
 unexpectedPasses = (
 	^ passed select: [:each | each shouldPass not]
-
 )
 
 updateResultsInHistory = (
-
 	#(#passed #failures #errors) do: [ :status |
 		(self perform: status) do: [ :testCase |
 			self class updateTestHistoryFor: testCase status: status ] ]
-
 )
 
 ----------------------------
@@ -318,49 +259,38 @@ failure = (
 )
 
 historyAt: aTestCaseClass = (
-"I will return the last test dictionary for aTestCaseClass. If none found, I will create a new empty one and link it in the history."
-
+	"I will return the last test dictionary for aTestCaseClass. If none found, I will create a new empty one and link it in the history."
 	^ aTestCaseClass history
-
 )
 
 historyAt: aTestCaseClass put: aDictionary = (
 	aTestCaseClass history: aDictionary
 	"^ self history at: aTestCaseClass put: aDictionary "
-
 )
 
 historyFor: aTestCaseClass = (
 	"I return the last test dictionary for aTestCaseClass.
 	If none found, I return an empty dictionary but will not link it to the class in the history."
-
 	| history |
 	history := aTestCaseClass history.
 	history ifNil: [ ^ self newTestDictionary ].
 	^ history
-
 "	^ self history at: aTestCaseClass ifAbsent: [ self newTestDictionary ]"
-
 )
 
 newTestDictionary = (
-
 	^ Dictionary new at: #timeStamp put: nil; "TimeStamp now;"
 		at: #passed put: Set new;
 		at: #failures put: Set new;
 		at: #errors put: Set new;
 		yourself
-
-
 )
 
 removeFromTestHistory: aSelector in: aTestCaseClass = (
 	| lastRun |
-
 	lastRun := self historyFor: aTestCaseClass.
 	#(#passed #failures #errors) do:
 		[ :set | (lastRun at: set) remove: aSelector ifAbsent: []].
-
 )
 
 resumableFailure = (
@@ -377,12 +307,10 @@ signalFailureWith: aString = (
 
 updateTestHistoryFor: aTestCase status: aSymbol = (
 	| cls sel |
-
 	cls := aTestCase class.
 	sel := aTestCase selector.
 	self removeFromTestHistory: sel in: cls.
 	((self historyAt: cls) at: aSymbol ) add: sel
-
 )
 
 comment = (^'

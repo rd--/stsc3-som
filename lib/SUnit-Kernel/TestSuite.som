@@ -19,7 +19,6 @@ debug = (
 	self tests do:
 		[ : each | self changed: each.
 		each debug ]
-
 )
 
 defaultResources = (
@@ -32,12 +31,10 @@ defaultResources = (
 )
 
 name = (
-
 	^name
 )
 
 name: aString = (
-
 	name := aString
 )
 
@@ -55,9 +52,7 @@ resources: anObject = (
 )
 
 resultClass = (
-
 	^ TestResult.
-
 )
 
 run = (
@@ -82,20 +77,16 @@ tests = (
 	^ tests ifNil: [tests := OrderedCollection new]
 )
 
-
 ----------------------------
 
 named: aString = (
-
 	^self new
 		name: aString;
 		yourself
 )
 
-
 comment = (^'
 This is a Composite of Tests, either TestCases or other TestSuites. The common protocol is #run: aTestResult and the dependencies protocol
 ')
-
 
 )

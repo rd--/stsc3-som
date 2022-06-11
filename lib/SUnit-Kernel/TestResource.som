@@ -3,49 +3,39 @@ TestResource = Object (
 | name description |
 
 description = (
-
 	^description ifNil: [ '' ]
-
 )
 
 description: aString = (
-
 	description := aString
 )
 
 initialize = (
 	super initialize.
 	self setUp
-
 )
 
 isAvailable = (
 	"override to provide information on the
 	readiness of the resource"
-
 	^true
 )
 
 isUnavailable = (
 	"override to provide information on the
 	readiness of the resource"
-
 	^self isAvailable not
 )
 
 name = (
-
 	^name ifNil: [ self printString]
-
 )
 
 name: aString = (
-
 	name := aString
 )
 
 printOn: aStream = (
-
 	aStream nextPutAll: self class printString
 )
 
@@ -70,10 +60,8 @@ tearDown = (
 ----------------------------
 
 cleanUp: aggressive = (
-
 	aggressive ifTrue: [
 		self withAllSubclassesDo: [:cls | cls reset]].
-
 )
 
 current = (
@@ -81,14 +69,12 @@ current = (
 )
 
 current: aTestResource = (
-
 	current := aTestResource
 )
 
 isAbstract = (
 	"Override to true if a TestResource subclass is Abstract and should not have
 	TestCase instances built from it"
-
 	^self name = #TestResource
 )
 
@@ -97,7 +83,6 @@ isAvailable = (
 )
 
 isUnavailable = (
-
 	^self isAvailable not
 )
 
@@ -105,7 +90,6 @@ reset = (
 	current ifNotNil: [:oldCurrent |
 		current := nil.
 		oldCurrent tearDown]
-
 )
 
 resources = (
@@ -116,10 +100,8 @@ signalInitializationError = (
 	^TestResult signalErrorWith: 'Resource ' , self name , ' could not be initialized'
 )
 
-
 comment = (^'
 No comment
 ')
-
 
 )

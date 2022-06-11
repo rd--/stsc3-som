@@ -1,4 +1,4 @@
-SpaceshipOperatorTest = TestCase (
+TestSpaceshipOperator = TestCase (
 
 testFloats = (
 	| a b c d |

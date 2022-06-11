@@ -90,20 +90,6 @@ testEmptyBlocksAnswerNil = (
 		self assert: (block cull: 1 cull: 2 cull: 3) equals: nil]
 )
 
-"
-testNew = (
-	self should: [Context new: 5] raise: Error.
-	[Context new: 5]
-		on: Error do: [:e|
-			self assert: (e messageText includesSubstring: 'newForMethod:') description: 'Error doesn''t tell you what you did wrong by calling #new:'].
-	self should: [Context new] raise: Error.
-	[Context new]
-		on: Error do: [:e|
-			self assert: (e messageText includesSubstring: 'newForMethod:') description: 'Error doesn''t tell you what you did wrong by calling #new']
-)
-"
-
-"
 testNoArguments = (
 	[10
 		timesRepeat: [:arg | 1 + 2]]
@@ -112,7 +98,6 @@ testNoArguments = (
 		timesRepeat: [:arg1 :arg2 | 1 + 2]]
 		ifError: [:err :rcvr | self deny: err = 'This block requires 2 arguments.']
 )
-"
 
 "
 testOnce = (
@@ -126,7 +111,6 @@ testOnce = (
 )
 "
 
-"
 testOneArgument = (
 	| c |
 	c := OrderedCollection new.
@@ -138,7 +122,6 @@ testOneArgument = (
 		do: [:arg1 :arg2 | 1 + 2]]
 		ifError: [:err :rcvr | self deny: err = 'This block requires 2 arguments.']
 )
-"
 
 "
 testRunSimulated = (
