@@ -732,11 +732,6 @@ findFirst: aBlock = (
 	^ 0
 )
 
-findIndex: aBlock = (
-    1 to: self size do: [ :index | (aBlock value: (self at: index)) ifTrue: [ ^index ] ].
-    ^nil
-)
-
 findLast: aBlock = (
 	"Return the index of my last element for which aBlock evaluates as true."
 	| index |

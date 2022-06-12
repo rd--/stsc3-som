@@ -1104,7 +1104,7 @@ systemLoadAndAssignClassesAbove x = do
   case existing of
       Just _ -> return existing
       Nothing -> do
-        maybeCd <- liftIO (St.somLoadClassDefinition cp x) -- todo: this should also read .st and .stc files
+        maybeCd <- liftIO (St.somLoadClassDefinitionExtMod True cp x) -- todo: this should also read .st and .stc files
         case maybeCd of
           Just cd -> do
             co <- classObject cd

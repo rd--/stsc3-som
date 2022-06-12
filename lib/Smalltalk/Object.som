@@ -63,10 +63,6 @@ assert: aBlock = (
 	aBlock value ifFalse: [AssertionFailure signal: 'Assertion failed']
 )
 
-asArray = (
-    ^Array with: self
-)
-
 asLink = (
 	^ ValueLink value: self
 )

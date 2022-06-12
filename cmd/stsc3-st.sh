@@ -1,5 +1,6 @@
 #!/bin/sh
 
-dir=/home/rohan/sw/stsc3-som/lib/
-cp=$dir/Smalltalk/:$dir/SUnit/:$dir/Tests/
+libdir=$HOME/sw/stsc3-som/lib/
+stcdir=$HOME/sw/stsc3/som/
+cp=$libdir:$stcdir
 stsc3-som -cp $cp st repl

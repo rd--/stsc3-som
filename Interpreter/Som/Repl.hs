@@ -34,7 +34,7 @@ standardClassListFor sys =
 
 loadClassTableFor :: SystemType -> [FilePath] -> IO ObjectAssociationList
 loadClassTableFor sys cp = do
-  classLibrary <- Som.somLoadClassList cp (standardClassListFor sys)
+  classLibrary <- Som.somLoadClassListExtMod True cp (standardClassListFor sys)
   makeClassTable classLibrary
 
 initialGlobalDictionaryFor :: SystemType -> [FilePath] -> IO ObjectDictionary
