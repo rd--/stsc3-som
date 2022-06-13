@@ -9,10 +9,13 @@ import Control.Concurrent {- base -}
 import qualified Control.Concurrent.MVar as MVar {- base -}
 import Control.Monad.IO.Class {- base -}
 import Data.Bits {- base -}
+import Data.Word {- base -}
 import System.Exit {- base -}
 import System.Mem {- base -}
 
-import System.Random {- random -}
+import qualified Data.ByteString {- bytestring -}
+import qualified System.Process {- process -}
+import qualified System.Random {- random -}
 
 import qualified Music.Theory.Byte {- hmt-base -}
 
@@ -110,6 +113,36 @@ prAllClassVarNames cd = do
   nm <- classAllVariableNamesFor cd True
   fmap Just (arrayFromList (map symObject nm))
 
+prReadTextFile :: ObjectData -> Vm (Maybe Object)
+prReadTextFile aFileName = do
+  maybeFileName <- objectDataAsString aFileName
+  case maybeFileName of
+    Just fileName -> liftIO (readFile fileName) >>= return .  Just . strObject
+    _ -> return Nothing
+
+prWriteStringToTextFile :: ObjectData -> ObjectData -> Vm (Maybe Object)
+prWriteStringToTextFile aString aFileName = do
+  maybeString <- objectDataAsString aString
+  maybeFileName <- objectDataAsString aFileName
+  case (maybeString, maybeFileName) of
+    (Just string, Just fileName) -> liftIO (writeFile fileName string) >> return (Just nilObject)
+    _ -> return Nothing
+
+prWriteByteArrayToBinaryFile :: VecRef Word8 -> ObjectData -> Vm (Maybe Object)
+prWriteByteArrayToBinaryFile aVecRef aFileName = do
+  bytes <- vecRefToList aVecRef
+  maybeFileName <- objectDataAsString aFileName
+  case maybeFileName of
+    Just fileName -> liftIO (Data.ByteString.writeFile fileName (Data.ByteString.pack bytes)) >> return (Just nilObject)
+    _ -> return Nothing
+
+prSystemCommand :: ObjectData -> Vm (Maybe Object)
+prSystemCommand aString = do
+  maybeString <- objectDataAsString aString
+  case maybeString of
+    Just string -> liftIO (System.Process.callCommand string) >> return (Just nilObject)
+    _ -> return Nothing
+
 stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
@@ -118,8 +151,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("asIEEE32BitWord", DataDouble x, []) -> return (Just (intObject (fromIntegral (Music.Theory.Byte.castFloatToWord32 (realToFrac x)))))
     ("asString", DataDouble x, []) -> fmap Just (mutableStringObject False (show x))
     ("asSymbol", _, []) -> if prClass == "Symbol" then return (Just receiver) else fmap (fmap symObject) (objectDataAsString receiverObj)
-    ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (getStdRandom (randomR (1, x))))
-    ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (getStdRandom (randomR (0, x))))
+    ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (System.Random.getStdRandom (System.Random.randomR (1, x))))
+    ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (System.Random.getStdRandom (System.Random.randomR (0, x))))
     ("evaluate:", DataSystem, [Object "String" str]) -> mapMMM (evalString stEvalOpt) (objectDataAsString str)
     ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fork", DataBlockClosure {}, []) -> fmap Just (threadObject stEvalOpt receiver)
@@ -151,13 +184,17 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmGetContext >>= contextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
+    ("readTextFile:", DataSystem, [Object "String" aFileName]) -> prReadTextFile aFileName
     ("sender", DataContext ctx, []) -> return (fmap contextObject (contextSender ctx))
     ("signal", _, []) -> signalException receiver
     ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelectorOrError) (contextNearestMethod ctx))
     ("selector", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
     ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
+    ("systemCommand:", DataSystem, [Object "String" aString]) -> prSystemCommand aString
     ("utcOffset", DataSystem, []) -> fmap (Just . intObject) getSystemTimezoneInSeconds
     ("utcTime", DataSystem, []) -> fmap (Just . intObject . secondsToMicroseconds) getSystemTimeInSeconds
+    ("writeByteArray:toBinaryFile:", DataSystem, [Object "ByteArray" (DataByteArray _ aVecRef), Object "String" aFileName]) -> prWriteByteArrayToBinaryFile aVecRef aFileName
+    ("writeString:toTextFile:", DataSystem, [Object "String" aString, Object "String" aFileName]) -> prWriteStringToTextFile aString aFileName
     _ -> return Nothing
 
 prIntegerDivisionExact :: SmallInteger -> SmallInteger -> Maybe Object

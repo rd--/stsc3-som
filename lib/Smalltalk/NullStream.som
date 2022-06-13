@@ -1,0 +1,178 @@
+NullStream = Stream (
+
+| binary position |
+
+ascii = (
+	"Switches the stream to ascii mode"
+	binary := false.
+)
+
+atEnd = (
+	"Answer whether the receiver can access any more objects."
+	^false
+)
+
+binary = (
+	"Switches the stream to binary mode"
+	binary := true
+)
+
+collectionSpecies = (
+	"The type of collection returned by the stream"
+	^binary ifTrue:[ByteArray] ifFalse:[String]
+)
+
+contents = (
+	"Answer all of the contents of the receiver."
+	self shouldNotImplement
+)
+
+cr = (
+)
+
+crtab: n = (
+)
+
+element = (
+	"The element returned by the stream"
+	^binary ifTrue:[0] ifFalse:[Character null]
+)
+
+ensureCr = (
+)
+
+initialize = (
+	"Initialize the receiver"
+	binary := false.
+	position := 0.
+)
+
+isBinary = (
+	"Return true if the receiver is a binary byte stream"
+	^binary
+)
+
+isEmpty = (
+	"Answer whether the receiver's contents has no elements."
+	^false
+)
+
+next = (
+	"Answer the next object accessible by the receiver."
+	position := position +1.
+	^self element
+)
+
+next: anInteger = (
+	"Answer the next anInteger elements of my collection. Must override
+	because default uses self contents species, which might involve a large
+	collection."
+	position := position +anInteger.
+	^self collectionSpecies new: anInteger
+)
+
+next: n into: aCollection startingAt: startIndex = (
+	"Read n objects into the given collection.
+	Return aCollection or a partial copy if less than
+	n elements have been read."
+	position := position +n.
+	^aCollection
+)
+
+next: anInteger putAll: aCollection = (
+	"Store the next anInteger elements from the given collection."
+	^self next: anInteger putAll: aCollection startingAt: 1
+)
+
+next: anInteger putAll: aCollection startingAt: startIndex = (
+	"Store the next anInteger elements from the given collection."
+	anInteger > 0 ifFalse: [ ^aCollection ].
+	position := position + anInteger.
+	^aCollection
+)
+
+nextInto: aCollection = (
+	"Read the next elements of the receiver into aCollection.
+	Return aCollection or a partial copy if less than aCollection
+	size elements have been read."
+	^self next: aCollection size into: aCollection startingAt: 1.
+)
+
+nextPut: anObject = (
+	"Insert the argument, anObject, as the next object accessible by the
+	receiver. Answer anObject."
+	position := position +1.
+	^anObject
+)
+
+nextPutAll: aCollection = (
+	"Append the elements of aCollection to the sequence of objects accessible
+	by the receiver. Answer aCollection."
+	position := position + aCollection size.
+	^aCollection
+)
+
+nl = (
+)
+
+peek = (
+	"Answer what would be returned if the message next were sent to the
+	receiver. If the receiver is at the end, answer nil."
+	^self element
+)
+
+position = (
+	"Answer the current position of accessing the sequence of objects."
+	^position
+)
+
+position: anInteger = (
+	"Set the current position for accessing the objects to be anInteger, as long
+	as anInteger is within the bounds of the receiver's contents. If it is not,
+	create an error notification."
+	(anInteger >= 0)
+		ifTrue: [position := anInteger]
+		ifFalse: [self positionError]
+)
+
+readInto: aCollection startingAt: startIndex count: n = (
+	"Read n objects into the given collection.
+	Return number of elements that have been read."
+	position := position + n.
+	^n
+)
+
+reset = (
+	"Set the receiver's position to the beginning of the sequence of objects."
+	position := 0
+)
+
+skip: anInteger = (
+	"Set the receiver's position to be the current position+anInteger. A
+	subclass might choose to be more helpful and select the minimum of the
+	receiver's size and position+anInteger, or the maximum of 1 and
+	position+anInteger for the repositioning."
+	self position: position + anInteger
+)
+
+space = (
+)
+
+tab = (
+)
+
+tab: n = (
+)
+
+----------------------------
+
+new = (
+	"Creates a new instance"
+	^self basicNew initialize
+)
+
+comment = (^'
+NullStream is a stream generating and consuming an infinite number of elements. It can be used as an equivalent of /dev/null or for performance benchmarks.
+')
+
+)

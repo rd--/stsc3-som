@@ -1,0 +1,28 @@
+String = String (
+
+evalString = (
+	"Evaluate myself (I am a Smalltalk expression)"
+	^Compiler evaluate: self
+)
+
+readTextFile = (
+	"Read my contents as a String (I am the name of an existing text file)"
+	^Smalltalk readTextFile: self
+)
+
+systemCommand = (
+	"Run myself as a synchronous OSProcess (I am an operating system command)."
+	Smalltalk systemCommand: self
+)
+
+writeBinaryFile: aBlock = (
+	"Run aBlock on me as a FileStream (I am the name of a binary file, possibly already existing)"
+	Smalltalk writeByteArray: (ByteArray streamContents: aBlock) toBinaryFile: self
+)
+
+writeTextFile: aBlock = (
+	"Run aBlock on me as a FileStream (I am the name of a text file, possibly already existing)"
+	Smalltalk writeString: (String streamContents: aBlock) toTextFile: self
+)
+
+)

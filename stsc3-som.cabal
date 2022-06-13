@@ -13,11 +13,13 @@ Build-Type:         Simple
 
 library
   build-depends:    base >= 4.7 && < 5,
+                    bytestring,
                     containers,
                     directory,
                     hashable,
                     hmt-base == 0.20.*,
                     mtl,
+                    process,
                     random,
                     stsc3 == 0.20.*,
                     text,

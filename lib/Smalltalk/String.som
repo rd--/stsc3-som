@@ -538,6 +538,10 @@ printOn: aStream = (
 	self storeOn: aStream
 )
 
+putOn:aStream = (
+	^aStream nextPutAll: self.
+)
+
 replaceFrom: start to: stop with: replacement startingAt: repStart = (
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 	<primitive: 105>

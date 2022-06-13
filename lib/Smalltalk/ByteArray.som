@@ -87,6 +87,10 @@ primReplaceFrom: start to: stop with: replacement startingAt: repStart = (
 	super replaceFrom: start to: stop with: replacement startingAt: repStart
 )
 
+putOn: aStream = (
+	aStream nextPutAll: self
+)
+
 readHexFrom: aStream = (
 	"Initialize the receiver from a hexadecimal string representation"
 	| map v ch value |

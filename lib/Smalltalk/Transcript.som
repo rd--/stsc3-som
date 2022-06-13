@@ -2,6 +2,10 @@ Transcript = (
 
 ----
 
+<< aString = (
+	Smalltalk printString: aString
+)
+
 clear = (
 )
 

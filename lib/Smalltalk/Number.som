@@ -534,23 +534,14 @@ to: stop = (
 )
 
 to: stop by: step = (
+	"Answer an Interval from the receiver up to the argument, stop,
+	incrementing by step."
 	^Interval from: self to: stop by: step
 )
 
-to: aNumber collect: aBlock = (
-    ^(self to: aNumber) collect: aBlock
-)
-
-to: stop do: aBlock = (
-	| nextValue |
-	nextValue := self.
-	[nextValue <= stop]
-		whileTrue:
-			[aBlock value: nextValue.
-			nextValue := nextValue + 1]
-)
-
 to: stop by: step do: aBlock = (
+	"Normally compiled in-line, and therefore not overridable.
+	Evaluate aBlock for each element of the interval (self to: stop by: step)."
 	| nextValue |
 	nextValue := self.
 	step = 0 ifTrue: [self error: 'step must be non-zero'].
@@ -563,6 +554,17 @@ to: stop by: step do: aBlock = (
 				whileTrue:
 					[aBlock value: nextValue.
 					nextValue := nextValue + step]]
+)
+
+to: stop do: aBlock = (
+	"Normally compiled in-line, and therefore not overridable.
+	Evaluate aBlock for each element of the interval (self to: stop by: 1)."
+	| nextValue |
+	nextValue := self.
+	[nextValue <= stop]
+		whileTrue:
+			[aBlock value: nextValue.
+			nextValue := nextValue + 1]
 )
 
 truncated = (

@@ -68,6 +68,37 @@ errorCantGoBack = (
 	self error: ' CantGoBack '
 )
 
+int16: anInteger = (
+	"Store the given signed, 16-bit integer on this (binary) stream."
+	| n |
+	(anInteger < -32768) | (anInteger >= 32768)
+		ifTrue: [self error: 'outside 16-bit integer range'].
+	anInteger < 0
+		ifTrue: [n := 65536 + anInteger]
+		ifFalse: [n := anInteger].
+	self nextPut: (n digitAt: 2).
+	self nextPut: (n digitAt: 1).
+)
+
+int32: anInteger = (
+	"Store the given signed, 32-bit integer on this (binary) stream."
+	| n |
+	(anInteger < -2147483648) | (anInteger >= 2147483648)
+		ifTrue: [self error: 'outside 32-bit integer range'].
+	anInteger < 0
+		ifTrue: [n := 4294967296 + anInteger]
+		ifFalse: [n := anInteger].
+	self nextPut: (n digitAt: 4).
+	self nextPut: (n digitAt: 3).
+	self nextPut: (n digitAt: 2).
+	self nextPut: (n digitAt: 1).
+)
+
+isBinary = (
+	"Return true if the receiver is a binary byte stream"
+	^collection class == ByteArray
+)
+
 isEmpty = (
 	"Answer whether the receiver's contents has no elements."
 	"Returns true if both the set of past and future sequence values of
@@ -143,6 +174,14 @@ nextLine = (
 	Handle a zoo of line delimiters CR, LF, or CR-LF pair"
 	self atEnd ifTrue: [^nil].
 	^self upToAnyOf: CharacterSet crlf do: [:char | char = Character cr ifTrue: [self peekFor: Character lf]]
+)
+
+nextNumber: n put: v = (
+	"Append to the receiver the argument, v, which is a positive
+	SmallInteger or a LargePositiveInteger, as the next n bytes.
+	Possibly pad with leading zeros."
+	1 to: n do: [:i | self nextPut: (v digitAt: n+1-i)].
+	^ v
 )
 
 on: aCollection = (
@@ -273,6 +312,16 @@ skipTo: anObject = (
 	[self atEnd]
 		whileFalse: [self next = anObject ifTrue: [^true]].
 	^false
+)
+
+uint32: anInteger = (
+	"Store the given unsigned, 32-bit integer on this (binary) stream."
+	(anInteger < 0) | (anInteger >= 4294967296)
+		ifTrue: [self error: 'outside unsigned 32-bit integer range'].
+	self nextPut: (anInteger digitAt: 4).
+	self nextPut: (anInteger digitAt: 3).
+	self nextPut: (anInteger digitAt: 2).
+	self nextPut: (anInteger digitAt: 1).
 )
 
 upTo: anObject = (

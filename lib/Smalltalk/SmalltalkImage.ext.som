@@ -1,0 +1,23 @@
+SmalltalkImage = (
+
+readTextFile: aFileName = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+systemCommand: aString = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+writeByteArray: aByteArray toBinaryFile: aFileName = (
+	<primitive: -1>
+	self primitiveFailed: #writeByteArray:toBinaryFile:
+)
+
+writeString: aString toTextFile: aFileName = (
+	<primitive: -1>
+	self primitiveFailed: #writeString:toTextFile:
+)
+
+)

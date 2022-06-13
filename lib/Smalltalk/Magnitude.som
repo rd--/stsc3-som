@@ -29,27 +29,34 @@ Magnitude = Object (
 )
 
 between: min and: max = (
+	"Answer whether the receiver is less than or equal to the argument, max,
+	and greater than or equal to the argument, min."
 	min <= self ifFalse: [ ^false ].
 	^self <= max
 )
 
 clampHigh: highMagnitude = (
+	"Answer my value, but keep it less than highMagnitude"
 	^ self min: highMagnitude
 )
 
 clampLow: lowMagnitude = (
+	"Answer my value, but keep it greater than lowMagnitude"
 	^ self max: lowMagnitude
 )
 
 clampLow: lowMagnitude high: highMagnitude = (
+	"Answer my value, but keep it between lowMagnitude and highMagnitude"
 	^ self min: highMagnitude max: lowMagnitude
 )
 
 hash = (
+	"Hash must be redefined whenever = is redefined."
 	^self subclassResponsibility
 )
 
 inRangeOf: first and: second = (
+	"Answer whether the receiver is in the range between first and second, even if first is > second."
 	^ first < second
 		ifTrue:
 			[ self
@@ -62,12 +69,16 @@ inRangeOf: first and: second = (
 )
 
 max: aMagnitude = (
+	"Answer the receiver or the argument, whichever has the greater
+	magnitude."
 	self > aMagnitude
 		ifTrue: [^self]
 		ifFalse: [^aMagnitude]
 )
 
 min: aMagnitude = (
+	"Answer the receiver or the argument, whichever has the lesser
+	magnitude."
 	self < aMagnitude
 		ifTrue: [^self]
 		ifFalse: [^aMagnitude]
@@ -75,6 +86,10 @@ min: aMagnitude = (
 
 min: aMin max: aMax = (
 	^ (self min: aMin) max: aMax
+)
+
+putOn: aStream = (
+	(aStream isBinary ifTrue: [ self asByteArray ] ifFalse: [ self asString]) putOn: aStream
 )
 
 )
