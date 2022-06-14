@@ -1,10 +1,6 @@
-DurationTest = ClassTestCase (
+DurationTest = TestCase (
 
 | aDuration |
-
-classToBeTested = (
-	^ Duration
-)
 
 selectorsToBeIgnored = (
 	| private |

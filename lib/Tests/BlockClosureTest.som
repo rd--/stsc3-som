@@ -1,4 +1,4 @@
-BlockClosureTest = ClassTestCase (
+BlockClosureTest = TestCase (
 
 | aBlockClosure homeOfABlockClosure |
 

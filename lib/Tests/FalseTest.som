@@ -1,4 +1,4 @@
-FalseTest = ClassTestCase (
+FalseTest = TestCase (
 
 testAND = (
 	self assert: (false & true) = false.

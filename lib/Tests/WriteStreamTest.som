@@ -1,4 +1,4 @@
-WriteStreamTest = ClassTestCase (
+WriteStreamTest = TestCase (
 
 testCr = (
 

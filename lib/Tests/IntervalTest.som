@@ -1,4 +1,4 @@
-IntervalTest = ClassTestCase (
+IntervalTest = TestCase (
 
 testAdd = (
 	self assert: (1 to: 10)

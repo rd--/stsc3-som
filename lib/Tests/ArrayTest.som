@@ -1,4 +1,4 @@
-ArrayTest = ClassTestCase (
+ArrayTest = TestCase (
 
 | example1 literalArray selfEvaluatingArray otherArray nonSEArray1 nonSEarray2 example2 |
 

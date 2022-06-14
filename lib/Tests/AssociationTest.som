@@ -1,4 +1,4 @@
-AssociationTest = ClassTestCase (
+AssociationTest = TestCase (
 
 | a b |
 

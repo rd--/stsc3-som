@@ -1,4 +1,4 @@
-IdentityBagTest = ClassTestCase (
+IdentityBagTest = TestCase (
 
 testIdentity = (
 	| bag identityBag aString anOtherString |

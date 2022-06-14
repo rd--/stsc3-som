@@ -1,4 +1,4 @@
-MatrixTest = ClassTestCase (
+MatrixTest = TestCase (
 
 | matrix1 matrix2 matrix3 |
 

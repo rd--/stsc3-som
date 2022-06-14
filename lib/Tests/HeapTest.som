@@ -1,4 +1,4 @@
-HeapTest = ClassTestCase (
+HeapTest = TestCase (
 
 test1 = (
 	| data |

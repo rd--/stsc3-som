@@ -90,6 +90,10 @@ exp = (
 )
 
 exponent = (
+	"Primitive. Consider the receiver to be represented as a power of two
+	multiplied by a mantissa (between one and two). Answer with the
+	SmallInteger to whose power two is raised. Optional. See Object
+	documentation whatIsAPrimitive."
 	<primitive: 53>
 	^self primitiveFailed: #exponent
 )
@@ -102,6 +106,11 @@ fractionPart = (
 identityHash = (
 	<primitive: 75>
 	^self primitiveFailed
+)
+
+log2 = (
+	<primitive: -1>
+	super log2
 )
 
 ln = (

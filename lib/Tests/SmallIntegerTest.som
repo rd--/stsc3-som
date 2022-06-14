@@ -1,4 +1,4 @@
-SmallIntegerTest = ClassTestCase (
+SmallIntegerTest = TestCase (
 
 testBasicNew = (
 	self should: [SmallInteger basicNew] raise: Error.

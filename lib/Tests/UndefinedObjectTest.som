@@ -1,4 +1,4 @@
-UndefinedObjectTest = ClassTestCase (
+UndefinedObjectTest = TestCase (
 
 "
 testAllInstances = (

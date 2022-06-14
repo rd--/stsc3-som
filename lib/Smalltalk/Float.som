@@ -192,6 +192,10 @@ rounded = (
 		ifFalse: [^self truncated + self sign rounded]
 )
 
+significand = (
+	^ self timesTwoPower: (self exponent negated)
+)
+
 sinh = (
 	"Answer receivers hyperbolic sine"
 	| ex |

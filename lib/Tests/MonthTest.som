@@ -1,10 +1,6 @@
-MonthTest = ClassTestCase (
+MonthTest = TestCase (
 
 | month |
-
-classToBeTested = (
-	^ Month
-)
 
 selectorsToBeIgnored = (
 	| deprecated private special |

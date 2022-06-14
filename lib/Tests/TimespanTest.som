@@ -1,4 +1,4 @@
-TimespanTest = ClassTestCase (
+TimespanTest = TestCase (
 
 | timespan aTimespan anOverlappingTimespan anIncludedTimespan aDisjointTimespan aDay aWeek dec31 jan01 jan08 localTimeZoneToRestore anEqualTimeSpan localTimeZonePreferenceToRestore |
 

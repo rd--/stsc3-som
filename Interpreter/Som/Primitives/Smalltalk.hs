@@ -172,6 +172,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("kill", DataThread threadId, []) -> liftIO (killThread threadId) >> return (Just nilObject)
     ("load:", DataSystem, [Object "Symbol" str]) -> mapMM systemLoadClassOrNil (objectDataAsString str)
     ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
+    ("log2", DataDouble x, []) -> return (Just (doubleObject (logBase 2 x)))
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
     ("methodClass", DataMethod methodClass _ _,[]) -> fmap Just (vmGlobalResolveOrError methodClass)
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))

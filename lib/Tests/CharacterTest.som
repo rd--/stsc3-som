@@ -1,4 +1,4 @@
-CharacterTest = ClassTestCase (
+CharacterTest = TestCase (
 
 testCharacterSeparators = (
 	| result |

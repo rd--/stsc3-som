@@ -831,7 +831,7 @@ objectHashEqual obj1 obj2 = do
 stringLiteralId :: Id
 stringLiteralId = -1
 
--- | String literals are a special case.
+-- | Object identity test (==).  String literals are a special case.
 objectIdentical :: (MonadIO m, StError m) => Object -> Object -> m Bool
 objectIdentical obj1 obj2 =
   case (obj1, obj2) of

@@ -1,4 +1,4 @@
-ComplexTest = ClassTestCase (
+ComplexTest = TestCase (
 
 testAbs = (
 	| c |
@@ -196,9 +196,6 @@ testDivision1 = (
 	c2 := c1.
 	quotient := c1 / c2.
  	self deny: (quotient - 1) isZero.
-	"This test fails due to the wonders of floating point arithmetic.
-	 Please have a look at Complex>>divideSecureBy: and #divideFastAndSecureBy:
-	how this can be avoided."
 )
 
 testEquality = (

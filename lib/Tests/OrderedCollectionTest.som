@@ -1,4 +1,4 @@
-OrderedCollectionTest = ClassTestCase (
+OrderedCollectionTest = TestCase (
 
 testAdd = (
 	| l |

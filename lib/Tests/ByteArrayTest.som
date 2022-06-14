@@ -1,4 +1,4 @@
-ByteArrayTest = ClassTestCase (
+ByteArrayTest = TestCase (
 
 testEmpty = (
 	self
@@ -8,11 +8,9 @@ testEmpty = (
 		assert: ByteArray
 		equals: ByteArray empty species
 		description: 'The empty ByteArray should be a ByteArray';
-"
 		assert: ByteArray empty
 		identical: ByteArray empty
 		description: 'The empty ByteArray should be canonical';
-"
 		yourself
 )
 

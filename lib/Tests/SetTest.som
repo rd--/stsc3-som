@@ -1,4 +1,4 @@
-SetTest = ClassTestCase (
+SetTest = TestCase (
 
 | full empty |
 

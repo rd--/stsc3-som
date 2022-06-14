@@ -1,10 +1,6 @@
-WeekTest = ClassTestCase (
+WeekTest = TestCase (
 
 | week restoredStartDay |
-
-classToBeTested = (
-	^ Week
-)
 
 selectorsToBeIgnored = (
 	| deprecated private special |

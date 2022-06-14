@@ -62,7 +62,7 @@ run = (
 		res isAvailable ifFalse: [^res signalInitializationError]].
 	"[self run: result] ensure: [self resources do: [:each | each reset]]."
 	self run: result.
-	result printOn: Transcript.
+	result printOn: Transcript. "(rd)"
         ^result runCount
 )
 

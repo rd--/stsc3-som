@@ -1,4 +1,4 @@
-NumberTest = ClassTestCase (
+NumberTest = TestCase (
 
 testFractionPart = (
 	self

@@ -1,4 +1,4 @@
-SymbolTest = ClassTestCase (
+SymbolTest = TestCase (
 
 testCapitalized = (
 	| uc lc |

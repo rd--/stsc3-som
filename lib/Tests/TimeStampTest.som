@@ -1,4 +1,4 @@
-TimeStampTest = ClassTestCase (
+TimeStampTest = TestCase (
 
 | timestamp aTimeStamp |
 

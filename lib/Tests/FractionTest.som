@@ -1,4 +1,4 @@
-FractionTest = ClassTestCase (
+FractionTest = TestCase (
 
 assert: a classAndValueEquals: b = (
 	self assert: a class = b class.

@@ -91,19 +91,22 @@ evalStatements opt (stm, ret) = do
 
 blockHandler :: EvalOpt -> Bool -> ExceptionHandler -> ExceptionOrNonLocalReturn -> Vm (Bool, Object)
 blockHandler opt hasReturn (_exc, hnd) exception = do
+  --printTrace (printf "blockHandler <ret: %s>: %s" (show hasReturn) (exceptionOrNonLocalReturn_pp exception)) []
   case exception of
-    SystemError _msg -> Except.throwError exception
     Exception obj _ -> fmap (\r -> (hasReturn, r)) (if isBlock hnd then evalBlockOfCorrectArity opt hnd [obj] Nothing else vmError "blockHandler: illegal block") -- should match on exception...
     NonLocalReturn _pc _blk _obj -> Except.throwError exception
+    SystemError _msg -> Except.throwError exception
 
 evalBlockOfCorrectArity :: EvalOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm Object
 evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler = do
   currentContext <- vmReplaceContext =<< blockContextFrame blockObject arguments maybeExceptionHandler
-  let Object _ (DataBlockClosure _ blockContext (Expr.Lambda _ _ _ blockStatements)) = blockObject
+  let onNoReturn result = return result
+      Object _ (DataBlockClosure _ blockContext (Expr.Lambda _ _ _ blockStatements)) = blockObject
       hasReturn = isJust (snd blockStatements)
-      Just homeContext = contextNearestMethod blockContext
-      onReturn result = let pc = contextIdOrError homeContext in nonLocalReturn pc blockObject result
-      onNoReturn result = return result
+      onReturn result =
+        case contextNearestMethod blockContext of
+          Nothing -> vmError "evalBlockOfCorrectArity: onReturn: no home context?"
+          Just homeContext -> let pc = contextIdOrError homeContext in nonLocalReturn pc blockObject result
   (isReturn, result) <- case maybeExceptionHandler of
             Nothing -> evalStatements opt blockStatements
             Just eh -> evalStatements opt blockStatements `Except.catchError` blockHandler opt hasReturn eh
@@ -112,7 +115,8 @@ evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler = do
   if isReturn then onReturn result else onNoReturn result
 
 evalBlockWithMaybeExceptionHandler :: EvalOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm (Maybe Object)
-evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler =
+evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler = do
+  --printTrace (printf "evalBlockWithMaybeExceptionHandler: eh=%s" (show (isJust maybeExceptionHandler))) (blockObject : arguments)
   if isBlockOfArity (length arguments) blockObject
   then fmap Just (evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler)
   else return Nothing
@@ -134,14 +138,12 @@ evalBlock :: EvalOpt -> Object -> [Object] -> Vm (Maybe Object)
 evalBlock opt blockObject arguments = evalBlockWithMaybeExceptionHandler opt blockObject arguments Nothing
 
 sendHandler :: Id -> ExceptionOrNonLocalReturn -> Vm (Bool, Object)
-sendHandler ctxId exception = do
-  ctx <- vmGetContext
-  let frm = contextFrameOrError ctx
-  _frm_str <- contextFrameInspect frm
+sendHandler ctxId exception =
+  --printTrace (printf "sendHandler <pc: %d>: %s" ctxId (exceptionOrNonLocalReturn_pp exception)) [] >>
   case exception of
-    NonLocalReturn pc _blk obj -> if ctxId == pc then return (True, obj) else  Except.throwError exception
-    SystemError _msg -> Except.throwError exception
     Exception {} -> Except.throwError exception
+    NonLocalReturn pc _blk obj -> if ctxId == pc then return (True, obj) else Except.throwError exception
+    SystemError _msg -> Except.throwError exception
 
 {- | evalMethod is similar to evalBlock, except that methods:
    1. have a receiver which is stored and can be referenced as self or super
@@ -295,3 +297,4 @@ objectPerform opt rcv sel = objectClass rcv >>= \cl -> objectPerformInSuperclass
 
 printTrace :: MonadIO m => String -> [Object] -> m ()
 printTrace msg o = liftIO (putStr (msg ++ " with: ")) >> objectListPrint o >> return ()
+

@@ -1,4 +1,4 @@
-SequenceableCollectionTest = ClassTestCase (
+SequenceableCollectionTest = TestCase (
 
 testAfterIfAbsent = (
 	| col |

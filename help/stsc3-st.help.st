@@ -5,8 +5,7 @@ allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTes
 allTests do: [ :each | each suite run printOn: Transcript ]
 
 allTests size = 50
-ClassTestCase subclasses size = 48
-TestCase subclasses size = (2 + 1) "ClassTestCase is a subclass of TestCase"
+TestCase subclasses size = 50
 
 "Individual tests"
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]

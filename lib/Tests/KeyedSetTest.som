@@ -1,4 +1,4 @@
-KeyedSetTest = ClassTestCase (
+KeyedSetTest = TestCase (
 
 testLike = (
 	| k |

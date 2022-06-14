@@ -1,4 +1,4 @@
-DateTest = ClassTestCase (
+DateTest = TestCase (
 
 | date aDate aTime |
 

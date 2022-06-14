@@ -1,4 +1,4 @@
-ReadStreamTest = ClassTestCase (
+ReadStreamTest = TestCase (
 
 classUnderTest = (
 	^ ReadStream

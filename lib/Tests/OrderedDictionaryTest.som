@@ -1,4 +1,4 @@
-OrderedDictionaryTest = ClassTestCase (
+OrderedDictionaryTest = TestCase (
 
 | sut |
 

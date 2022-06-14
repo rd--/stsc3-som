@@ -1,4 +1,4 @@
-FloatTest = ClassTestCase (
+FloatTest = TestCase (
 
 | exactInteger float greaterInexactInt smallerInexactInt greaterFloat smallerFloat |
 

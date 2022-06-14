@@ -1,4 +1,4 @@
-StringTest = ClassTestCase (
+StringTest = TestCase (
 
 | string |
 

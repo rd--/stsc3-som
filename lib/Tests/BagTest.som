@@ -1,4 +1,4 @@
-BagTest = ClassTestCase (
+BagTest = TestCase (
 
 testAdd = (
 	| aBag |

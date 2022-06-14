@@ -1,4 +1,4 @@
-GeneratorTest = ClassTestCase (
+GeneratorTest = TestCase (
 
 fibonacciSequence = (
 	^ Generator on: [ :generator |

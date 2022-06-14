@@ -1,4 +1,4 @@
-ReadWriteStreamTest = ClassTestCase (
+ReadWriteStreamTest = TestCase (
 
 testConstructionUsingWith = (
 	| aStream |

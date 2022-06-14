@@ -1,7 +1,4 @@
-YearTest = ClassTestCase (
-classToBeTested = (
-	^ Year
-)
+YearTest = TestCase (
 
 testCurrent = (
 	self assert:
@@ -18,6 +15,5 @@ testPreviousInLeapYear = (
 	self assert: leap isLeapYear.
 	self assert: (Year year: (leap year - 1)) = leap previous
 )
-
 
 )

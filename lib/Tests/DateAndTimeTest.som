@@ -1,8 +1,4 @@
-DateAndTimeTest = ClassTestCase (
-
-classToBeTested = (
-	^ DateAndTime
-)
+DateAndTimeTest = TestCase (
 
 selectorsToBeIgnored = (
 	| private |
@@ -157,11 +153,11 @@ testGetSeconds = (
 	self assert: 36425 equals: seconds1.
 	id := dt identityHash.
 	stSeconds := dt asSeconds.
-	dt localOffsetSeconds: 0. "make the receivers timezone GMT, do not change magnitude"
-	self assert: id equals: dt identityHash. "same object, not a copy"
+	dt localOffsetSeconds: 0.
+	self assert: id equals: dt identityHash.
 	self assert: '2019-01-12T15:07:05.18743+00:00' equals: dt asString.
-	self assert: stSeconds equals: dt asSeconds. "magnitude unchanged"
-	self assert: '2019-01-12T10:07:05.18743-05:00' asDateAndTime equals: dt. "still equal"
+	self assert: stSeconds equals: dt asSeconds.
+	self assert: '2019-01-12T10:07:05.18743-05:00' asDateAndTime equals: dt.
 	seconds2 := dt getSeconds.
 	self deny: seconds1 equals: seconds2.
 	self assert: 54425 equals: seconds2.

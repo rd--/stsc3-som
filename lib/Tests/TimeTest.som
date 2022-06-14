@@ -1,4 +1,4 @@
-TimeTest = ClassTestCase (
+TimeTest = TestCase (
 
 | time aTime localTimeZoneToRestore timeWithNanos localTimeZonePreferenceToRestore |
 

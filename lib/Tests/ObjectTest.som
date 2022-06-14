@@ -1,4 +1,4 @@
-ObjectTest = ClassTestCase (
+ObjectTest = TestCase (
 
 a = (
 	self b.

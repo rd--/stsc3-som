@@ -168,8 +168,11 @@ word32At: i put: value = (
 
 ----
 
+| EmptyByteArray |
+
 empty = (
-	^self new: 0
+	"A canonicalized empty ByteArray instance."
+	^ EmptyByteArray ifNil: [ EmptyByteArray := self new: 0 ].
 )
 
 isVariable = (

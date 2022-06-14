@@ -1,4 +1,4 @@
-NumberParsingTest = ClassTestCase (
+NumberParsingTest = TestCase (
 
 testFloatFromStreamAsNumber = (
 	| rs aFloat |
