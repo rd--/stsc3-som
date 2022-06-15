@@ -1,0 +1,13 @@
+Socket = (
+
+-----
+
+sendUdpData: aByteArray toHost: hostAddress port: portNumber = (
+	"Create a socket, send Udp packet, close socket."
+	| socket |
+	socket := Socket newUDP.
+	socket sendUdpData: aByteArray toHost: hostAddress port: portNumber.
+	socket close.
+)
+
+)

@@ -5,6 +5,11 @@ readTextFile: aFileName = (
 	self primitiveFailed
 )
 
+sendUdpData: aByteArray toHost: hostAddress port: portNumber = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 systemCommand: aString = (
 	<primitive: -1>
 	self primitiveFailed

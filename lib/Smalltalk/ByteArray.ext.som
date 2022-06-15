@@ -1,0 +1,7 @@
+ByteArray = ByteArray (
+
+sendUdpToHost: hostAddress port: portNumber = (
+	^Smalltalk sendUdpData: self toHost: hostAddress port: portNumber
+)
+
+)

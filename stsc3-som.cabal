@@ -19,6 +19,7 @@ library
                     hashable,
                     hmt-base == 0.20.*,
                     mtl,
+                    network,
                     process,
                     random,
                     stsc3 == 0.20.*,

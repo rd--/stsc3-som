@@ -1,0 +1,35 @@
+Socket = (
+
+close = (
+	"Close connection."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+connectTo: hostAddress port: port = (
+	"Initiate a connection to the given port at the given host address.
+	Waits until the connection is established or time outs."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+sendData: aByteArray = (
+	"Send all of the data in the given array to the connected port."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+sendUdpData: aByteArray toHost: hostAddress port: portNumber = (
+	"Send data to indicated host over Udp (does not require socket to be connected."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+----
+
+newUdp = (
+	"Create a socket and initialise it for Udp"
+	<primitive: -1>
+)
+
+)

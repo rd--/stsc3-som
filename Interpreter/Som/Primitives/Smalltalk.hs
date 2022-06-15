@@ -14,6 +14,8 @@ import System.Exit {- base -}
 import System.Mem {- base -}
 
 import qualified Data.ByteString {- bytestring -}
+import qualified Network.Socket {- network -}
+import qualified Network.Socket.ByteString {- network -}
 import qualified System.Process {- process -}
 import qualified System.Random {- random -}
 
@@ -143,6 +145,24 @@ prSystemCommand aString = do
     Just string -> liftIO (System.Process.callCommand string) >> return (Just nilObject)
     _ -> return Nothing
 
+sendUdpPacket :: String -> Int -> Data.ByteString.ByteString -> IO ()
+sendUdpPacket host port bytes = do
+  fd <- Network.Socket.socket Network.Socket.AF_INET Network.Socket.Datagram 0
+  let hints = Network.Socket.defaultHints { Network.Socket.addrFamily = Network.Socket.AF_INET } -- localhost=ipv4
+  i:_ <- Network.Socket.getAddrInfo (Just hints) (Just host) (Just (show port))
+  let sa = Network.Socket.addrAddress i
+  Network.Socket.connect fd sa
+  Network.Socket.ByteString.sendAllTo fd bytes sa
+  Network.Socket.close fd
+
+prSendUdp :: VecRef Word8 -> ObjectData -> Int -> Vm (Maybe Object)
+prSendUdp bytes hostString port = do
+  bytes' <- fmap Data.ByteString.pack (vecRefToList bytes)
+  maybeHost <- objectDataAsString hostString
+  case maybeHost of
+    Nothing -> return Nothing
+    Just host -> liftIO (sendUdpPacket host port bytes') >> return (Just nilObject)
+
 stPrimitivesC :: PrimitiveDispatcher
 stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
@@ -178,6 +198,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stEvalOpt receiver [] (Just (exception, handler))
+    ("sendUdpData:toHost:port:", DataSystem, [Object _ (DataByteArray _ aByteArray),  Object _ hostAddress, Object _ (DataSmallInteger portNumber)]) -> prSendUdp aByteArray hostAddress portNumber
     ("threadDelayMicroseconds", DataSmallInteger x, []) -> liftIO (threadDelay x) >> return (Just receiver)
     ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stEvalOpt receiver sym cl) (objectDataAsString str)
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
