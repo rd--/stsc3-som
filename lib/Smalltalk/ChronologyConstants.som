@@ -1,0 +1,88 @@
+ChronologyConstants = Object (
+
+----------------------------
+
+| DayNames DaysInMonth MicrosecondsInDay MonthNames NanosInMillisecond NanosInSecond OneDay SecondsInDay SecondsInHour SecondsInMinute SqueakEpoch Zero |
+
+daysFromSmalltalkEpochToPosixEpoch = (
+	^ 25202 "52 * 365 + (17 * 366)"
+)
+
+daysInMonth = (
+	^ #(31 28 31 30 31 30 31 31 30 31 30 31)
+)
+
+dayNames = (
+	^ #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday)
+)
+
+epochOffset = (
+	"Elaspsed seconds from the Smalltalk epoch to the Posix epoch"
+	^2177452800 "daysFromSmalltalkEpochToPosixEpoch * secondsInDay"
+)
+
+epochOffsetMicros = (
+	"Elaspsed microseconds from the Smalltalk epoch to the Posix epoch"
+	^ChronologyConstants epochOffset * 1000000
+)
+
+initialize = (
+	"ChronologyConstants initialize"
+	SqueakEpoch := 2415386. 		"Julian day number of 1 Jan 1901"
+	SecondsInDay := 86400.
+	SecondsInHour := 3600.
+	SecondsInMinute := 60.
+	MicrosecondsInDay := 24 * 60 * 60 * 1000000.
+	NanosInSecond := 10 raisedTo: 9.
+	NanosInMillisecond := 10 raisedTo: 6.
+	DayNames := #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday).
+	MonthNames := #(January February March April May June July August September October November December).
+	DaysInMonth := #(31 28 31 30 31 30 31 31 30 31 30 31)
+)
+
+microsecondsInDay = (
+	^ 86400000000 "24 * 60 * 60 * 1000000"
+)
+
+millisecondsInDay = (
+	^ 86400000 "24 * 60 * 60 * 1000"
+)
+
+monthNames = (
+	^ #(January February March April May June July August September October November December)
+)
+
+nanosecondsInSecond = (
+	^ 1000000000 "10 raisedTo: 9"
+)
+
+nanosecondsInMillisecond = (
+	^ 1000000 "10 raisedTo: 6"
+)
+
+posixEpochJulianDays = (
+	^ 2440588
+)
+
+secondsInDay = (
+	^ 86400 "24 * 60 * 60"
+)
+
+secondsInHour = (
+	^ 3600 "60 * 60"
+)
+
+secondsInMinute = (
+	^ 60
+)
+
+smalltalkEpoch = (
+	"Julian day number of 1 Jan 1901"
+	^ 2415386
+)
+
+comment = (
+	^'ChronologyConstants is a SharedPool for the constants used by the Kernel-Chronology classes.'
+)
+
+)

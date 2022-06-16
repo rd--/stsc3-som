@@ -161,8 +161,8 @@ print24: hr24 showSeconds: showSeconds showSubseconds: showSubseconds on: aStrea
 		[ aStream nextPutAll: (s < 10 ifTrue: [':0'] ifFalse: [':']).
 		(showSubseconds not or: [self nanoSecond = 0])
 			ifTrue: [s asInteger printOn: aStream]
-			ifFalse: [s asInteger * Time nanosecondsInSecond + self nanoSecond asInteger
-				printOn: aStream asFixedPoint: Time nanosecondsInSecond]].
+			ifFalse: [s asInteger * ChronologyConstants nanosecondsInSecond + self nanoSecond asInteger
+				printOn: aStream asFixedPoint: ChronologyConstants nanosecondsInSecond]].
 	hr24 ifFalse:
 		[ aStream nextPutAll: (h < 12 ifTrue: [' am'] ifFalse: [' pm']) ].
 )
@@ -274,28 +274,6 @@ dateAndTimeNow = (
 	^ self dateAndTimeFromSeconds: self totalSeconds
 )
 
-daysFromSmalltalkEpochToPosixEpoch = (
-	^ 25202 "52 * 365 + (17 * 366)"
-)
-
-daysInMonth = (
-	^ #(31 28 31 30 31 30 31 31 30 31 30 31)
-)
-
-dayNames = (
-	^ #(Sunday Monday Tuesday Wednesday Thursday Friday Saturday)
-)
-
-epochOffset = (
-	"Elaspsed seconds from the Smalltalk epoch to the Posix epoch"
-	^2177452800 "Time daysFromSmalltalkEpochToPosixEpoch * Time secondsInDay"
-)
-
-epochOffsetMicros = (
-	"Elaspsed microseconds from the Smalltalk epoch to the Posix epoch"
-	^Time epochOffset * 1000000
-)
-
 durationToRun: timedBlock = (
 	"Answer a duration timedBlock takes to return its value"
 	^(self microsecondsToRun: timedBlock) microSeconds
@@ -307,7 +285,7 @@ fromSeconds: secondCount = (
 	integerSeconds := secondCount truncated.
 	integerSeconds = secondCount
 		ifTrue: [nanos := 0]
-		ifFalse: [nanos := (secondCount - integerSeconds * Time nanosecondsInSecond) asInteger].
+		ifFalse: [nanos := (secondCount - integerSeconds * ChronologyConstants nanosecondsInSecond) asInteger].
 	^ self seconds: integerSeconds nanoSeconds: nanos
 )
 
@@ -323,7 +301,7 @@ hour: hour minute: minute second: second = (
 hour: hour minute: minute second: second nanoSecond: nanoCount = (
 	"Answer a Time - only second precision for now"
 	^ self
-		seconds: (hour * Time secondsInHour) + (minute * Time secondsInMinute) + second
+		seconds: (hour * ChronologyConstants secondsInHour) + (minute * ChronologyConstants secondsInMinute) + second
 		nanoSeconds: nanoCount
 )
 
@@ -368,10 +346,6 @@ localMicrosecondClockWithOffset = (
 	^result
 )
 
-microsecondsInDay = (
-	^ 86400000000 "24 * 60 * 60 * 1000000"
-)
-
 microsecondsToRun: timedBlock = (
 	"Answer the number of microseconds timedBlock takes to return its value."
 	| startUsecs |
@@ -410,22 +384,6 @@ millisecondsToRun: timedBlock = (
 	^(self microsecondsToRun: timedBlock) + 500 // 1000
 )
 
-millisecondsInDay = (
-	^ 86400000 "24 * 60 * 60 * 1000"
-)
-
-monthNames = (
-	^ #(January February March April May June July August September October November December)
-)
-
-nanosecondsInSecond = (
-	^ 1000000000 "10 raisedTo: 9"
-)
-
-nanosecondsInMillisecond = (
-	^ 1000000 "10 raisedTo: 6"
-)
-
 namesForTimes: arrayOfSeconds = (
 	| simpleEnglish final prev |
 	"Return English descriptions of the times in the array.  They are each seconds since 1901.  If two names are the same, append the date and time to distinguish them."
@@ -462,21 +420,17 @@ new = (
 )
 
 noon = (
-	^ self seconds: (Time secondsInDay / 2)
+	^ self seconds: (ChronologyConstants secondsInDay / 2)
 )
 
 now = (
 	"Answer a Time representing the time right now - this is a 24 hour clock."
 	| localUsecs localUsecsToday |
 	localUsecs := self localMicrosecondClock.
-	localUsecsToday := localUsecs \\ Time microsecondsInDay.
+	localUsecsToday := localUsecs \\ ChronologyConstants microsecondsInDay.
 	^ self
 		seconds: localUsecsToday // 1000000
 		nanoSeconds: localUsecsToday \\ 1000000 * 1000
-)
-
-posixEpochJulianDays = (
-	^ 2440588
 )
 
 posixMicrosecondClockWithOffset = (
@@ -556,23 +510,6 @@ seconds: seconds nanoSeconds: nanoCount = (
 	"Answer a Time from midnight."
 	^ self basicNew
 		ticks: (Duration seconds: seconds nanoSeconds: nanoCount) ticks
-)
-
-secondsInDay = (
-	^ 86400 "24 * 60 * 60"
-)
-
-secondsInHour = (
-	^ 3600 "60 * 60"
-)
-
-secondsInMinute = (
-	^ 60
-)
-
-smalltalkEpoch = (
-	"Julian day number of 1 Jan 1901"
-	^ 2415386
 )
 
 totalSeconds = (

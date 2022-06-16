@@ -220,7 +220,7 @@ firstWeekdayOfMonth: month year: year = (
 
 fromDays: dayCount = (
 	"Days since 1 January 1901"
-	^ self julianDayNumber: dayCount + Time smalltalkEpoch
+	^ self julianDayNumber: dayCount + ChronologyConstants smalltalkEpoch
 )
 
 fromSeconds: seconds = (

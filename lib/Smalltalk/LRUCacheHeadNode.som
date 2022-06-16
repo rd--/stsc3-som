@@ -1,0 +1,25 @@
+LRUCacheHeadNode = Object (
+
+| next previous |
+
+initialize = (
+	previous := next := self
+)
+
+next = (
+	^next
+)
+
+next: anObject = (
+	next := anObject
+)
+
+previous = (
+	^previous
+)
+
+previous: anObject = (
+	previous := anObject
+)
+
+)

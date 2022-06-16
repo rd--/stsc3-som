@@ -1,5 +1,5 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. LRUCache. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
@@ -76,6 +76,9 @@ KeyedSetTest suite run printOn: Transcript
 
 LinkedListTest testSelectors do: [ :each | Transcript show: each; cr. LinkedListTest run: each ]
 LinkedListTest suite run printOn: Transcript
+
+LRUCacheTest testSelectors do: [ :each | Transcript show: each; cr. LRUCacheTest run: each ]
+LRUCacheTest suite run printOn: Transcript
 
 MatrixTest testSelectors do: [ :each | Transcript show: each; cr. MatrixTest run: each ]
 MatrixTest suite run printOn: Transcript

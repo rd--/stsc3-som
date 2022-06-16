@@ -18,23 +18,23 @@ printOn: aStream = (
 | StartDay |
 
 dayNames = (
-	^ Time dayNames
+	^ ChronologyConstants dayNames
 )
 
 indexOfDay: aSymbol = (
-	^ Time dayNames indexOf: aSymbol
+	^ ChronologyConstants dayNames indexOf: aSymbol
 )
 
 nameOfDay: anIndex = (
-	^ Time dayNames at: anIndex
+	^ ChronologyConstants dayNames at: anIndex
 )
 
 startDay = (
-	^ StartDay ifNil: [ StartDay := Time dayNames first ]
+	^ StartDay ifNil: [ StartDay := ChronologyConstants dayNames first ]
 )
 
 startDay: aSymbol = (
-	(Time dayNames includes: aSymbol)
+	(ChronologyConstants dayNames includes: aSymbol)
 		ifTrue: [ StartDay := aSymbol ]
 		ifFalse: [ self error: aSymbol, ' is not a recognised day name' ]
 )
@@ -44,7 +44,7 @@ starting: aDateAndTime duration: aDuration = (
 	 Week will start from the Week class>>startDay"
 	| midnight delta adjusted |
 	midnight := aDateAndTime asDateAndTime midnight.
-	delta := ((midnight dayOfWeek + 7 - (Time dayNames indexOf: self startDay)) rem: 7) abs.
+	delta := ((midnight dayOfWeek + 7 - (ChronologyConstants dayNames indexOf: self startDay)) rem: 7) abs.
 	adjusted := midnight - (Duration days: delta seconds: 0).
 	^ super starting: adjusted duration: (Duration weeks: 1)
 )

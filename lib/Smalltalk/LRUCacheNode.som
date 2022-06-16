@@ -1,0 +1,44 @@
+LRUCacheNode = LRUCacheHeadNode (
+
+| key value |
+
+key = (
+	^key
+)
+
+key: anObject = (
+	key := anObject
+)
+
+linkAfter: anLRUCacheHeadNode = (
+	next := anLRUCacheHeadNode next.
+	previous := anLRUCacheHeadNode.
+	next previous: self.
+	previous next: self
+)
+
+printOn: stream = (
+	super printOn: stream.
+	stream
+		nextPut: $(;
+		print: key;
+		nextPutAll: ', ';
+		print: value;
+		nextPut: $)
+)
+
+unlink = (
+	next previous: previous.
+	previous next: next.
+	next := previous := nil
+)
+
+value = (
+	^value
+)
+
+value: anObject = (
+	value := anObject
+)
+
+)

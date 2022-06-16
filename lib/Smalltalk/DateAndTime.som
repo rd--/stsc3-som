@@ -61,7 +61,7 @@ asExactSeconds = (
 	This implementation differs from earlier Squeak in that it uses seconds relative
 	to the Smalltalk epoch (not local time), and represents seconds as an arbitrary
 	precision number rather than an integer."
-	^ utcMicroseconds / 1000000 + Time epochOffset
+	^ utcMicroseconds / 1000000 + ChronologyConstants epochOffset
 )
 
 asLocal = (
@@ -117,7 +117,7 @@ asSeconds = (
 	This implementation differs from earlier Squeak in that it uses seconds relative
 	to the Smalltalk epoch (not local time), and represents seconds as an arbitrary
 	precision number rather than an integer."
-	^ utcMicroseconds // 1000000 + Time epochOffset
+	^ utcMicroseconds // 1000000 + ChronologyConstants epochOffset
 )
 
 asTime = (
@@ -266,7 +266,7 @@ isLeapYear = (
 )
 
 julianDayNumber = (
-	^utcMicroseconds // 1000000 + localOffsetSeconds // 86400 + Time posixEpochJulianDays
+	^utcMicroseconds // 1000000 + localOffsetSeconds // 86400 + ChronologyConstants posixEpochJulianDays
 )
 
 localOffsetSeconds: seconds = (
@@ -288,7 +288,7 @@ meridianAbbreviation = (
 )
 
 microsecondsFromDay: jdn seconds: s nanos: n offset: localOffsetSeconds = (
-	^jdn - Time posixEpochJulianDays "days" * 86400
+	^jdn - ChronologyConstants posixEpochJulianDays "days" * 86400
 		+ s - localOffsetSeconds "seconds" * 1000000
 		+ (n / 1000) "nanos"
 )
@@ -528,8 +528,8 @@ ticks = (
 ticks: ticks offset: utcOffset = (
 	"ticks is {julianDayNumber. secondCount. nanoSeconds}"
 	| jdn s nanos |
-	self normalize: 3 ticks: ticks base: Time nanosecondsInSecond.
-	self normalize: 2 ticks: ticks base: Time secondsInDay.
+	self normalize: 3 ticks: ticks base: ChronologyConstants nanosecondsInSecond.
+	self normalize: 2 ticks: ticks base: ChronologyConstants secondsInDay.
 	jdn	:= ticks at: 1.
 	s := ticks at: 2.
 	nanos := ticks at: 3.
@@ -618,7 +618,7 @@ date: aDate time: aTime = (
 
 epoch = (
 	"Answer a DateAndTime representing the Squeak epoch: 1 January 1901"
-	^ self utcMicroseconds: Time epochOffsetMicros negated offset: 0
+	^ self utcMicroseconds: ChronologyConstants epochOffsetMicros negated offset: 0
 )
 
 fromSeconds: seconds = (
@@ -633,7 +633,7 @@ fromSeconds: seconds = (
 	precision number rather than an integer."
 	| s uSec offset |
 	offset := self localOffsetSeconds.
-	s := seconds - Time epochOffset.
+	s := seconds - ChronologyConstants epochOffset.
 	uSec := s * 1000000.
 	^ self utcMicroseconds: uSec offset: offset
 )
@@ -688,7 +688,7 @@ millisecondClockValue = (
 
 new = (
 	"Answer a DateAndTime representing the Squeak epoch: 1 January 1901"
-	^ self utcMicroseconds: Time epochOffsetMicros negated offset: 0
+	^ self utcMicroseconds: ChronologyConstants epochOffsetMicros negated offset: 0
 )
 
 noon = (
@@ -805,7 +805,7 @@ utcMicrosecondsForYear: year month: month day: day hour: hour minute: minute sec
 			( (367 * r) quo: 12 ) -
  				( (3 * s) quo: 4 ) +
  					( day - 32075 ).
-	posixDays := julianDayNumber - Time posixEpochJulianDays.
+	posixDays := julianDayNumber - ChronologyConstants posixEpochJulianDays.
 	seconds := hour * 60 + minute * 60 + second - offsetSeconds.
 	utcSeconds := seconds + (posixDays * 24 * 3600).
 	^ utcSeconds * 1000000 + (nanoCount / 1000)

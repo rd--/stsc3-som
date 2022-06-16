@@ -31,14 +31,14 @@ daysInMonth: indexOrName forYear: yearInteger = (
 	index := indexOrName isInteger
 				ifTrue: [indexOrName]
 				ifFalse: [self indexOfMonth: indexOrName].
-	^ (Time daysInMonth at: index)
+	^ (ChronologyConstants daysInMonth at: index)
 			+ ((index = 2
 					and: [Year isLeapYear: yearInteger])
 						ifTrue: [1] ifFalse: [0])
 )
 
 indexOfMonth: aMonthName = (
-	1 to: 12 do: [ :i |  (aMonthName, '*' match: (Time monthNames at: i)) ifTrue: [^i] ].
+	1 to: 12 do: [ :i |  (aMonthName, '*' match: (ChronologyConstants monthNames at: i)) ifTrue: [^i] ].
 	self error: aMonthName , ' is not a recognized month name'
 )
 
@@ -58,7 +58,7 @@ month: month year: year = (
 )
 
 nameOfMonth: anIndex = (
-	^ Time monthNames at: anIndex
+	^ ChronologyConstants monthNames at: anIndex
 )
 
 readFrom: aStream = (

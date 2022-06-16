@@ -83,7 +83,7 @@ asMilliSeconds = (
 )
 
 asNanoSeconds = (
-	^seconds * Time nanosecondsInSecond + nanos
+	^seconds * ChronologyConstants nanosecondsInSecond + nanos
 )
 
 asSeconds = (
@@ -92,7 +92,7 @@ asSeconds = (
 
 days = (
 	"Answer the number of days the receiver represents."
-	^ seconds quo: Time secondsInDay
+	^ seconds quo: ChronologyConstants secondsInDay
 )
 
 fromNow = (
@@ -113,7 +113,7 @@ hash = (
 
 hours = (
 	"Answer the number of hours the receiver represents."
-	^ (seconds rem: Time secondsInDay) quo: Time secondsInHour
+	^ (seconds rem: ChronologyConstants secondsInDay) quo: ChronologyConstants secondsInHour
 )
 
 initialize = (
@@ -126,7 +126,7 @@ isZero = (
 
 minutes = (
 	"Answer the number of minutes the receiver represents."
-	^ (seconds rem: Time secondsInHour) quo: Time secondsInMinute
+	^ (seconds rem: ChronologyConstants secondsInHour) quo: ChronologyConstants secondsInMinute
 )
 
 nanoSeconds = (
@@ -174,7 +174,7 @@ roundTo: aDuration = (
 
 seconds = (
 	"Answer the number of seconds the receiver represents."
-	^seconds rem: Time secondsInMinute
+	^seconds rem: ChronologyConstants secondsInMinute
 )
 
 seconds: secondCount nanoSeconds: nanoCount = (
@@ -184,10 +184,10 @@ seconds: secondCount nanoSeconds: nanoCount = (
 	"normalize if signs do not match"
 	[ nanos < 0 and: [ seconds > 0 ] ]
 		whileTrue: [ seconds := seconds - 1.
-			nanos := nanos + Time nanosecondsInSecond ].
+			nanos := nanos + ChronologyConstants nanosecondsInSecond ].
 	[ seconds < 0 and: [ nanos > 0 ] ]
 		whileTrue: [ seconds := seconds + 1.
-			nanos := nanos - Time nanosecondsInSecond ]
+			nanos := nanos - ChronologyConstants nanosecondsInSecond ]
 )
 
 storeOn: aStream = (
@@ -207,7 +207,7 @@ ticks = (
 	days := self days.
 	^ Array
 		with: days
-		with: seconds - (days * Time secondsInDay)
+		with: seconds - (days * ChronologyConstants secondsInDay)
 		with: nanos
 )
 
@@ -231,7 +231,7 @@ wait = (
 | OneDay Zero |
 
 days: aNumber = (
-	^ self seconds: aNumber * Time secondsInDay nanoSeconds: 0
+	^ self seconds: aNumber * ChronologyConstants secondsInDay nanoSeconds: 0
 )
 
 days: days hours: hours minutes: minutes seconds: seconds = (
@@ -241,14 +241,14 @@ days: days hours: hours minutes: minutes seconds: seconds = (
 days: days hours: hours minutes: minutes seconds: seconds nanoSeconds: nanos = (
  	^self
 		seconds: seconds
-			+ (minutes * Time secondsInMinute)
-			+ (hours * Time secondsInHour)
-			+ (days * Time secondsInDay)
+			+ (minutes * ChronologyConstants secondsInMinute)
+			+ (hours * ChronologyConstants secondsInHour)
+			+ (days * ChronologyConstants secondsInDay)
 		nanoSeconds: nanos
 )
 
 days: days seconds: seconds = (
-	^ self basicNew seconds: days * Time secondsInDay + seconds nanoSeconds: 0
+	^ self basicNew seconds: days * ChronologyConstants secondsInDay + seconds nanoSeconds: 0
 )
 
 fromString: aString = (
@@ -256,7 +256,7 @@ fromString: aString = (
 )
 
 hours: aNumber = (
-	^ self seconds: aNumber * Time secondsInHour nanoSeconds: 0
+	^ self seconds: aNumber * ChronologyConstants secondsInHour nanoSeconds: 0
 )
 
 microSeconds: anInteger = (
@@ -268,11 +268,11 @@ microSeconds: anInteger = (
 milliSeconds: milliCount = (
 	^self
 		seconds: (milliCount quo: 1000)
-		nanoSeconds: (milliCount rem: 1000) * Time nanosecondsInMillisecond
+		nanoSeconds: (milliCount rem: 1000) * ChronologyConstants nanosecondsInMillisecond
 )
 
 minutes: aNumber = (
-	^ self seconds: aNumber * Time secondsInMinute nanoSeconds: 0
+	^ self seconds: aNumber * ChronologyConstants secondsInMinute nanoSeconds: 0
 )
 
 month: aMonth = (
@@ -283,10 +283,10 @@ month: aMonth = (
 nanoSeconds: nanos = (
 	"This method is slow. If you have nanos less than 10^6 you should use #seconds:nanoSeconds: instead."
 	| quo |
-	quo := nanos quo: Time nanosecondsInSecond.
+	quo := nanos quo: ChronologyConstants nanosecondsInSecond.
 	^ self basicNew
 		seconds: quo
-		nanoSeconds: nanos - (quo * Time nanosecondsInSecond)
+		nanoSeconds: nanos - (quo * ChronologyConstants nanosecondsInSecond)
 )
 
 oneDay = (
@@ -356,7 +356,7 @@ seconds: seconds = (
 seconds: seconds nanoSeconds: nanos = (
 	^ self basicNew
 		seconds: seconds truncated
-		nanoSeconds: seconds fractionPart * Time nanosecondsInSecond + nanos
+		nanoSeconds: seconds fractionPart * ChronologyConstants nanosecondsInSecond + nanos
 )
 
 weeks: aNumber = (
