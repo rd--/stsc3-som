@@ -108,7 +108,7 @@ contextFrameInspect ctx =
      The Name lookup rules are:
 
      For methods:
-                  1. temporaries & arguments,
+                  1. temporaries (including arguments),
                   2. receiver instance variables,
                   3. receiver class variables,
                   4. globals.

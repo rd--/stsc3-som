@@ -1,4 +1,4 @@
-SmalltalkImage = (
+SmalltalkImage = SmalltalkImage (
 
 readTextFile: aFileName = (
 	<primitive: -1>

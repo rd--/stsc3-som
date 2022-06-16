@@ -1,4 +1,4 @@
-SequenceableCollection = (
+SequenceableCollection = SequenceableCollection (
 
 permutations = (
 	^ (Generator on: [ :g | self permutationsDo: [ :each | g yield: each ] ]) contents
