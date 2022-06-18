@@ -1,12 +1,24 @@
 Random = Object (
 
-----
-
 next = (
+	"This is not correct.  It should not share a generator."
 	^ 1.0 atRandom
 )
 
 nextInt: anInteger = (
+	"This is not correct.  It should not share a generator."
+	^ anInteger atRandom
+)
+
+----
+
+next = (
+	"This is not correct.  There should not be a class method."
+	^ 1.0 atRandom
+)
+
+nextInt: anInteger = (
+	"This is not correct.  There should not be a class method."
 	^ anInteger atRandom
 )
 
