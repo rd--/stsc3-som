@@ -9,3 +9,4 @@ clean:
 
 push-all:
 	r.gitlab-push.sh stsc3-som
+	r.github-push.sh stsc3
