@@ -5,7 +5,7 @@ implementation of the
 [Simple Object Model](http://som-st.github.io/)
 ([Smalltalk](http://archive.org/details/byte-magazine-1981-08/))
 system using the parser and abstract syntax tree of
-[sts3c](http://rohandrape.net/?t=stsc3).
+[stsc3](http://rohandrape.net/?t=stsc3).
 
 ![](https://rohandrape.net/sw/stsc3/lib/png/smalltalk-balloon.png)
 
