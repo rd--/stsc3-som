@@ -91,6 +91,11 @@ asYear = (
 	^ Year year: self
 )
 
+atRandom: aGenerator = (
+	"Answer a random integer from 1 to self picked from aGenerator."
+	^ aGenerator nextInt: self
+)
+
 benchFib  "Handy send-heavy benchmark" = (
 	"(result // seconds to run) = approx calls per second"
 	" | r t |

@@ -18,3 +18,7 @@ deRef = liftIO . readIORef
 -- | Mutate reference, liftIO of modifyIORef
 rwRef :: MonadIO m => Ref t -> (t -> t) -> m ()
 rwRef r = liftIO . modifyIORef r
+
+wrRef :: MonadIO m => Ref t -> t -> m ()
+wrRef r = liftIO . writeIORef r
+

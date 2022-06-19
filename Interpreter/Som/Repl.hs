@@ -22,6 +22,7 @@ stStandardClassList =
     ,"Exception", "Error", "Halt"
     ,"Magnitude", "Character", "LookupKey", "Association", "Number", "Float", "Double", "Integer", "SmallInteger"
     ,"Method"
+    ,"RandomGenerator"
     ,"SmalltalkImage"
     ,"UndefinedObject", "Nil"
     ]

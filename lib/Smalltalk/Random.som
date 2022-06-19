@@ -1,25 +1,125 @@
 Random = Object (
 
+| randomGenerator |
+
+diceToken: stream = (
+	"Private. Mini scanner, see #roll:"
+	stream atEnd ifTrue: [^ nil].
+	stream peek isDigit ifTrue: [^ Integer readFrom: stream].
+	^ stream next asLowercase
+)
+
 next = (
-	"This is not correct.  It should not share a generator."
-	^ 1.0 atRandom
+	^ randomGenerator next
+)
+
+next: anInteger = (
+	^ self next: anInteger into: (Array new: anInteger)
+)
+
+next: anInteger into: anArray = (
+	1 to: anInteger do: [:index | anArray at: index put: self next].
+	^ anArray
 )
 
 nextInt: anInteger = (
-	"This is not correct.  It should not share a generator."
-	^ anInteger atRandom
+	^ randomGenerator nextInt: anInteger
+)
+
+roll: diceString = (
+	"Roll some dice, DnD-style, according to this mini-grammar:
+		dice := epxr {pm dice}
+		pm := '+' | '-'
+		expr := num | num dD | dD numP | num dD numP
+		dD := 'd' | 'D'
+		num := digit+
+		numP := num | '%'"
+	| stream op result |
+	stream := diceString readStream.
+	result := 0.
+	op := #+.
+	[ | res range dice token |
+	token := self diceToken: stream.
+	token isNumber
+		ifTrue: [dice := token.
+				res := token.
+				token := self diceToken: stream]
+		ifFalse: [token == $d
+			ifTrue: [dice := 1]
+			ifFalse: [self error: 'unknown token' , token]].
+	token == $d
+		ifTrue: [token := self diceToken: stream.
+				token isNumber
+					ifTrue: [range := token.
+							token := self diceToken: stream]
+					ifFalse: [token == $%
+						ifTrue: [range := 100.
+								token := self diceToken: stream]
+						ifFalse: [range := 6]].
+				res := 0.
+				dice timesRepeat: [res := res + (self nextInt: range)]].
+	result := result perform: op with: res.
+	token ifNil: [^ result].
+	(token == $+ or: [token == $-])
+		ifFalse: [self error: 'unknown token ' , token].
+	op := token asSymbol] repeat
+)
+
+seed: anInteger = (
+	randomGenerator := anInteger randomGenerator
 )
 
 ----
 
+new = (
+	"New instance seeded with current the time."
+	^self seed: Time utcMicrosecondClock
+)
+
 next = (
-	"This is not correct.  There should not be a class method."
+	"Allow using Random as a shared generator.  atRandom at Double is a primitive."
 	^ 1.0 atRandom
 )
 
 nextInt: anInteger = (
-	"This is not correct.  There should not be a class method."
+	"Allow using Random as a shared generator. atRandom at SmallInteger is a primitive."
 	^ anInteger atRandom
 )
+
+seed: anInteger = (
+	^self basicNew seed: anInteger
+)
+
+comment = (^'
+I implement the 32-bit version of the Mersenne Twister PRNG, using 30-bit arithmetic, based on http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/ARTICLES/mt.pdf . The parameters of the generator are stored in class variables prefixed with MT.
+
+Instance Variables
+	states:	<Array>
+	index: <Integer>
+
+index
+	- the index of the state, which should be used to generate the next random integer value
+
+states
+	- an Array holding the internal state of the generator
+
+---
+
+If you just want a quick random integer, use:
+		10 atRandom
+Every integer interval can give a random number:
+		(6 to: 12) atRandom
+SequenceableCollections can give randomly selected elements:
+		''pick one of these letters randomly'' atRandom
+SequenceableCollections also respond to shuffled, as in:
+		($A to: $Z) shuffled
+
+The correct way to use class Random is to store one in an instance or class variable:
+		myGenerator := Random new.
+Then use it every time you need another number between 0.0 and 1.0 (excluding)
+		myGenerator next
+You can also generate a positive integer
+		myGenerator nextInt: 10
+')
 
 )

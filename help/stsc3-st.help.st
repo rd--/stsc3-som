@@ -1,5 +1,5 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. LRUCache. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
@@ -100,6 +100,9 @@ OrderedCollectionTest suite run printOn: Transcript
 
 OrderedDictionaryTest testSelectors do: [ :each | Transcript show: each; cr. OrderedDictionaryTest run: each ]
 OrderedDictionaryTest suite run printOn: Transcript
+
+RandomTest testSelectors do: [ :each | Transcript show: each; cr. RandomTest run: each ]
+RandomTest suite run printOn: Transcript
 
 ReadStreamTest testSelectors do: [ :each | Transcript show: each; cr. ReadStreamTest run: each ]
 ReadStreamTest suite run printOn: Transcript

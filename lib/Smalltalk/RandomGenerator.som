@@ -1,0 +1,15 @@
+RandomGenerator = (
+
+next = (
+	"Float in range (0, 1)."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+nextInt: anInteger = (
+	"Integer in range (1, anInteger)."
+	<primitive: -1>
+	self primitiveFailed
+)
+
+)

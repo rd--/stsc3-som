@@ -1,0 +1,81 @@
+RandomTest = TestCase (
+
+testNext = (
+	| random min max |
+	min := Float infinity.
+	max := Float negativeInfinity.
+	random := Random seed: 112629.
+	25000 timesRepeat: [
+		| next |
+		next := random next.
+		next < min ifTrue: [ min := next ].
+		next > max ifTrue: [ max := next ].
+		self assert: next >= 0.0 description: [ 'Generated value ', next asString, ' should be non-negative.' ].
+		self assert: next < 1.0 description: [ 'Generated value ', next asString, ' should be less than 1.0.' ] ].
+	self assert: max > 0.9999 description: 'The largest generated value should be greater than 0.9999.'.
+	self assert: min < 0.0001 description: 'The smallest generated value should be less than 0.0001.'
+)
+
+testNextInt = (
+	| random |
+	random := Random seed: 1234567812345678.
+	#(
+		"2 100000"
+		"3 200000"
+		"10 300000"
+		100 400000
+	) groupsDo: [ :bucketCount :runs |
+		| buckets |
+		buckets := Array new: bucketCount withAll: 0.
+		runs timesRepeat: [
+			| next |
+			next := random nextInt: bucketCount.
+			buckets at: next put: (buckets at: next) + 1 ].
+		buckets do: [ :each |
+			self assert: (each / (runs / bucketCount) between: 0.95 and: 1.05) ] ]
+)
+
+testRoll = (
+	| random result |
+	random := Random seed: 14482.
+	100 timesRepeat: [
+		result := random roll: 'd'.
+		self assert: result >= 1 description: [ 'Rolled value ', result asString, ' should be 1 or more.' ].
+		self assert: result <= 6 description: [ 'Rolled value ', result asString, ' should be 6 or less.' ] ].
+	100 timesRepeat: [
+		result := random roll: '1d'.
+		self assert: result >= 1 description: [ 'Rolled value ', result asString, ' should be 1 or more.' ].
+		self assert: result <= 6 description: [ 'Rolled value ', result asString, ' should be 6 or less.' ] ].
+	100 timesRepeat: [
+		result := random roll: '1d20'.
+		self assert: result >= 1 description: [ 'Rolled value ', result asString, ' should be 1 or more.' ].
+		self assert: result <= 20 description: [ 'Rolled value ', result asString, ' should be 20 or less.' ] ].
+	1000 timesRepeat: [
+		result := random roll: '1d%'.
+		self assert: result >= 1 description: [ 'Rolled value ', result asString, ' should be 1 or more.' ].
+		self assert: result <= 100 description: [ 'Rolled value ', result asString, ' should be 100 or less.' ] ].
+	1000 timesRepeat: [
+		result := random roll: 'd%'.
+		self assert: result >= 1 description: [ 'Rolled value ', result asString, ' should be 1 or more.' ].
+		self assert: result <= 100 description: [ 'Rolled value ', result asString, ' should be 100 or less.' ] ].
+	100 timesRepeat: [
+		result := random roll: '2d2'.
+		self assert: result >= 2 description: [ 'Rolled value ', result asString, ' should be 2 or more.' ].
+		self assert: result <= 4 description: [ 'Rolled value ', result asString, ' should be 4 or less.' ] ].
+	100 timesRepeat: [
+		result := random roll: '1d2+1d2'.
+		self assert: result >= 2 description: [ 'Rolled value ', result asString, ' should be 2 or more.' ].
+		self assert: result <= 4 description: [ 'Rolled value ', result asString, ' should be 4 or less.' ] ].
+	result := random roll: '10d1'.
+	self assert: result = 10 description: [ 'Rolled value ', result asString, 'should be 10.' ].
+	result := random roll: '10d1-5d1'.
+	self assert: result = 5 description: [ 'Rolled value ', result asString, 'should be 5.' ].
+	result := random roll: '5'.
+	self assert: result = 5 description: [ 'Rolled value ', result asString, 'should be 5.' ].
+	result := random roll: '5+3+2'.
+	self assert: result = 10 description: [ 'Rolled value ', result asString, 'should be 10.' ].
+	result := random roll: '1d1+3'.
+	self assert: result = 4 description: [ 'Rolled value ', result asString, 'should be 4.' ].
+)
+
+)

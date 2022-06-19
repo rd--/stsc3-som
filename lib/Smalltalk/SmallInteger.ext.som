@@ -1,0 +1,8 @@
+SmallInteger = SmallInteger (
+
+randomGenerator = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
+)

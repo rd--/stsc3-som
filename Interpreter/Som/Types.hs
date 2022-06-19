@@ -19,6 +19,7 @@ import Text.Printf {- base -}
 
 import qualified Data.Hashable as Hashable {- hashable -}
 import qualified Data.Map as Map {- containers -}
+import qualified System.Random as Random {- containers -}
 
 import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
@@ -257,6 +258,7 @@ data ObjectData
   | DataByteArray Id (VecRef Word8) -- ^ Byte array
   | DataThread ThreadId
   | DataMVar (MVar.MVar Object)
+  | DataRandomGenerator Id (Ref Random.StdGen)
   deriving (Eq)
 
 objectDataAsDouble :: ObjectData -> Maybe Double
@@ -746,6 +748,25 @@ trueObject = booleanObject True
 arrayLiteralObject :: [Object] -> Object
 arrayLiteralObject lst = Object (toSymbol "Array") (DataArrayLiteral (vecFromList lst))
 
+randomGeneratorObject :: Int -> Vm Object
+randomGeneratorObject seed = do
+  pc <- vmIncrementProgramCounter
+  ref <- toRef (Random.mkStdGen seed)
+  return (Object "RandomGenerator" (DataRandomGenerator pc ref))
+
+randomGenerator :: (MonadIO m, Random.Random t) => Ref Random.StdGen -> (t, t) -> m t
+randomGenerator ref rng = do
+  gen <- deRef ref
+  let (answer, gen') = Random.randomR rng gen
+  wrRef ref gen'
+  return answer
+
+randomGeneratorNextInt :: MonadIO m => Ref Random.StdGen -> Int -> m Int
+randomGeneratorNextInt rng n = randomGenerator rng (1, n)
+
+randomGeneratorNext :: MonadIO m => Ref Random.StdGen -> m Double
+randomGeneratorNext rng = randomGenerator rng (0, 1)
+
 -- | (intObject, strObject, symObject)
 type LiteralConstructors = (LargeInteger -> Object, String -> Object, String -> Object)
 
@@ -809,15 +830,16 @@ objectHash (Object nm obj) =
     DataContext _ -> vmError ("Object>>hash: Context")
     DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
     DataPrimitive holder signature -> mHash (nm,holder,signature)
-    DataBlockClosure x _ _ -> mHash ("Block",x)
+    DataBlockClosure x _ _ -> mHash ("Block", x)
     DataSystem -> mHash (nm,"system")
     DataArrayLiteral vec -> mapM objectHash (vecToList vec) >>= \lst -> mHash (nm, lst)
-    DataIndexable x _ -> mHash (nm,x)
-    DataNonIndexable x _ -> mHash (nm,x)
+    DataIndexable x _ -> mHash (nm, x)
+    DataNonIndexable x _ -> mHash (nm, x)
     DataCharacterArray _ ref -> vecRefToList ref >>= \str -> mHash (nm, str) -- strings and copies of strings hash equally
     DataByteArray _ ref -> vecRefToList ref >>= \bytes -> mHash (nm, bytes)
     DataThread _ -> vmError ("Object>>hash: Thread")
     DataMVar _ -> vmError ("Object>>hash: MVar")
+    DataRandomGenerator x _ -> mHash (nm, x)
 
 objectHashEqual :: (StError m, MonadIO m) => Object -> Object -> m Bool
 objectHashEqual obj1 obj2 = do

@@ -196,6 +196,8 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
     ("methodClass", DataMethod methodClass _ _,[]) -> fmap Just (vmGlobalResolveOrError methodClass)
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
+    ("next", DataRandomGenerator _ rng, []) -> fmap (Just . doubleObject) (randomGeneratorNext rng)
+    ("nextInt:", DataRandomGenerator _ rng, [Object _ (DataSmallInteger x)]) -> fmap (Just . intObject) (randomGeneratorNextInt rng x)
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stEvalOpt receiver [] (Just (exception, handler))
     ("sendUdpData:toHost:port:", DataSystem, [Object _ (DataByteArray _ aByteArray),  Object _ hostAddress, Object _ (DataSmallInteger portNumber)]) -> prSendUdp aByteArray hostAddress portNumber
@@ -206,6 +208,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("printCharacter:", DataSystem, [Object _ (DataCharacter ch)]) -> liftIO (putChar ch) >> return (Just nilObject)
     ("printContext", DataSystem, []) -> vmGetContext >>= contextPrint >> return (Just nilObject)
     ("printString:", DataSystem, [str]) -> prPrintString str
+    ("randomGenerator", DataSmallInteger x, []) -> fmap Just (randomGeneratorObject x)
     ("readTextFile:", DataSystem, [Object "String" aFileName]) -> prReadTextFile aFileName
     ("sender", DataContext ctx, []) -> return (fmap contextObject (contextSender ctx))
     ("signal", _, []) -> signalException receiver
