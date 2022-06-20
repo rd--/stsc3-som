@@ -1,0 +1,111 @@
+RxsCharSet = RxsNode (
+| negated elements |
+
+dispatchTo: aMatcher = (
+	"Inform the matcher of the kind of the node, and it
+	will do whatever it has to."
+	^aMatcher syntaxCharSet: self
+)
+
+enumerablePartPredicateIgnoringCase: ignoreCase = (
+	| set p |
+	set := (self enumerableSetIgnoringCase: ignoreCase) ifNil: [ ^nil ].
+	set size = 1 ifTrue: [
+		| char |
+		char := set anyOne.
+		ignoreCase ifTrue: [
+			| lowercaseChar |
+			lowercaseChar := char asLowercase.
+			char := char asUppercase.
+			char == lowercaseChar ifFalse: [
+				negated ifTrue: [
+					^[ :character | (character == char or: [ character == lowercaseChar ]) not ] ].
+				^[ :character | character == char or: [ character == lowercaseChar ] ] ] ].
+		negated ifTrue: [ ^[ :character | (character == char) not ] ].
+		^[ :character | character == char ] ].
+	ignoreCase ifTrue: [
+		set copy do: [ :each |
+			| char |
+			(char := each asUppercase) == each
+				ifFalse: [ set add: char ]
+				ifTrue: [
+					(char := each asLowercase) == each ifFalse: [
+						set add: char ] ] ] ].
+	set size < 10 ifTrue: [ "10 is an empirical value"
+		p := set asArray.
+		negated ifTrue: [ ^[ :character | (p instVarsInclude: character) not ] ].
+		^[ :character | p instVarsInclude: character ] ].
+	negated ifTrue: [ ^[ :character | (set includes: character) not ] ].
+	^[ :character | set includes: character ]
+)
+
+enumerableSetIgnoringCase: aBoolean = (
+	"Answer a collection of characters that make up the portion of me that can be enumerated, or nil if there are no such characters. The case check is only used to determine the type of set to be used. The returned set won't contain characters of both cases, because this way the senders of this method can create more efficient checks."
+	| highestCharacterCode set |
+	highestCharacterCode := elements inject: -1 into: [ :max :each |
+		(each maximumCharacterCodeIgnoringCase: aBoolean) max: max ].
+	highestCharacterCode = -1 ifTrue: [ ^nil ].
+	set := highestCharacterCode <= 255
+		ifTrue: [ CharacterSet new ]
+		ifFalse: [ WideCharacterSet new ].
+	elements do: [ :each | each enumerateTo: set ].
+	^set
+)
+
+hasPredicates = (
+	^(elements allSatisfy: [ :some | some isEnumerable ]) not
+)
+
+initializeElements: aCollection negated: aBoolean = (
+	"See class comment for instance variables description."
+	elements := aCollection.
+	negated := aBoolean
+)
+
+isEnumerable = (
+	^elements anySatisfy: [:some | some isEnumerable ]
+)
+
+isNegated = (
+	^negated
+)
+
+predicateIgnoringCase: aBoolean = (
+	| enumerable predicate |
+	enumerable := self enumerablePartPredicateIgnoringCase: aBoolean.
+	predicate := self predicatePartPredicate ifNil: [
+		"There are no predicates in this set."
+		^enumerable ifNil: [
+			"This set is empty."
+			[ :char | negated ] ] ].
+	enumerable ifNil: [ ^predicate ].
+	negated ifTrue: [
+		"enumerable and predicate already negate the result, that's why #not is not needed here."
+		^[ :char | (enumerable value: char) and: [ predicate value: char ] ] ].
+	^[ :char | (enumerable value: char) or: [ predicate value: char ] ]
+)
+
+predicatePartPredicate = (
+	"Answer a predicate that tests all of my elements that cannot be enumerated, or nil if such elements don't exist."
+	| predicates size |
+	predicates := elements reject: [ :some | some isEnumerable ].
+	(size := predicates size) = 0 ifTrue: [
+		"We could return a real predicate block - like [ :char | negated ] - here, but it wouldn't be used anyway. This way we signal that this character set has no predicates."
+		^nil ].
+	size = 1 ifTrue: [
+		negated ifTrue: [ ^predicates first predicateNegation ].
+		^predicates first predicate ].
+	predicates replace: [ :each | each predicate ].
+	negated ifTrue: [ ^[ [: char | predicates noneSatisfy: [ :some | some value: char ] ] ] ].
+	^[ :char | predicates anySatisfy: [ :some | some value: char ] ]
+)
+
+predicates = (
+	| predicates |
+	predicates := elements reject: [ :some | some isEnumerable ].
+	predicates isEmpty ifTrue: [ ^nil ].
+	^predicates replace: [ :each | each predicate ]
+)
+
+
+)

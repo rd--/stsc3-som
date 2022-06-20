@@ -1,0 +1,48 @@
+RxsContextCondition = RxsNode (
+| kind |
+
+beAny = (
+	"Matches anything but a newline."
+	kind := #syntaxAny
+)
+
+beBeginningOfLine = (
+	"Matches empty string at the beginning of a line."
+	kind := #syntaxBeginningOfLine
+)
+
+beBeginningOfWord = (
+	"Matches empty string at the beginning of a word."
+	kind := #syntaxBeginningOfWord
+)
+
+beEndOfLine = (
+	"Matches empty string at the end of a line."
+	kind := #syntaxEndOfLine
+)
+
+beEndOfWord = (
+	"Matches empty string at the end of a word."
+	kind := #syntaxEndOfWord
+)
+
+beNonWordBoundary = (
+	"Analog of \B."
+	kind := #syntaxNonWordBoundary
+)
+
+beWordBoundary = (
+	"Analog of \w (alphanumeric plus _)."
+	kind := #syntaxWordBoundary
+)
+
+dispatchTo: aBuilder = (
+	^aBuilder perform: kind
+)
+
+isNullable = (
+	^(#syntaxAny == kind) not
+)
+
+
+)

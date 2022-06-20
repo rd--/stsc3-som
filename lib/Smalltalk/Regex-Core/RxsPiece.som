@@ -1,0 +1,89 @@
+RxsPiece = RxsNode (
+| atom min max |
+
+atom = (
+	^atom
+)
+
+character = (
+	"If this node is atomic, answer the character it
+	represents. It is the caller's responsibility to make sure this
+	node is indeed atomic before using this."
+	^atom character
+)
+
+dispatchTo: aMatcher = (
+	"Inform the matcher of the kind of the node, and it
+	will do whatever it has to."
+	^aMatcher syntaxPiece: self
+)
+
+initializeAtom: anAtom = (
+	"This piece is exactly one occurrence of the specified RxsAtom."
+	self initializeAtom: anAtom min: 1 max: 1
+)
+
+initializeAtom: anAtom min: minOccurrences max: maxOccurrences = (
+	"This piece is from <minOccurrences> to <maxOccurrences>
+	occurrences of the specified RxsAtom."
+	atom := anAtom.
+	min := minOccurrences.
+	max := maxOccurrences
+)
+
+initializeOptionalAtom: anAtom = (
+	"This piece is 0 or 1 occurrences of the specified RxsAtom."
+	self initializeAtom: anAtom min: 0 max: 1
+)
+
+initializePlusAtom: anAtom = (
+	"This piece is one or more occurrences of the specified RxsAtom."
+	self initializeAtom: anAtom min: 1 max: nil
+)
+
+initializeStarAtom: anAtom = (
+	"This piece is any number of occurrences of the atom."
+	self initializeAtom: anAtom min: 0 max: nil
+)
+
+isAtomic = (
+	"A piece is atomic if only it contains exactly one atom
+	which is atomic (sic)."
+	^self isSingular and: [atom isAtomic]
+)
+
+isNullable = (
+	"A piece is nullable if it allows 0 matches.
+	This is often handy to know for optimization."
+	^min = 0 or: [atom isNullable]
+)
+
+isOptional = (
+	^min = 0 and: [max = 1]
+)
+
+isPlus = (
+	^min = 1 and: [max == nil]
+)
+
+isSingular = (
+	"A piece with a range is 1 to 1 needs can be compiled
+	as a simple match."
+	^min = 1 and: [max = 1]
+)
+
+isStar = (
+	^min = 0 and: [max == nil]
+)
+
+max = (
+	"The value answered may be nil, indicating infinity."
+	^max
+)
+
+min = (
+	^min
+)
+
+
+)

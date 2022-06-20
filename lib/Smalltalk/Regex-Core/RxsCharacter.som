@@ -1,0 +1,57 @@
+RxsCharacter = RxsNode (
+| character |
+
+character = (
+	^character
+)
+
+dispatchTo: aMatcher = (
+	"Inform the matcher of the kind of the node, and it
+	will do whatever it has to."
+	^aMatcher syntaxCharacter: self
+)
+
+enumerateTo: aSet = (
+	^aSet add: character
+)
+
+initializeCharacter: aCharacter = (
+	"See class comment for instance variable description."
+	character := aCharacter
+)
+
+isAtomic = (
+	"A character is always atomic."
+	^true
+)
+
+isEnumerable = (
+	^true
+)
+
+maximumCharacterCodeIgnoringCase: aBoolean = (
+	"Return the largest character code among the characters I represent."
+	aBoolean ifFalse: [ ^character asInteger ].
+	^character asUppercase asInteger max: character asLowercase asInteger
+)
+
+
+----------------------------
+
+with: aCharacter = (
+	^self new initializeCharacter: aCharacter
+)
+
+
+comment = (^'
+
+-- Regular Expression Matcher v 1.1 (C) 1996, 1999 Vassili Bykov
+--
+A character is a literal character that appears either in the expression itself or in a character set within an expression.
+
+Instance variables:
+	character		<Character>
+')
+
+
+)

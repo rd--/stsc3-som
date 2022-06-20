@@ -1,0 +1,36 @@
+RxmSpecial = RxmLink (
+| matchSelector |
+
+beBeginningOfLine = (
+	matchSelector := #atBeginningOfLine
+)
+
+beBeginningOfWord = (
+	matchSelector := #atBeginningOfWord
+)
+
+beEndOfLine = (
+	matchSelector := #atEndOfLine
+)
+
+beEndOfWord = (
+	matchSelector := #atEndOfWord
+)
+
+beNotWordBoundary = (
+	matchSelector := #notAtWordBoundary
+)
+
+beWordBoundary = (
+	matchSelector := #atWordBoundary
+)
+
+matchAgainst: aMatcher = (
+	"Match without consuming any input, if the matcher is
+	in appropriate state."
+	(aMatcher perform: matchSelector) ifFalse: [ ^false ].
+	^next matchAgainst: aMatcher
+)
+
+
+)

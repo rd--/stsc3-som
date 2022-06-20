@@ -1,0 +1,102 @@
+RxCharSetParser = Object (
+
+| source lookahead elements |
+
+addChar: aChar = (
+	elements add: (RxsCharacter with: aChar)
+)
+
+addRangeFrom: firstChar to: lastChar = (
+	firstChar asInteger > lastChar asInteger ifTrue:
+		[RxParser signalSyntaxException: ' bad character range' at: source position].
+	elements add: (RxsRange from: firstChar to: lastChar)
+)
+
+initialize: aStream = (
+	source := aStream.
+	lookahead := aStream next.
+	elements := OrderedCollection new
+)
+
+match: aCharacter = (
+	aCharacter = lookahead ifTrue: [ ^self next ].
+	RxParser
+		signalSyntaxException: 'unexpected character: ', (String with: lookahead)
+		at: source position
+)
+
+next = (
+	^lookahead := source next
+)
+
+parse = (
+	lookahead == $- ifTrue: [
+		self addChar: $-.
+		self next ].
+	[ lookahead == nil ] whileFalse: [ self parseStep ].
+	^elements
+)
+
+parseCharOrRange = (
+	| firstChar |
+	firstChar := lookahead.
+	self next == $- ifFalse: [ ^self addChar: firstChar ].
+	self next ifNil: [ ^self addChar: firstChar; addChar: $- ].
+	self addRangeFrom: firstChar to: lookahead.
+	self next
+)
+
+parseEscapeChar = (
+	| first |
+	self match: $\.
+	first := (RxsPredicate forEscapedLetter: lookahead)
+		ifNil: [ RxsCharacter with: lookahead ].
+	self next == $- ifFalse: [^ elements add: first].
+	self next ifNil: [
+		elements add: first.
+		^ self addChar: $-].
+	self addRangeFrom: first character to: lookahead.
+	self next
+)
+
+parseNamedSet = (
+	| name |
+	self match: $[; match: $:.
+	name := (String with: lookahead), (source upTo: $:).
+	self next.
+	self match: $].
+	elements add: (RxsPredicate forNamedClass: name)
+)
+
+parseStep = (
+	lookahead == $[ ifTrue:
+		[source peek == $:
+			ifTrue: [^self parseNamedSet]
+			ifFalse: [^self parseCharOrRange]].
+	lookahead == $\ ifTrue:
+		[^self parseEscapeChar].
+	lookahead == $- ifTrue:
+		[RxParser signalSyntaxException: 'invalid range' at: source position].
+	self parseCharOrRange
+)
+
+
+----------------------------
+
+on: aStream = (
+	^self new initialize: aStream
+)
+
+comment = (^'
+-- Regular Expression Matcher v 1.1 (C) 1996, 1999 Vassili Bykov
+--
+I am a parser created to parse the insides of a character set ([...]) construct. I create and answer a collection of "elements", each being an instance of one of: RxsCharacter, RxsRange, or RxsPredicate.
+
+Instance Variables:
+
+	source	<Stream>	open on whatever is inside the square brackets we have to parse.
+	lookahead	<Character>	The current lookahead character
+	elements	<Collection of: <RxsCharacter|RxsRange|RxsPredicate>> Parsing result
+')
+
+)

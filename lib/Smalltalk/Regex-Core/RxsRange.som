@@ -1,0 +1,53 @@
+RxsRange = RxsNode (
+| first last |
+
+enumerateTo: aSet = (
+	"Add all of the elements I represent to the collection."
+	first asInteger to: last asInteger do: [ :charCode |
+		aSet add: charCode asCharacter ].
+	^self
+)
+
+initializeFirst: aCharacter last: anotherCharacter = (
+	first := aCharacter.
+	last := anotherCharacter
+)
+
+isEnumerable = (
+	^true
+)
+
+maximumCharacterCodeIgnoringCase: aBoolean = (
+	"Return the largest character code among the characters I represent."
+	first <= last ifFalse: [ ^-1 "Empty range" ].
+	aBoolean ifFalse: [ ^last asInteger ].
+	^(first to: last) detectMax: [ :each |
+		each asLowercase asInteger max: each asUppercase asInteger ]
+)
+
+
+----------------------------
+
+from: aCharacter to: anotherCharacter = (
+	^self new initializeFirst: aCharacter last: anotherCharacter
+)
+
+
+comment = (^'
+
+-- Regular Expression Matcher v 1.1 (C) 1996, 1999 Vassili Bykov
+--
+I represent a range of characters as appear in character classes such as
+
+	[a-ZA-Z0-9].
+
+I appear in a syntax tree only as an element of RxsCharSet.
+
+Instance Variables:
+
+	first	<Character>
+	last	<Character>
+')
+
+
+)

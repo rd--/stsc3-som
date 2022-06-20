@@ -1,0 +1,57 @@
+RxmBranch = RxmLink (
+| loopback alternative |
+
+alternative: aBranch = (
+	"See class comment for instance variable description."
+	alternative := aBranch
+)
+
+beLoopback = (
+	"See class comment for instance variable description."
+	loopback := true
+)
+
+initialize = (
+	"See class comment for instance variable description."
+	super initialize.
+	loopback := false
+)
+
+matchAgainst: aMatcher = (
+	"Match either `next' or `alternative'. Fail if the alternative is nil."
+	(next matchAgainst: aMatcher) ifTrue: [ ^true ].
+	^(alternative ifNil: [ ^false ]) matchAgainst: aMatcher
+)
+
+pointTailTo: aNode = (
+	"See superclass for explanations."
+	loopback
+		ifTrue: [
+			alternative == nil
+				ifTrue: [alternative := aNode]
+				ifFalse: [alternative pointTailTo: aNode]]
+		ifFalse: [super pointTailTo: aNode]
+)
+
+postCopy = (
+	super postCopy.
+	alternative := alternative copy
+)
+
+postCopyUsing: anIdentityDictionary = (
+	super postCopyUsing: anIdentityDictionary.
+	alternative ifNotNil: [
+		alternative := alternative copyUsing: anIdentityDictionary ]
+)
+
+terminateWith: aNode = (
+	"See superclass for explanations."
+	loopback
+		ifTrue: [alternative == nil
+			ifTrue: [alternative := aNode]
+			ifFalse: [alternative terminateWith: aNode]]
+		ifFalse: [super terminateWith: aNode]
+)
+
+
+)

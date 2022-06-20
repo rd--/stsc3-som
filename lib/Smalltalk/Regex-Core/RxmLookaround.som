@@ -1,0 +1,51 @@
+RxmLookaround = RxmLink (
+| forward positive lookaround |
+
+lookaround: anRxmLink forward: forwardBoolean positive: positiveBoolean = (
+	lookaround := anRxmLink.
+	forward := forwardBoolean.
+	positive := positiveBoolean.
+)
+
+matchAgainst: aMatcher = (
+	"Match if the predicate block evaluates to true when given the current stream character as the argument."
+	^ forward
+		ifTrue: [aMatcher matchAgainstLookahead: lookaround positive: positive nextLink: next]
+		ifFalse: [aMatcher matchAgainstLookbehind: lookaround positive: positive nextLink: next]
+)
+
+postCopy = (
+	super postCopy.
+	lookaround := lookaround copy
+)
+
+postCopyUsing: anIdentityDictionary = (
+	super postCopyUsing: anIdentityDictionary.
+	lookaround := lookaround copyUsing: anIdentityDictionary
+)
+
+terminateWith: aNode = (
+	lookaround terminateWith: aNode.
+	super terminateWith: aNode.
+)
+
+
+----------------------------
+
+with: aPiece forward: forwardBoolean positive: positiveBoolean = (
+	^self new lookaround: aPiece forward: forwardBoolean positive: positiveBoolean
+)
+
+
+comment = (^'
+
+Instance holds onto a lookaround which matches but does not consume anything.
+
+Instance Variables
+	lookbehind:		<RxmLink>
+	forward:		<Boolean>
+	positive:		<Boolean>
+')
+
+
+)

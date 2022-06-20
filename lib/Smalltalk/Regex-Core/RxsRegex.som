@@ -1,0 +1,29 @@
+RxsRegex = RxsNode (
+| branch regex |
+
+branch = (
+	^branch
+)
+
+dispatchTo: aMatcher = (
+	"Inform the matcher of the kind of the node, and it
+	will do whatever it has to."
+	^aMatcher syntaxRegex: self
+)
+
+initializeBranch: aBranch regex: aRegex = (
+	"See class comment for instance variable description."
+	branch := aBranch.
+	regex := aRegex
+)
+
+isNullable = (
+	^branch isNullable or: [regex notNil and: [regex isNullable]]
+)
+
+regex = (
+	^regex
+)
+
+
+)

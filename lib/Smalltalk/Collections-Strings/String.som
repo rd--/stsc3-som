@@ -42,6 +42,14 @@ String = ArrayedCollection (
 		  with: anObject asString
 )
 
+allRangesOfRegexMatches: rxString = (
+	^rxString asRegex matchingRangesIn: self
+)
+
+allRegexMatches: rxString = (
+	^rxString asRegex matchesIn: self
+)
+
 asByteArray = (
 	"Convert to a ByteArray with the ascii values of the string."
 	| answer |
@@ -102,6 +110,24 @@ asNumber = (
 		ifFalse: [ ^ Integer readFrom: self ]
 )
 
+asRegex = (
+	"Compile the receiver as a regex matcher. May raise RxParser>>syntaxErrorSignal
+	or RxParser>>compilationErrorSignal.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^RxParser preferredMatcherClass for: (RxParser new parse: self)
+)
+
+asRegexIgnoringCase = (
+	"Compile the receiver as a regex matcher. May raise RxParser>>syntaxErrorSignal
+	or RxParser>>compilationErrorSignal.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^RxParser preferredMatcherClass
+		for: (RxParser new parse: self)
+		ignoreCase: true
+)
+
 asSignedInteger = (
 	"Return the first signed integer I can find or nil."
 	^self asIntegerSigned: true
@@ -158,6 +184,14 @@ asUnsignedInteger = (
 	^self asIntegerSigned: false
 )
 
+asUppercase = (
+	"Answer a string made up from the receiver whose characters are all uppercase."
+	| aStream |
+	aStream := WriteStream on: (String new: self size).
+	self do: [:aCharacter | aStream nextPut: aCharacter asUppercase].
+	^aStream contents
+)
+
 at: index = (
 	"Answer the Character stored in the field of the receiver indexed by the
 	argument.  Fail if the index argument is not an Integer or is out of bounds.
@@ -198,26 +232,6 @@ byteAt: anInteger = (
 	^ (self at: anInteger) asInteger
 )
 
-compare: s = (
-	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter ]
-)
-
-compareSafely: aString = (
-	^ aString isString
-		ifTrue: [ self < aString ]
-		ifFalse: [ super compareSafely: aString ]
-)
-
-condensedIntoOneLine = (
-	"Return a copy of the receiver with all separators converted to spaces, and with no consecutive spaces.  A formatting tool."
-	^ String streamContents:
-		[ : stream | | prior |
-		prior := $X.  "some non-separator"
-		self do:
-			[ : char | char isSeparator ifTrue: [ prior isSeparator ifFalse: [stream space]] ifFalse: [ stream nextPut: char ].
-			prior := char ] ]
-)
-
 capitalized = (
 	"Return a copy with the first letter capitalized"
 	| cap |
@@ -229,6 +243,10 @@ capitalized = (
 
 caseInsensitiveCompare: s = (
 	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter asUppercase ]
+)
+
+compare: s = (
+	^ self compare: s withNormalisingBlock: [ :aCharacter | aCharacter ]
 )
 
 compare: s withNormalisingBlock: aBlock = (
@@ -256,6 +274,44 @@ compare: s withNormalisingBlock: aBlock = (
 							ifTrue: [1]
 							ifFalse: [3]]]].
 	^endResult
+)
+
+compareSafely: aString = (
+	^ aString isString
+		ifTrue: [ self < aString ]
+		ifFalse: [ super compareSafely: aString ]
+)
+
+condensedIntoOneLine = (
+	"Return a copy of the receiver with all separators converted to spaces, and with no consecutive spaces.  A formatting tool."
+	^ String streamContents:
+		[ : stream | | prior |
+		prior := $X.  "some non-separator"
+		self do:
+			[ : char | char isSeparator ifTrue: [ prior isSeparator ifFalse: [stream space]] ifFalse: [ stream nextPut: char ].
+			prior := char ] ]
+)
+
+contractTo: charCount  "Shorten by ellipsis if too long" = (
+	| half |
+	self size > charCount ifTrue:
+		[half := charCount // 2.
+		^ self copyReplaceFrom: half
+				to: self size - (charCount-half) + 2
+				with: '...']
+	"
+	'antidisestablishmentarianism' contractTo: 10 'anti...ism'
+	"
+)
+
+copyWithRegex: rxString matchesReplacedWith: aString = (
+	^rxString asRegex
+		copy: self replacingMatchesWith: aString
+)
+
+copyWithRegex: rxString matchesTranslatedUsing: aBlock = (
+	^rxString asRegex
+		copy: self translatingMatchesUsing: aBlock
 )
 
 deepCopy = (
@@ -500,6 +556,29 @@ match: text = (
 "
 )
 
+matchesRegex: regexString = (
+	"Test if the receiver matches a regex.  May raise RxParser>>regexErrorSignal or
+	child signals.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^regexString asRegex matches: self
+)
+
+matchesRegexIgnoringCase: regexString = (
+	"Test if the receiver matches a regex.  May raise RxParser>>regexErrorSignal or
+	child signals.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^regexString asRegexIgnoringCase matches: self
+)
+
+occurrencesOfRegex: rxString = (
+	| count |
+	count := 0.
+	self regex: rxString matchesDo: [ :each | count := count + 1 ].
+	^count
+)
+
 padded: leftOrRight to: length with: aCharacter = (
 	| result paddingLength |
 	(paddingLength := length - self size) <= 0 ifTrue: [ ^self ].
@@ -526,6 +605,22 @@ padded: leftOrRight to: length with: aCharacter = (
 			yourself ]
 )
 
+prefixMatchesRegex: regexString = (
+	"Test if the receiver's prefix matches a regex.
+	May raise RxParser class>>regexErrorSignal or child signals.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^regexString asRegex matchesPrefix: self
+)
+
+prefixMatchesRegexIgnoringCase: regexString = (
+	"Test if the receiver's prefix matches a regex.
+	May raise RxParser class>>regexErrorSignal or child signals.
+	This is a part of the Regular Expression Matcher package, (c) 1996, 1999 Vassili Bykov.
+	Refer to `documentation' protocol of RxParser class for details."
+	^regexString asRegexIgnoringCase matchesPrefix: self
+)
+
 print = (
 	Smalltalk printString: self
 )
@@ -542,10 +637,30 @@ putOn:aStream = (
 	^aStream nextPutAll: self.
 )
 
+regex: rxString matchesCollect: aBlock = (
+	^rxString asRegex matchesIn: self collect: aBlock
+)
+
+regex: rxString matchesDo: aBlock = (
+	^rxString asRegex matchesIn: self do: aBlock
+)
+
 replaceFrom: start to: stop with: replacement startingAt: repStart = (
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 	<primitive: 105>
 	super replaceFrom: start to: stop with: replacement startingAt: repStart
+)
+
+sameAs: aString = (
+	"Answer whether the receiver sorts equal to aString. The
+	collation sequence is ascii with case differences ignored."
+	self == aString ifTrue: [ ^true ].
+	^(self compare: aString caseSensitive: false) = 2
+)
+
+search: aString = (
+	"compatibility method to make regexp and strings work polymorphicly"
+	^ aString includesSubstring: self
 )
 
 size = (

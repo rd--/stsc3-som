@@ -1,0 +1,295 @@
+RxMatchOptimizer = Object (
+| ignoreCase prefixes nonPrefixes conditions testBlock methodPredicates nonMethodPredicates predicates nonPredicates |
+
+addCondition: aSymbol = (
+	^(conditions ifNil: [ conditions := IdentitySet new: 1 ]) add: aSymbol
+)
+
+addMethodPredicate: aSelector = (
+	^(methodPredicates ifNil: [ methodPredicates := IdentitySet new: 1 ]) add: aSelector
+)
+
+addNonMethodPredicate: aSelector = (
+	^(nonMethodPredicates ifNil: [ nonMethodPredicates := IdentitySet new: 1 ]) add: aSelector
+)
+
+addNonPredicate: nonPredicate = (
+	^(nonPredicates ifNil: [ nonPredicates := Set new: 1 ]) add: nonPredicate
+)
+
+addNonPrefixes: aSet = (
+	aSet size = 0 ifTrue: [ ^aSet ].
+	^nonPrefixes
+		ifNil: [ nonPrefixes := aSet ]
+		ifNotNil: [ nonPrefixes addAll: aSet ]
+)
+
+addPredicate: predicate = (
+	^(predicates ifNil: [ predicates := Set new: 1 ]) add: predicate
+)
+
+addPrefix: aCharacter = (
+	^(prefixes ifNil: [ prefixes := CharacterSet new ]) add: aCharacter
+)
+
+addPrefixes: aSet = (
+	aSet size = 0 ifTrue: [ ^aSet ].
+	^prefixes
+		ifNil: [ prefixes := aSet ]
+		ifNotNil: [ prefixes addAll: aSet ]
+)
+
+canStartMatch: aCharacter in: aMatcher = (
+	"Answer whether a match could commence at the given lookahead
+	character, or in the current state of <aMatcher>. True answered
+	by this method does not mean a match will definitly occur, while false
+	answered by this method *does* guarantee a match will never occur."
+	aCharacter ifNil: [ ^true ].
+	^testBlock value: aCharacter value: aMatcher
+)
+
+conditionTester = (
+	"#any condition is filtered at the higher level;
+	it cannot appear among the conditions here."
+	| matchConditions size |
+	conditions ifNil: [ ^nil ].
+	(size := conditions size) = 0 ifTrue: [ ^nil ].
+	size = 1 ifTrue: [
+		| matchCondition |
+		matchCondition := conditions anyOne.
+		"Special case all of the possible conditions."
+		#atBeginningOfLine == matchCondition ifTrue: [^[:c :matcher | matcher atBeginningOfLine]].
+		#atEndOfLine == matchCondition ifTrue: [^[:c :matcher | matcher atEndOfLine]].
+		#atBeginningOfWord == matchCondition ifTrue: [^[:c :matcher | matcher atBeginningOfWord]].
+		#atEndOfWord == matchCondition ifTrue: [^[:c :matcher | matcher atEndOfWord]].
+		#atWordBoundary == matchCondition ifTrue: [^[:c :matcher | matcher atWordBoundary]].
+		#notAtWordBoundary == matchCondition ifTrue: [^[:c :matcher | matcher notAtWordBoundary]].
+		RxParser signalCompilationException: 'invalid match condition'].
+	"More than one condition. Capture them as an array in scope."
+	matchConditions := conditions asArray.
+	^[ :c :matcher |
+		matchConditions anySatisfy: [ :conditionSelector |
+			matcher perform: conditionSelector ] ]
+)
+
+determineTestMethod = (
+	"Answer a block closure that will work as a can-match predicate.
+	Answer nil if no viable optimization is possible (too many chars would
+	be able to start a match)."
+	| testers size |
+	conditions ifNotNil: [
+		(conditions includes: #any) ifTrue: [ ^nil ] ].
+	testers := {
+		self prefixTester.
+		self nonPrefixTester.
+		self conditionTester.
+		self methodPredicateTester.
+		self nonMethodPredicateTester.
+		self predicateTester.
+		self nonPredicateTester } reject: [ :each | each isNil ].
+	(size := testers size) = 0 ifTrue: [ ^nil ].
+	size = 1 ifTrue: [ ^testers first ].
+	^[ :char :matcher | testers anySatisfy: [ :t | t value: char value: matcher ] ]
+)
+
+hasTestBlock = (
+	^testBlock notNil
+)
+
+initialize: aRegex ignoreCase: aBoolean = (
+	"Set `testMethod' variable to a can-match predicate block:
+	two-argument block which accepts a lookahead character
+	and a matcher (presumably built from aRegex) and answers
+	a boolean indicating whether a match could start at the given
+	lookahead. "
+	ignoreCase := aBoolean.
+	aRegex dispatchTo: self.
+	"If the whole expression is nullable, end-of-line is an implicit can-match condition!"
+	aRegex isNullable ifTrue: [ self addCondition: #atEndOfLine ].
+	testBlock := self determineTestMethod
+)
+
+methodPredicateTester = (
+	| p size |
+	methodPredicates ifNil: [ ^nil ].
+	(size := methodPredicates size) = 0 ifTrue: [ ^nil ].
+	size = 1 ifTrue: [
+		| selector |
+		"might be a pretty common case"
+		selector := methodPredicates anyOne.
+		^[ :char :matcher |
+			RxParser doHandlingMessageNotUnderstood: [
+				char perform: selector ] ] ].
+	p := methodPredicates asArray.
+	^[ :char :matcher |
+		RxParser doHandlingMessageNotUnderstood: [
+			p anySatisfy: [ :sel | char perform: sel ] ] ]
+)
+
+nonMethodPredicateTester = (
+	| p size |
+	nonMethodPredicates ifNil: [ ^nil ].
+	(size := nonMethodPredicates size) = 0 ifTrue: [ ^nil ].
+	size = 1 ifTrue: [
+		| selector |
+		selector := nonMethodPredicates anyOne.
+		^[ :char :matcher |
+			RxParser doHandlingMessageNotUnderstood: [
+				(char perform: selector) not ] ] ].
+	p := nonMethodPredicates asArray.
+	^[:char :m |
+		RxParser doHandlingMessageNotUnderstood: [
+			(p allSatisfy: [:sel | char perform: sel ]) not ] ]
+)
+
+nonPredicateTester = (
+	| p |
+	nonPredicates ifNil: [ ^nil ].
+	nonPredicates size = 1 ifTrue:  [
+		| predicate |
+		predicate := nonPredicates anyOne.
+		^[ :char :matcher | (predicate value: char) not ] ].
+	p := nonPredicates asArray.
+	^[ :char :matcher | (p allSatisfy: [ :some | some value: char ]) not ]
+)
+
+nonPrefixTester = (
+	nonPrefixes ifNil: [ ^nil ].
+	nonPrefixes size = 1 ifTrue: [
+		| nonPrefixChar |
+		nonPrefixChar := nonPrefixes anyOne.
+		^[ :char :matcher | (char == nonPrefixChar) not ] ].
+	^[ :char : matcher | (nonPrefixes includes: char) not ]
+)
+
+predicateTester = (
+	| p |
+	predicates ifNil: [ ^nil ].
+	predicates size = 1 ifTrue: [
+		| pred |
+		pred := predicates anyOne.
+		^[ :char :matcher | pred value: char ] ].
+	p := predicates asArray.
+	^[ :char :matcher | p anySatisfy: [:some | some value: char ] ]
+)
+
+prefixTester = (
+	| p |
+	prefixes ifNil: [ ^nil ].
+	prefixes size = 1 ifTrue: [
+		| prefixChar |
+		prefixChar := prefixes anyOne.
+		ignoreCase ifTrue: [
+			| lowercasePrefixChar |
+			lowercasePrefixChar := prefixChar asLowercase.
+			prefixChar := prefixChar asUppercase.
+			prefixChar == lowercasePrefixChar ifFalse: [
+				^[ :char :matcher | char == prefixChar or: [ char == lowercasePrefixChar ] ] ] ].
+		^[ :char :matcher | char == prefixChar ] ].
+	ignoreCase ifTrue: [
+		prefixes copy do: [ :each |
+			| character |
+			(character := each asUppercase) == each
+				ifFalse: [ prefixes add: character ]
+				ifTrue: [
+					(character := each asLowercase) == each ifFalse: [
+						prefixes add: character ] ] ] ].
+	prefixes size < 10 ifTrue: [ "10 is an empirical value"
+		p := prefixes asArray.
+		^[ :char :matcher | p instVarsInclude: char ] ].
+	^[ :char :matcher | prefixes includes: char ]
+)
+
+syntaxAny = (
+	"Any special char is among the prefixes."
+	self addCondition: #any
+)
+
+syntaxBeginningOfLine = (
+	"Beginning of line is among the prefixes."
+	self addCondition: #atBeginningOfLine
+)
+
+syntaxBeginningOfWord = (
+	"Beginning of line is among the prefixes."
+	self addCondition: #atBeginningOfWord
+)
+
+syntaxBranch: branchNode = (
+	"If the head piece of the branch is transparent (allows 0 matches),
+	we must recurse down the branch. Otherwise, just the head atom
+	is important."
+	(branchNode piece isNullable and: [branchNode branch notNil])
+		ifTrue: [branchNode branch dispatchTo: self].
+	branchNode piece dispatchTo: self
+)
+
+syntaxCharSet: charSetNode = (
+	"All these (or none of these) characters is the prefix."
+	(charSetNode enumerableSetIgnoringCase: ignoreCase) ifNotNil: [ :enumerableSet |
+		charSetNode isNegated
+			ifTrue: [ self addNonPrefixes: enumerableSet ]
+			ifFalse: [ self addPrefixes: enumerableSet ] ].
+	charSetNode predicates ifNotNil: [ :charsetPredicates |
+		charSetNode isNegated
+			ifTrue: [
+				charsetPredicates do: [ :each | self addNonPredicate: each ] ]
+			ifFalse: [
+				charsetPredicates do: [ :each | self addPredicate: each ] ] ]
+)
+
+syntaxCharacter: charNode = (
+	"This character is the prefix, of one of them."
+	self addPrefix: charNode character
+)
+
+syntaxEndOfLine = (
+	"Beginning of line is among the prefixes."
+	self addCondition: #atEndOfLine
+)
+
+syntaxEndOfWord = (
+	self addCondition: #atEndOfWord
+)
+
+syntaxEpsilon = (
+	"Empty string, terminate the recursion (do nothing)."
+)
+
+syntaxLookaround: lookaroundNode forward: forward positive: positive = (
+	"Do nothing."
+)
+
+syntaxMessagePredicate: messagePredicateNode = (
+	messagePredicateNode negated ifTrue: [
+		^self addNonMethodPredicate: messagePredicateNode selector ].
+	self addMethodPredicate: messagePredicateNode selector
+)
+
+syntaxNonWordBoundary = (
+	self addCondition: #notAtWordBoundary
+)
+
+syntaxPiece: pieceNode = (
+	"Pass on to the atom."
+	pieceNode atom dispatchTo: self
+)
+
+syntaxPredicate: predicateNode = (
+	self addPredicate: predicateNode predicate
+)
+
+syntaxRegex: regexNode = (
+	"All prefixes of the regex's branches should be combined.
+	Therefore, just recurse."
+	regexNode branch dispatchTo: self.
+	regexNode regex ifNotNil: [ :regex |
+		regex dispatchTo: self ]
+)
+
+syntaxWordBoundary = (
+	self addCondition: #atWordBoundary
+)
+
+
+)

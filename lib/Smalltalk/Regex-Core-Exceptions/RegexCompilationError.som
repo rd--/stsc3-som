@@ -1,0 +1,7 @@
+RegexCompilationError = RegexError (
+
+----
+
+comment = (^'This class represents compilation errors in regular expressions.')
+
+)

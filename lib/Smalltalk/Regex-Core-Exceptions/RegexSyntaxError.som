@@ -1,0 +1,26 @@
+RegexSyntaxError = RegexError (
+
+| position |
+
+position = (
+	"return the parsing error location"
+	^ position
+)
+
+position: anInteger = (
+	position := anInteger.
+)
+
+----------------------------
+
+signal: anErrorMessage at: errorPosition = (
+	^ (self new)
+		position: errorPosition;
+		signal: anErrorMessage
+)
+
+comment = (^'
+This class represents syntax errors in regular expressions.
+')
+
+)

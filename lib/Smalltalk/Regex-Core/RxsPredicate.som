@@ -1,0 +1,204 @@
+RxsPredicate = RxsNode (
+
+| predicate negation |
+
+beAlphaNumeric = (
+	predicate := [:char | char isAlphaNumeric].
+	negation := [:char | char isAlphaNumeric not]
+)
+
+beAlphabetic = (
+	predicate := [:char | char isLetter].
+	negation := [:char | char isLetter not]
+)
+
+beCharacter: aCharacter = (
+	predicate := [ :char | char == aCharacter ].
+	negation := [ :char | (char == aCharacter) not ]
+)
+
+beControl = (
+	predicate := [:char | char asInteger < 32].
+	negation := [:char | char asInteger >= 32]
+)
+
+beDigit = (
+	predicate := [:char | char isDigit].
+	negation := [:char | char isDigit not]
+)
+
+beGraphics = (
+	self
+		beControl;
+		negate
+)
+
+beHexDigit = (
+	| hexLetters |
+	hexLetters := 'abcdefABCDEF'.
+	predicate := [:char | char isDigit or: [hexLetters includes: char]].
+	negation := [:char | char isDigit not and: [(hexLetters includes: char) not]]
+)
+
+beLowercase = (
+	predicate := [:char | char isLowercase].
+	negation := [:char | char isLowercase not]
+)
+
+beNotDigit = (
+	self
+		beDigit;
+		negate
+)
+
+beNotSpace = (
+	self
+		beSpace;
+		negate
+)
+
+beNotWordConstituent = (
+	self
+		beWordConstituent;
+		negate
+)
+
+bePrintable = (
+	self
+		beControl;
+		negate
+)
+
+bePunctuation = (
+	| punctuationChars |
+	punctuationChars := #($. $, $! $? $; $: $" $' $- $( $) $`).
+	predicate := [:char | punctuationChars includes: char].
+	negation := [:char | (punctuationChars includes: char) not]
+)
+
+beSpace = (
+	predicate := [:char | char isSeparator].
+	negation := [:char | char isSeparator not]
+)
+
+beUppercase = (
+	predicate := [:char | char isUppercase].
+	negation := [:char | char isUppercase not]
+)
+
+beWordConstituent = (
+	predicate := [ :char | char == $_ or: [ char isAlphaNumeric ] ].
+	negation := [ :char | (char == $_ or: [ char isAlphaNumeric ]) not ]
+)
+
+dispatchTo: anObject = (
+	^anObject syntaxPredicate: self
+)
+
+enumerateTo: aSet = (
+	^self "Not enumerable"
+)
+
+isEnumerable = (
+	^false
+)
+
+maximumCharacterCodeIgnoringCase: aBoolean = (
+	"Return the largest character code among the characters I represent."
+	^-1 "Not enumerable"
+)
+
+negate = (
+	| tmp |
+	tmp := predicate.
+	predicate := negation.
+	negation := tmp
+)
+
+negated = (
+	^self copy negate
+)
+
+predicate = (
+	^predicate
+)
+
+predicateNegation = (
+	^negation
+)
+
+value: aCharacter = (
+	^predicate value: aCharacter
+)
+
+----------------------------
+
+| EscapedLetterSelectors NamedClassSelectors |
+
+escapedLetterSelectors = ( ^EscapedLetterSelectors ifNil: [ self initializeEscapedLetterSelectors. EscapedLetterSelectors ] )
+namedClassSelectors = ( ^NamedClassSelectors ifNil: [ self initializeNamedClassSelectors. NamedClassSelectors ] )
+
+forEscapedLetter: aCharacter = (
+	"Return a predicate instance for the given character, or nil if there's no such predicate."
+	^self escapedLetterSelectors
+		at: aCharacter
+		ifPresent: [ :selector | self new perform: selector ]
+)
+
+forNamedClass: aString = (
+	^self new perform:
+		(self namedClassSelectors
+			at: aString
+			ifAbsent: [RxParser signalSyntaxException: 'bad character class name'])
+)
+
+initialize = (
+	"self initialize"
+	self
+		initializeNamedClassSelectors;
+		initializeEscapedLetterSelectors
+)
+
+initializeEscapedLetterSelectors = (
+	"self initializeEscapedLetterSelectors"
+	EscapedLetterSelectors := Dictionary new
+		at: $w put: #beWordConstituent;
+		at: $W put: #beNotWordConstituent;
+		at: $d put: #beDigit;
+		at: $D put: #beNotDigit;
+		at: $s put: #beSpace;
+		at: $S put: #beNotSpace;
+		yourself
+)
+
+initializeNamedClassSelectors = (
+	"self initializeNamedClassSelectors"
+	NamedClassSelectors := Dictionary new
+		at: 'alnum' put: #beAlphaNumeric;
+		at: 'alpha' put: #beAlphabetic;
+		at: 'cntrl' put: #beControl;
+		at: 'digit' put: #beDigit;
+		at: 'graph' put: #beGraphics;
+		at: 'lower' put: #beLowercase;
+		at: 'print' put: #bePrintable;
+		at: 'punct' put: #bePunctuation;
+		at: 'space' put: #beSpace;
+		at: 'upper' put: #beUppercase;
+		at: 'xdigit' put: #beHexDigit;
+		yourself
+)
+
+comment = (^'
+
+-- Regular Expression Matcher v 1.1 (C) 1996, 1999 Vassili Bykov
+--
+This represents a character that satisfies a certain predicate.
+
+Instance Variables:
+
+	predicate	<BlockClosure>	A one-argument block. If it evaluates to the value defined by <negated> when it is passed a character, the predicate is considered to match.
+	negation	<BlockClosure>	A one-argument block that is a negation of <predicate>.
+')
+
+
+)

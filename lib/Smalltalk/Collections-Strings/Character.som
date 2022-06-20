@@ -44,6 +44,7 @@ asSymbol = (
 )
 
 asUppercase = (
+	"Answer the receiver's matching uppercase Character."
 	97 <= self asciiValue
 		ifTrue: [self asciiValue <= 122
 					ifTrue: [^Character value: self asciiValue - 32]]
@@ -129,6 +130,12 @@ printOn: aStream = (
 	(self class constantNameFor: self)
 		ifNotNil: [ :name | aStream nextPutAll: self class name; space; nextPutAll: name ]
 		ifNil: [ aStream nextPutAll: self class name; nextPutAll: ' value: '; print: integerValue ]
+)
+
+sameAs: aCharacter  = (
+	"Answer whether the receiver is equal to aCharacter, ignoring case"
+	self == aCharacter ifTrue: [ ^true ].
+	^self asLowercase == aCharacter asLowercase
 )
 
 shouldBePrintedAsLiteral = (

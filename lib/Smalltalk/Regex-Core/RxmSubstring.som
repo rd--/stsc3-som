@@ -1,0 +1,34 @@
+RxmSubstring = RxmLink (
+| sampleStream ignoreCase |
+
+initialize = (
+	super initialize.
+	ignoreCase := false
+)
+
+matchAgainst: aMatcher = (
+	"Match if my sample stream is exactly the current prefix
+	of the matcher stream's contents."
+	sampleStream reset.
+	ignoreCase ifFalse: [ ^aMatcher matchCaseSensitiveAgainstStream: sampleStream nextLink: next ].
+	^aMatcher matchCaseInsensitiveAgainstStream: sampleStream nextLink: next
+)
+
+postCopy = (
+	super postCopy.
+	sampleStream := sampleStream copy
+)
+
+postCopyUsing: anIdentityDictionary = (
+	super postCopyUsing: anIdentityDictionary.
+	sampleStream := sampleStream copy
+)
+
+substring: aString ignoreCase: aBoolean = (
+	"Match exactly this string."
+	sampleStream := aString readStream.
+	ignoreCase := aBoolean
+)
+
+
+)
