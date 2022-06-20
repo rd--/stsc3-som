@@ -1,0 +1,138 @@
+CascadeNode = ParseNode (
+| receiver messages |
+
+accept: aVisitor = (
+	^aVisitor visitCascadeNode: self
+)
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	{ receiver }, messages do:
+		[:node| node analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools]
+)
+
+asMorphicSyntaxIn: parent = (
+	^parent
+		cascadeNode: self
+		receiver: receiver
+		messages: messages
+)
+
+asStatementTileSetForPlayer: aPlayer = (
+	^ self asTileSetForPlayer: aPlayer
+)
+
+asTileSetForPlayer: aPlayer = (
+	^ self messages gather: [:message |
+		message copy
+			receiver: self receiver;
+			asTileSetForPlayer: aPlayer]
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	receiver emitCodeForValue: stack encoder: encoder.
+	1 to: messages size - 1 do:
+		[:i |
+		encoder genDup.
+		stack push: 1.
+		(messages at: i) emitCodeForValue: stack encoder: encoder.
+		encoder genPop.
+		stack pop: 1].
+	messages last emitCodeForValue: stack encoder: encoder
+)
+
+getAllChildren = (
+	^ (Array with: receiver), messages.
+)
+
+getElderSiblingOf: node = (
+	| index |
+	((index := messages indexOf: node) > 1) ifTrue: [^ messages at: index - 1].
+	index = 1 ifTrue: [^ receiver].
+	^ nil.
+)
+
+getFirstChild = (
+	^ receiver.
+)
+
+getLastChild = (
+	messages size > 0 ifTrue: [^ messages last].
+	^ receiver.
+)
+
+isFirstChild: childNode = (
+	^ childNode = receiver.
+)
+
+isLastChild: childNode = (
+	messages size > 0 ifTrue: [^ childNode = messages last].
+	^ childNode = receiver.
+)
+
+messages = (
+	^messages
+)
+
+printOn: aStream indent: level = (
+	self printOn: aStream indent: level precedence: 0
+)
+
+printOn: aStream indent: level precedence: p = (
+	p > 0 ifTrue: [aStream nextPut: $(].
+	messages first printReceiver: receiver on: aStream indent: level.
+	1 to: messages size do:
+		[:i | (messages at: i) printOn: aStream indent: level.
+		i < messages size ifTrue:
+				[aStream nextPut: $;.
+				messages first precedence >= 2 ifTrue: [aStream crtab: level + 1]]].
+	p > 0 ifTrue: [aStream nextPut: $)]
+)
+
+printWithClosureAnalysisOn: aStream indent: level = (
+	self printWithClosureAnalysisOn: aStream indent: level precedence: 0
+)
+
+printWithClosureAnalysisOn: aStream indent: level precedence: p = (
+	p > 0 ifTrue: [aStream nextPut: $(].
+	messages first printWithClosureAnalysisReceiver: receiver on: aStream indent: level.
+	1 to: messages size do:
+		[:i | (messages at: i) printWithClosureAnalysisOn: aStream indent: level.
+		i < messages size ifTrue:
+				[aStream nextPut: $;.
+				messages first precedence >= 2 ifTrue: [aStream crtab: level + 1]]].
+	p > 0 ifTrue: [aStream nextPut: $)]
+)
+
+receiver = (
+	^receiver
+)
+
+receiver: receivingObject messages: msgs = (
+	" Transcript show: 'abc'; cr; show: 'def' "
+	receiver := receivingObject.
+	messages := msgs
+)
+
+replaceNode: childNode with: newNode = (
+	| index |
+	childNode = receiver ifTrue: [receiver := newNode. ^ self].
+	(index := messages indexOf: childNode) > 0
+		ifTrue: [messages at: index put: newNode. ^ self].
+)
+
+sizeCodeForValue: encoder = (
+	| size |
+	size := (receiver sizeCodeForValue: encoder)
+			 + (messages size - 1 * (encoder sizeDup + encoder sizePop)).
+	messages do: [:aMessage | size := size + (aMessage sizeCodeForValue: encoder)].
+	^size
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+	receiver visitBy: visitor.
+	messages do: [:a | a visitBy: visitor].
+)
+
+
+)

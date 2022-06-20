@@ -1,0 +1,37 @@
+InstanceVariableNode = VariableNode (
+accept: aVisitor = (
+	^aVisitor visitInstanceVariableNode: self
+)
+
+emitCodeForStore: stack encoder: encoder = (
+	encoder genStoreInstVar: index
+)
+
+emitCodeForStorePop: stack encoder: encoder = (
+	encoder genStorePopInstVar: index.
+	stack pop: 1
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	stack push: 1.
+	^encoder genPushInstVar: index
+)
+
+name: varName index: varIndex = (
+	^self name: varName index: varIndex-1 type: LdInstType
+)
+
+sizeCodeForStore: encoder = (
+	^encoder sizeStoreInstVar: index
+)
+
+sizeCodeForStorePop: encoder = (
+	^encoder sizeStorePopInstVar: index
+)
+
+sizeCodeForValue: encoder = (
+	^encoder sizePushInstVar: index
+)
+
+
+)

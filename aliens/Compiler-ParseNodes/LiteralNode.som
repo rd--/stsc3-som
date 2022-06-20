@@ -1,0 +1,124 @@
+LiteralNode = LeafNode (
+accept: aVisitor = (
+	^aVisitor visitLiteralNode: self
+)
+
+asMorphicSyntaxIn: parent = (
+	| row |
+	row := parent addRow: #literal on: self.
+	(key isVariableBinding) ifFalse: [
+		row layoutInset: 1.
+		^ row addMorphBack: (row addString: key storeString special: false)].
+	key key isNil ifTrue: [
+		^ row addTextRow: ('###',key value soleInstance name)
+	] ifFalse: [
+		^ row addTextRow: ('##', key key)
+	]
+)
+
+asTileForPlayer: aPlayer = (
+	^ aPlayer presenter constantTile: self literalValue
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	stack push: 1.
+	(encoder isSpecialLiteralForPush: key)
+		ifTrue: [encoder genPushSpecialLiteral: key]
+		ifFalse: [encoder genPushLiteral: index]
+)
+
+eval = (
+	"When everything in me is a constant, I can produce a value.  This is only used by the Scripting system (TilePadMorph tilesFrom:in:)"
+	^ key
+)
+
+explanation = (
+	(key isVariableBinding) ifFalse: [
+		^'Literal ', key storeString
+	].
+	key key isNil ifTrue: [
+		^'Literal ', ('###',key value soleInstance name)
+	] ifFalse: [
+		^'Literal ', ('##', key key)
+	].
+)
+
+isConstantNumber = (
+	^ key isNumber
+)
+
+isLiteralNode = (
+	^ true
+)
+
+isSpecialConstant = (
+	^ code between: LdTrue and: LdMinus1+3
+)
+
+literalValue = (
+	^key
+)
+
+name: literal key: object index: i type: type = (
+	"For compatibility with Encoder>>name:key:class:type:set:"
+	^self key: object index: i type: type
+)
+
+precedence = (
+	^ 0
+)
+
+printOn: aStream indent: level = (
+	key isVariableBinding ifTrue:
+		[key key isNil
+			ifTrue:
+				[aStream nextPutAll: '###'; nextPutAll: key value soleInstance name]
+			ifFalse:
+				[aStream nextPutAll: '##'; nextPutAll: key key].
+		^self].
+	key isLiteral ifTrue:
+		[key printAsLiteralOn: aStream.
+		 ^self].
+	(key isCompiledCode and: [key isCompiledBlock]) ifTrue:
+		[key printOn: aStream.
+		 ^self].
+	key storeOn: aStream
+)
+
+printWithClosureAnalysisOn: aStream indent: level = (
+	key isVariableBinding
+		ifTrue:
+			[key key isNil
+				ifTrue:
+					[aStream nextPutAll: '###'; nextPutAll: key value soleInstance name]
+				ifFalse:
+					[aStream nextPutAll: '##'; nextPutAll: key key]]
+		ifFalse:
+			[key storeOn: aStream]
+)
+
+reserve: encoder = (
+	"If this is a yet unused literal of type -code, reserve it."
+	code < 0 ifTrue:
+		[index := key isVariableBinding "true if sending value[:] to a special binding"
+					ifTrue: [encoder sharableLitIndex: key]
+					ifFalse: [encoder litIndex: key].
+		 code := self code: index type: 0 - code]
+)
+
+resetForBlockGeneration = (
+	"Reset the receiver to an unassigned state such that its index
+	 in the encoder's literalStream is as yet to be determined."
+	code := LdLitType negated.
+	index := nil
+)
+
+sizeCodeForValue: encoder = (
+	self reserve: encoder.
+	^(encoder isSpecialLiteralForPush: key)
+		ifTrue: [encoder sizePushSpecialLiteral: key]
+		ifFalse: [encoder sizePushLiteral: index]
+)
+
+
+)

@@ -1,0 +1,140 @@
+SelectorNode = LeafNode (
+accept: aVisitor = (
+	^aVisitor visitSelectorNode: self
+)
+
+emitCode: stack args: nArgs encoder: encoder = (
+	self emitCode: stack
+		args: nArgs
+		encoder: encoder
+		super: false
+)
+
+emitCode: stack args: nArgs encoder: encoder super: supered = (
+	code < Send ifTrue:
+		[self internalEncodingError].
+	stack pop: nArgs.
+	supered
+		ifTrue:
+			[(encoder supportsFullBlocks
+			  and: [encoder generatingFullBlock])
+				ifTrue:
+					[encoder genPushLiteral: (encoder sharableLitIndex: encoder classEncoding).
+					 encoder genSendDirectedSuper: index numArgs: nArgs]
+				ifFalse: [encoder genSendSuper: index numArgs: nArgs]]
+		ifFalse:
+			[encoder genSend: index numArgs: nArgs]
+)
+
+emitCodeForEffect: stack encoder: encoder = (
+	self shouldNotImplement
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	self shouldNotImplement
+)
+
+emitForEffect: stack on: strm = (
+	self shouldNotImplement
+)
+
+emitForValue: stack on: strm = (
+	self shouldNotImplement
+)
+
+forSuperSend = (
+	"Answer the receiver or a derivative, suitable for use in a super send.
+	 This is overridden by SpecialSelectorNode to return a SelectorNode clone."
+	^self
+)
+
+internalEncodingError = (
+	self error: 'with the split between SelectorNode and SpecialSelectorNode code should never be < Send for normal sends.'
+)
+
+isForFFICall = (
+	^key asString includesSubstring: '()/'
+)
+
+isPvtSelector = (
+	"Answer if this selector node is a private message selector."
+	^key isPvtSelector
+)
+
+key: aSelector = (
+	"This is for printing of FFI selectors."
+	key := aSelector
+)
+
+key: object code: byte index: idx = (
+	key := object.
+	code := byte.
+	index := idx
+)
+
+name: literal key: object index: i type: type = (
+	"For compatibility with Encoder>>name:key:class:type:set:"
+	^self key: object index: i type: type
+)
+
+precedence = (
+	^ key precedence
+)
+
+printAsFFICallWithArguments: aSequence on: aStream indent: level = (
+	aStream nextPutAll: (key copyUpTo: $)).
+	aSequence
+		do: [:arg| arg printOn: aStream indent: level]
+		separatedBy: [aStream nextPutAll: ', '].
+	aStream nextPut: $)
+)
+
+printOn: aStream indent: level = (
+	aStream nextPutAll: (key == nil
+							ifTrue: ['<key==nil>']
+							ifFalse: [key])
+)
+
+printWithClosureAnalysisOn: aStream indent: level = (
+	aStream nextPutAll: (key == nil
+							ifTrue: ['<key==nil>']
+							ifFalse: [key])
+)
+
+reserve: encoder = (
+	"If this is a yet unused literal of type -code, reserve it."
+	index ifNil:
+		[index := encoder sharableLitIndex: key.
+		 code := Send]
+)
+
+resetForBlockGeneration = (
+	"Reset the receiver to an unassigned state such that its index
+	 in the encoder's literalStream is as yet to be determined."
+	code := SendType negated.
+	index := nil
+)
+
+sizeCode: encoder args: nArgs super: supered = (
+	self reserve: encoder.
+	code < Send ifTrue:
+		[self internalEncodingError].
+	supered ifFalse:
+		[^encoder sizeSend: index numArgs: nArgs].
+	(encoder supportsFullBlocks
+	 and: [encoder generatingFullBlock]) ifTrue:
+		[^(encoder sizePushLiteral: (encoder sharableLitIndex: encoder classEncoding))
+		 + (encoder sizeSendDirectedSuper: index numArgs: nArgs)].
+	^encoder sizeSendSuper: index numArgs: nArgs
+)
+
+sizeCodeForEffect: encoder = (
+	self shouldNotImplement
+)
+
+sizeCodeForValue: encoder = (
+	self shouldNotImplement
+)
+
+
+)

@@ -1,0 +1,669 @@
+MethodNode = ParseNode (
+| selectorOrFalse precedence arguments block primitive encoder temporaries properties sourceText locationCounter localsPool |
+
+accept: aVisitor = (
+	^aVisitor visitMethodNode: self
+)
+
+addLocalsToPool: locals = (
+	localsPool isNil ifTrue:
+		[localsPool := IdentitySet new].
+	localsPool addAll: locals
+)
+
+arguments = (
+	"For transformations etc, not used in compilation"
+	^arguments
+)
+
+arguments: aSequence = (
+	"For transformations etc, not used in compilation"
+	arguments := aSequence
+)
+
+asColorizedSmalltalk80Text = (
+	"Answer a colorized Smalltalk-80-syntax string description of the parse tree whose root is the receiver."
+	| printText |
+	printText := self printString asText.
+	^(TextStyler for: #Smalltalk)
+		ifNotNil: [:stylerClass| stylerClass new styledTextFor: printText]
+		ifNil: [printText]
+)
+
+asMorphicSyntaxIn: parent = (
+	^parent
+		methodNodeInner: self
+		selectorOrFalse: selectorOrFalse
+		precedence: precedence
+		arguments: arguments
+		temporaries: temporaries
+		primitive: primitive
+		block: block
+)
+
+asMorphicSyntaxUsing: aClass = (
+	^ Cursor wait showWhile: [
+		(aClass methodNodeOuter: self) finalAppearanceTweaks]
+)
+
+asScriptEditorFor: aPlayer = (
+	| editor |
+	editor := ScriptEditorMorph new.
+	editor
+		playerScripted: aPlayer;
+		setMorph: aPlayer costume scriptName: self selector.
+	(self asTileSetForPlayer: aPlayer)
+		withIndexDo: [:tile :index |
+			editor insertTileRow: {tile} after: index].
+	editor
+		removeSpaces;
+		enforceTileColorPolicy;
+		scriptEdited;
+		allMorphsDo: #layoutChanged.
+	^ editor
+)
+
+asTileSetForPlayer: aPlayer = (
+	^ self block withoutImplicitReturns asTileSetForPlayer: aPlayer
+)
+
+block = (
+	^ block
+)
+
+blockExtentsToTempsMap = (
+	"Answer a Dictionary of blockExtent to temp locations for the current method.
+	 This is used by the debugger to locate temp vars in contexts.  A temp map
+	 entry is a pair of the temp's name and its index, where an index is either an
+	 integer for a normal temp or a pair of the index of the indirect temp vector
+	 containing  the temp and the index of the temp in its indirect temp vector."
+	^encoder blockExtentsToTempsMap ifNil:
+		[| methNode |
+		methNode := encoder classEncoding newParser
+						encoderClass: encoder class;
+						parse: (sourceText ifNil: [self decompileString])
+						class: self methodClass.
+		"As a side effect generate: creates data needed for the map."
+		methNode generate.
+		methNode encoder blockExtentsToTempsMap]
+)
+
+body = (
+	^block
+)
+
+decompileString = (
+	"Answer a string description of the parse tree whose root is the receiver."
+	^self fullPrintString
+)
+
+decompileText = (
+	"Answer a string description of the parse tree whose root is the receiver."
+	^self asColorizedSmalltalk80Text
+)
+
+encoder = (
+	^ encoder
+)
+
+ensureClosureAnalysisDone = (
+	block blockExtent ifNil:
+		[temporaries := block analyseArguments: arguments temporaries: temporaries rootNode: self]
+)
+
+ensureNotQuick = (
+	"If the receiver is quick (can be generated as a Quick method, ^self,^inst var or ^ special constant)
+	 make it not so.  This is used to create break-pointable versions of quick methods.   Answer if the
+	 receiver was quick."
+	^block ensureNotQuick: encoder
+)
+
+generate = (
+	"The receiver is the root of a parse tree. Answer a CompiledMethod. The
+	argument, trailer, is the references to the source code that is stored with
+	every CompiledMethod."
+	^self generate: CompiledMethodTrailer empty using: CompiledMethod
+)
+
+generate: trailer = (
+	"The receiver is the root of a parse tree. Answer a CompiledMethod.
+	 The argument, trailer, is arbitrary but is typically either the reference
+	 to the source code that is stored with every CompiledMethod, or an
+	 encoding of the method's temporary names."
+	^self generate: trailer using: CompiledMethod
+)
+
+generate: trailer ifQuick: methodBlock = (
+	^self generate: trailer using: CompiledMethod ifQuick: methodBlock
+)
+
+generate: trailer using: aCompiledMethodClass = (
+	"The receiver is the root of a parse tree. Answer an instance of aCompiledMethodClass.
+	 The argument, trailer, is arbitrary but is typically either the reference to the source code
+	 that is stored with every CompiledMethod, or an encoding of the method's temporary names."
+	| method |
+	self generate: trailer
+		using: aCompiledMethodClass
+		ifQuick:
+			[:m |
+			  m	literalAt: 2 put: encoder associationForClass;
+				properties: properties.
+			^m].
+	method := encoder generateMethodOfClass: aCompiledMethodClass trailer: trailer from: self.
+	method properties: properties.
+	^method
+)
+
+generate: trailer using: aCompiledMethodClass ifQuick: methodBlock = (
+	| v |
+	(primitive = 0 and: [arguments size = 0 and: [block isQuick]]) ifFalse:
+		[^self].
+	v := block code.
+	v < 0 ifTrue:
+		[^self].
+	v = LdSelf ifTrue:
+		[^methodBlock value: (aCompiledMethodClass toReturnSelfTrailerBytes: trailer)].
+	(v between: LdTrue and: LdMinus1 + 3) ifTrue:
+		[^methodBlock value: (aCompiledMethodClass toReturnConstant: v - LdSelf trailerBytes: trailer)].
+	v < ((CodeBases at: LdInstType) + (CodeLimits at: LdInstType)) ifTrue:
+		[^methodBlock value: (aCompiledMethodClass toReturnField: v trailerBytes: trailer)].
+	v // 256 = 1 ifTrue:
+		[^methodBlock value: (aCompiledMethodClass toReturnField: v \\ 256 trailerBytes: trailer)]
+)
+
+generateWithTempNames = (
+	"Answer a CompiledMethod with temps names encoded in its trailer."
+	| methodSansTempNames |
+	"The encoder computes the schematic temp names during generation, so
+	 generate a method without temp names first.  If the method is quick there are
+	 no temps and hence no temp names."
+	methodSansTempNames := self
+									generate: CompiledMethodTrailer empty
+									using: CompiledMethod.
+	^methodSansTempNames
+		copyWithTrailerBytes:
+			((CompiledMethodTrailer new tempNames:
+				(methodSansTempNames isQuick
+					ifTrue: ['']
+					ifFalse: [encoder schematicTempNamesString])))
+)
+
+getAllChildren = (
+	^ arguments, (Array with: block), (temporaries ifNil: [#()]).
+)
+
+getElderSiblingOf: node = (
+	| index |
+	temporaries ifNotNil: [
+		((index := temporaries indexOf: node) > 1) ifTrue: [^ temporaries at: index - 1].
+		index = 1 ifTrue: [^ block].
+	].
+	node = block ifTrue: [
+		arguments size > 0 ifTrue: [^ arguments last].
+	].
+	((index := arguments indexOf: node) > 1) ifTrue: [^ arguments at: index - 1].
+	^ nil.
+)
+
+getFirstChild = (
+	arguments size > 0 ifTrue: [^ arguments first].
+	^ block.
+)
+
+getLastChild = (
+	temporaries ifNotNil: [temporaries size > 0 ifTrue: [^ temporaries last]].
+	^ block.
+)
+
+hasGeneratedMethod = (
+	^encoder hasGeneratedMethod
+)
+
+isFirstChild: childNode = (
+	arguments size > 0 ifTrue: [^ childNode = arguments first].
+	^ childNode = block.
+)
+
+isLastChild: childNode = (
+	temporaries ifNotNil: [temporaries size > 0 ifTrue: [^ childNode = temporaries last]].
+	^ childNode = block.
+)
+
+locationCounter = (
+	^locationCounter
+)
+
+methodClass = (
+	^ encoder classEncoding
+)
+
+noteBlockEntry: aBlock = (
+	"Evaluate aBlock with the numbering for the block entry."
+	locationCounter isNil ifTrue:
+		[locationCounter := -1].
+	aBlock value: locationCounter + 1.
+	locationCounter := locationCounter + 2
+)
+
+noteBlockExit: aBlock = (
+	"Evaluate aBlock with the numbering for the block exit."
+	aBlock value: locationCounter + 1.
+	locationCounter := locationCounter + 2
+)
+
+parserClass = (
+	"Which parser produces this class of parse node"
+	^ Parser
+)
+
+preen = (
+	"Preen for pretty-printing and/or decompilation.
+	 i.e. post-process to cover up for inadequacies in both algorithms.
+	 Currently two cases:
+		preenLocalIfNotNilArg: blockNode
+		hiding the assignment to the arg of an inlined block arg to ifNotNil:,
+			(var := expr) ifNil: [...] ifNotNil: [...]    =>    expr ifNil: [...] ifNotNil: [:var| ...].
+		preenTempsConflictingWithBlockNode: temps
+		hiding the declaration of a temp that is redeclared in some block"
+	self preenableNodes keysAndValuesDo:
+		[:nodeOrArray :selector |
+		 self perform: selector with: nodeOrArray]
+)
+
+preenIfNotNilNode: messageNode = (
+	"Transform a (var := expr) ifNil: [...] ifNotNil: [...] where var is only used in the ifNotNil: block
+	 and convert it to expr ifNil: [...] ifNotNil: [:var| ...].  Deal both with the pretty-print case where
+	 the block already declares the variable and the decompile case where it does not."
+	| variable |
+	self assert: (messageNode isMessageNode
+				and: [messageNode macroPrinter == #printIfNilNotNil:indent:
+				and: [messageNode receiver receiver isAssignmentNode]]).
+	variable := messageNode receiver receiver variable.
+	self assert: (variable isTemp and: [variable isRemote not]).
+	messageNode arguments last arguments isEmpty
+		ifTrue: [messageNode arguments last arguments: { variable }]
+		ifFalse:
+			[self assert: messageNode arguments last arguments asArray = { variable }.
+			 variable := nil].
+	messageNode receiver receiver: messageNode receiver receiver value.
+	variable ifNil: [^self].
+	self nodesDo:
+		[:node|
+		((node == self or: [node isBlockNode])
+		 and: [node temporaries includes: variable]) ifTrue:
+			[node temporaries: (node temporaries copyWithout: variable)]]
+)
+
+preenNilNodeFollowingNilIfNode: aNilIfMessageNode = (
+	self nodesDo:
+		[:node| | statements indices |
+		 (node isBlockNode
+		  and: [(statements := node statements) includes: aNilIfMessageNode]) ifTrue:
+			[indices := (2 to: statements size) reject:
+							[:i|
+							(statements at: i) == NodeNil
+							and: [(statements at: i - 1) isNilIf]].
+			 node statements: (({1}, indices) collect: [:i| statements at: i])]]
+)
+
+preenTempsConflictingWithBlockNode: temps = (
+	"Push temps that conflict with other blocks down into their narrowest enclosing block scope."
+	temps do:
+		[:tempVar|
+		(self accept: (NarrowerVariableScopeFinder new ofVariable: tempVar)) ifNotNil:
+			[:enclosingScope |
+			 self assert: enclosingScope isBlockNode.
+			 self nodesDo:
+				[:node|
+				 ((node == self or: [node isBlockNode])
+				  and: [node temporaries includes: tempVar]) ifTrue:
+					[node temporaries: (node temporaries copyWithout: tempVar)]].
+			 enclosingScope temporaries: enclosingScope temporaries, { tempVar }]]
+)
+
+preenableNodes = (
+	"Answer a Dictionary from node or sequence of nodes to preen method selector for nodes
+	 in the tree that require post-processing after either a format or a decompile.  Such issues
+	 are the variable for an ifNotNil: which is local to the ifNotNil: block but, due to the inlining
+	 of ifNotNil: appears to be declared at the outer level, and, similarly, a temporary variable
+	 that conflicts with one of the same name in a block when, were the variable declared
+	 local to some inlined block it would no longer conflict.  The resulting dictionary is used to
+	 perform the value with the key (node or array) as argument to preen the tree."
+	| preenableNodes priorBlocks priorVariables |
+	preenableNodes := Dictionary new.
+	priorBlocks := OrderedCollection new.
+	priorVariables := Set new.
+	self nodesWithPrecedingStatementsDo:
+		[:node :precedingStatementOrNil| | variable temps |
+		(node isMessageNode
+		and: [node macroPrinter == #printIfNilNotNil:indent:
+		and: [node receiver isMessageNode
+		and: [node receiver selector key == #==
+		and: [node receiver receiver isAssignmentNode
+		and: [(variable := node receiver receiver variable) isTemp
+		and: [variable isRemote not
+		and: [variable isOnlySubnodeOf: node in: self]]]]]]]) ifTrue:
+			[preenableNodes at: node put: #preenIfNotNilNode:.
+			 priorVariables add: variable].
+		node isBlockNode ifTrue:
+			[temps := OrderedCollection new.
+			 node temporaries do:
+				[:temp|
+				 priorBlocks do:
+					[:aBlock|
+					 aBlock temporaries do:
+						[:priorTemp|
+						 (priorVariables includes: priorTemp) ifFalse:
+							[priorTemp key = temp key ifTrue:
+								[temps addLast: priorTemp]]]]].
+			 temps isEmpty ifFalse:
+				[preenableNodes at: temps put: #preenTempsConflictingWithBlockNode:].
+			 priorBlocks addLast: node].
+		(node == NodeNil
+		 and: [precedingStatementOrNil notNil
+		 and: [precedingStatementOrNil isMessageNode
+		 and: [precedingStatementOrNil isNilIf]]]) ifTrue:
+			[preenableNodes at: precedingStatementOrNil put: #preenNilNodeFollowingNilIfNode:]].
+	^preenableNodes
+)
+
+primitive = (
+	^primitive
+)
+
+primitiveErrorVariableName = (
+	"Answer the primitive error code temp name, or nil if none."
+	(primitive isInteger and: [primitive > 0]) ifTrue:
+		[properties pragmas do:
+			[:pragma| | kwds ecIndex |
+			((kwds := pragma keyword keywords) first = 'primitive:'
+			and: [(ecIndex := kwds indexOf: 'error:') > 0]) ifTrue:
+				[^pragma argumentAt: ecIndex]]].
+	^nil
+	"(Parser new parse: (MethodNode sourceCodeAt: #primitiveErrorVariableName) class: Parser) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: 111 error: ''foo''> self primitiveFailed' class: Object) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: 111 error: foo> self primitiveFailed' class: Object) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: 111> self primitiveFailed' class: Object) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: ''foo'' error: foo module: ''bar''> self primitiveFailed' class: Object) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: ''foo'' module: ''bar'' error: foo> self primitiveFailed' class: Object) primitiveErrorVariableName"
+	"(Parser new parse: 'foo <primitive: 111 error: foo> self primitiveFailed' class: Object) generate"
+)
+
+printOn: aStream = (
+	| selectorNode |
+	selectorNode := self selectorNode.
+	precedence = 1
+		ifTrue:
+			[selectorNode isForFFICall
+				ifTrue: [selectorNode
+							printAsFFICallWithArguments: arguments
+							on: aStream
+							indent: 0]
+				ifFalse: [aStream nextPutAll: selectorNode key]]
+		ifFalse:
+			[selectorNode key keywords with: arguments do:
+				[:kwd :arg |
+				aStream nextPutAll: kwd; space; nextPutAll: arg key; space]].
+	comment == nil ifFalse:
+		[aStream crtab: 1.
+		 self printCommentOn: aStream indent: 1].
+	block printTemporaries: temporaries on: aStream doPrior: [aStream crtab: 1].
+	primitive > 0 ifTrue:
+		[(primitive between: 255 and: 519) ifFalse:  "Dont decompile quick prims  e.g, ^ self or ^instVar"
+			[aStream crtab: 1.
+			 self printPrimitiveOn: aStream]].
+	self printPropertiesOn: aStream.
+	self printPragmasOn: aStream.
+	aStream crtab: 1.
+	block printStatementsOn: aStream indent: 0
+)
+
+printPragmasOn: aStream = (
+	properties ifNil: [^self].
+	properties pragmas do:
+		[:pragma|
+		"Primitives are printed in printPrimitiveOn:; skip these"
+		(Parser primitivePragmaSelectors includes: pragma keyword) ifFalse:
+			[aStream crtab: 1; nextPut: $<; print: pragma message; nextPut: $>]]
+)
+
+printPrimitiveOn: aStream = (
+	"Print the primitive on aStream"
+	| primDecl |
+	primitive = 0 ifTrue:
+		[^self].
+	primitive = 120 ifTrue: "External call spec"
+		[^aStream print: encoder literals first].
+	aStream nextPutAll: '<primitive: '.
+	primitive = 117
+		ifTrue:
+			[primDecl := encoder literals at: 1.
+			 (primDecl at: 2) asString printOn: aStream.
+			 (primDecl at: 1) ifNotNil:
+				[:moduleName|
+				aStream nextPutAll:' module: '.
+				moduleName asString printOn: aStream]]
+		ifFalse:
+			[aStream print: primitive].
+	self primitiveErrorVariableName ifNotNil:
+		[:primitiveErrorVariableName|
+		 aStream nextPutAll: ' error: '; nextPutAll: primitiveErrorVariableName].
+	aStream nextPut: $>.
+	((Smalltalk classNamed: #StackInterpreter) ifNil: [Smalltalk classNamed: #Interpreter]) ifNotNil:
+		[:interpreterClass|
+		 aStream nextPutAll: ' "', (interpreterClass primitiveTable at: primitive + 1), '" ']
+)
+
+printPropertiesOn: aStream = (
+	properties ifNil: [^self].
+	properties propertyKeysAndValuesDo:
+		[:prop :val|
+		aStream crtab; nextPut: $<.
+		prop = #on:in:
+			ifTrue:
+				[prop keywords with: val do:
+					[:k :v | aStream nextPutAll: k; space; nextPutAll: v; space]]
+			ifFalse:
+				[prop = #on
+					ifTrue: [aStream nextPutAll: prop; nextPutAll:': '; nextPutAll: val]
+					ifFalse: [aStream nextPutAll: prop; nextPutAll:': '; print: val]].
+		aStream nextPut: $>]
+)
+
+printWithClosureAnalysisOn: aStream = (
+	self ensureClosureAnalysisDone.
+	precedence = 1
+		ifTrue:
+			[(self selector includesSubstring: '()/')
+				ifTrue: [aStream nextPutAll: (self selector copyUpTo: $)).
+						arguments
+							do: [:arg| aStream nextPutAll: arg key]
+							separatedBy: [aStream nextPutAll: ', '].
+						aStream nextPut: $)]
+				ifFalse: [aStream nextPutAll: self selector]]  "no node for method selector"
+		ifFalse:
+			[self selector keywords with: arguments do:
+				[:kwd :arg |
+				aStream nextPutAll: kwd; space.
+				arg printDefinitionForClosureAnalysisOn: aStream.
+				aStream space]].
+	comment == nil ifFalse:
+			[aStream crtab: 1.
+			 self printCommentOn: aStream indent: 1].
+	temporaries size > 0 ifTrue:
+			[aStream crtab: 1; nextPut: $|.
+			temporaries do: [:temp |
+				aStream space.
+				temp printDefinitionForClosureAnalysisOn: aStream].
+			aStream space; nextPut: $|].
+	primitive > 0 ifTrue:
+		[(primitive between: 255 and: 519) ifFalse:  "Dont decompile quick prims  e.g, ^ self or ^instVar"
+			[aStream crtab: 1.
+			 self printPrimitiveOn: aStream]].
+	self printPropertiesOn: aStream.
+	self printPragmasOn: aStream.
+	aStream crtab: 1.
+	block printWithClosureAnalysisStatementsOn: aStream indent: 0
+)
+
+properties = (
+	^properties
+)
+
+rawSourceRanges = (
+	^self rawSourceRangesAndMethodDo: [:rawSourceRanges :method| rawSourceRanges]
+)
+
+rawSourceRangesAndMethodDo: aBinaryBlock = (
+	"Evaluate aBinaryBlock with the rawSourceRanges and method generated from the receiver."
+	| methNode method |
+	methNode := encoder classEncoding newParser
+					encoderClass: encoder class;
+					parse: (sourceText "If no source, use decompile string as source to map from"
+							ifNil: [self decompileString]
+							ifNotNil: [sourceText])
+					class: self methodClass.
+	method := methNode generate.  "set bytecodes to map to"
+	^aBinaryBlock
+		value: methNode encoder rawSourceRanges
+		value: method
+)
+
+referencedValuesWithinBlockExtent: anInterval = (
+	^(localsPool select:
+		[:temp|
+		 temp isReferencedWithinBlockExtent: anInterval]) collect:
+			[:temp|
+			temp isRemote ifTrue: [temp remoteNode] ifFalse: [temp]]
+)
+
+removeAndRenameLastTempIfErrorCode = (
+	self primitiveErrorVariableName ifNotNil:
+		[:primitiveErrorVariableName|
+		 temporaries last
+			name: primitiveErrorVariableName
+			key: primitiveErrorVariableName
+			code: temporaries last code.
+		 temporaries removeLast].
+)
+
+removeProperty: aSymbol = (
+	properties := properties copyWithout: (Association
+											key: aSymbol
+											value: (properties propertyValueAt: aSymbol))
+)
+
+replaceNode: childNode with: newNode = (
+	| index |
+	(index := arguments indexOf: childNode) > 0
+		ifTrue: [arguments at: index put: newNode. ^ self].
+	childNode = block ifTrue: [block := newNode. ^ self].
+	temporaries ifNotNil: [
+		(index := temporaries indexOf: childNode) > 0
+			ifTrue: [temporaries at: index put: newNode. ^ self].
+	].
+)
+
+schematicTempNamesString = (
+	"Answer the temp names for the current method node in a form that captures
+	 temp structure.  The temps at each method and block scope level occur
+	 space-separated, with any indirect temps enclosed in parentheses.  Each block
+	 level is enclosed in square brackets.  e.g.
+		'method level temps (indirect temp)[block args and temps (indirect)]'
+	 This representation can be reconstituted into a blockExtentsToTempsMap
+	 by a CompiledMethod that has been copied with the schematicTempNamesString."
+	encoder hasGeneratedMethod ifFalse:
+		["create the encoder's blockExtentsToLocals map, except if the method is quick
+		  in which case it has no temps."
+		self generate isQuick ifTrue:
+			[^'']].
+	^encoder schematicTempNamesString
+)
+
+selector = (
+	"Answer the message selector for the method represented by the receiver."
+	(selectorOrFalse isSymbol)
+		ifTrue: [^selectorOrFalse].
+	^selectorOrFalse key.
+)
+
+selector: symbol = (
+	selectorOrFalse := symbol
+)
+
+selector: selOrFalse arguments: args precedence: p temporaries: temps block: blk encoder: anEncoder primitive: prim = (
+	self
+		selector: selOrFalse
+		arguments: args
+		precedence: p
+		temporaries: temps
+		block: blk encoder:
+		anEncoder
+		primitive: prim
+		properties: AdditionalMethodState new.
+)
+
+selector: selOrFalse arguments: args precedence: p temporaries: temps block: blk encoder: anEncoder primitive: prim properties: propDict = (
+	"Initialize the receiver with respect to the arguments given."
+	encoder := anEncoder.
+	selectorOrFalse := selOrFalse.
+	precedence := p.
+	arguments := args.
+	temporaries := temps.
+	block := blk.
+	primitive := prim.
+	properties := propDict.
+)
+
+selectorNode = (
+	"Answer a SelectorNode for the message selector of the method represented by the receiver."
+	^(selectorOrFalse isKindOf: SelectorNode)
+		ifTrue: [selectorOrFalse]
+		ifFalse: [SelectorNode new key: selectorOrFalse]
+)
+
+sourceMap = (
+	"Answer a SortedCollection of associations of the form: pc (byte offset in me) -> sourceRange (an Interval) in source text."
+	| methNode |
+	methNode := self.
+	sourceText ifNil: [
+		"No source, use decompile string as source to map from"
+		methNode := self parserClass new
+			parse: self decompileString
+			class: self methodClass
+	].
+	methNode generate: CompiledMethodTrailer empty.  "set bytecodes to map to"
+	^ methNode encoder sourceMap
+)
+
+sourceText = (
+	^ sourceText ifNil: [self printString]
+)
+
+sourceText: stringOrText = (
+	sourceText := stringOrText
+)
+
+tempNames = (
+	^ encoder tempNames
+)
+
+temporaries = (
+	"For transformations etc, not used in compilation"
+	^temporaries
+)
+
+temporaries: aSequence = (
+	"For transformations etc, not used in compilation"
+	temporaries := aSequence
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+	arguments do: [:a | a visitBy: visitor].
+	block visitBy: visitor.
+	temporaries ifNotNil: [temporaries do: [:a | a visitBy: visitor]].
+)
+
+
+)

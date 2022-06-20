@@ -1,0 +1,112 @@
+FutureNode = ParseNode (
+| receiver originalSelector futureSelector futureDelta futureArgs effectNode valueNode |
+
+accept: aVisitor = (
+	^aVisitor visitFutureNode: self
+)
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	{ receiver. futureDelta }, (futureArgs ifNil: [#()]) do:
+		[:node|
+		node == nil ifFalse:
+			[node analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools]]
+)
+
+emitCodeForBlockValue: stack encoder: encoder = (
+	"Generate code for evaluating the last statement in a block."
+	^effectNode emitCodeForValue: stack encoder: encoder
+)
+
+emitCodeForEffect: stack encoder: encoder = (
+	^effectNode emitCodeForEffect: stack encoder: encoder
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	^valueNode emitCodeForValue: stack encoder: encoder
+)
+
+futureMessage: selName arguments: args from: encoder sourceRange: range = (
+	futureSelector := selName.
+	futureArgs := args.
+	^self
+)
+
+futureSelector = (
+	^futureSelector
+)
+
+isFutureNode = (
+	^true
+)
+
+originalSelector = (
+	^originalSelector
+)
+
+receiver = (
+	^receiver
+)
+
+receiver: rcvr selector: selector arguments: args precedence: p from: encoder sourceRange: range = (
+	receiver := rcvr.
+	originalSelector := selector.
+	originalSelector == #future: ifTrue:[futureDelta := args first].
+	encoder noteSourceRange: range forNode: self.
+)
+
+sizeCodeForBlockValue: encoder = (
+	receiver == NodeSuper ifTrue: [^self error: 'Futures cannot send to future'].
+	(futureArgs isNil or: [futureSelector isNil]) ifTrue:
+		[^self error: 'Futures must be sent messages'].
+	encoder sharableLitIndex: originalSelector. "to find its senders"
+	futureDelta ifNil:[futureDelta := encoder encodeLiteral: 0].
+	effectNode := MessageNode new
+		receiver: receiver
+		selector: #futureDo:at:args:
+		arguments: (Array
+			with: (encoder encodeLiteral: futureSelector)
+			with: futureDelta
+			with: (BraceNode new elements: futureArgs))
+		precedence: 3
+		from: encoder.
+	^effectNode sizeCodeForValue: encoder
+)
+
+sizeCodeForEffect: encoder = (
+	receiver == NodeSuper ifTrue: [^self error: 'Futures cannot send to future'].
+	(futureArgs isNil or: [futureSelector isNil]) ifTrue:
+		[^self error: 'Futures must be sent messages'].
+	encoder sharableLitIndex: originalSelector. "to find its senders"
+	futureDelta ifNil:[futureDelta := encoder encodeLiteral: 0].
+	effectNode := MessageNode new
+		receiver: receiver
+		selector: #futureDo:at:args:
+		arguments: (Array
+			with: (encoder encodeLiteral: futureSelector)
+			with: futureDelta
+			with: (BraceNode new elements: futureArgs))
+		precedence: 3
+		from: encoder.
+	^effectNode sizeCodeForEffect: encoder
+)
+
+sizeCodeForValue: encoder = (
+	receiver == NodeSuper ifTrue: [^self error: 'Futures cannot send to future'].
+	(futureArgs isNil or: [futureSelector isNil]) ifTrue:
+		[^self error: 'Futures must be sent messages'].
+	encoder sharableLitIndex: originalSelector. "to find its senders"
+	futureDelta ifNil:[futureDelta := encoder encodeLiteral: 0].
+	valueNode := MessageNode new
+		receiver: receiver
+		selector: #futureSend:at:args:
+		arguments: (Array
+			with: (encoder encodeLiteral: futureSelector)
+			with: futureDelta
+			with: (BraceNode new elements: futureArgs))
+		precedence: 3
+		from: encoder.
+	^valueNode sizeCodeForValue: encoder
+)
+
+
+)

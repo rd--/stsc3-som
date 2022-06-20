@@ -1,0 +1,5 @@
+This is the Squeak (6.0α) Parser.
+
+It requires Environment &etc. which doesn't exist.
+
+It would probably be saner to use the St-80 Parser.

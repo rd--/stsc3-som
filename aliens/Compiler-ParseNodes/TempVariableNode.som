@@ -1,0 +1,4 @@
+TempVariableNode = VariableNode (
+| argType hasRefs hasDefs scope definingScope readingScopes writingScopes remoteNode |
+
+)

@@ -1,0 +1,35 @@
+MaybeContextInstanceVariableNode = InstanceVariableNode (
+code = (
+	"Answer a bogus code to avoid creating quick methods.
+	 See MethodNode>>generate:ifQuick:"
+	^LoadLong
+)
+
+emitCodeForStore: stack encoder: encoder = (
+	encoder genStoreInstVarLong: index
+)
+
+emitCodeForStorePop: stack encoder: encoder = (
+	encoder genStorePopInstVarLong: index.
+	stack pop: 1
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	stack push: 1.
+	^encoder genPushInstVarLong: index
+)
+
+sizeCodeForStore: encoder = (
+	^encoder sizeStoreInstVarLong: index
+)
+
+sizeCodeForStorePop: encoder = (
+	^encoder sizeStorePopInstVarLong: index
+)
+
+sizeCodeForValue: encoder = (
+	^encoder sizePushInstVarLong: index
+)
+
+
+)

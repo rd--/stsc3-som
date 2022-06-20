@@ -1,0 +1,9 @@
+MethodTempsNode = ParseNode (
+| temporaries |
+
+asTileSetForPlayer: aPlayer = (
+	^ #()
+)
+
+
+)

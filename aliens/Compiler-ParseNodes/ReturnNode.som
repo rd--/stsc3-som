@@ -1,0 +1,132 @@
+ReturnNode = ParseNode (
+| expr |
+
+accept: aVisitor = (
+	^aVisitor visitReturnNode: self
+)
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	"Note we could do this:
+		scopeBlock ~~ rootNode block ifTrue:
+			[scopeBlock noteNonLocalReturn].
+	 and pass up the flag in <BlockNode>>>analyseTempsWithin:rootNode:
+	 which may be fast but will also give less information the debugger.
+	 For now we consider clean blocks a premature optimization."
+	self flag: 'consider clean blocks'.
+	expr analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools
+)
+
+asMorphicSyntaxIn: parent = (
+	^parent returnNode: self expression: expr
+)
+
+asReturnNode = (
+)
+
+asTileSetForPlayer: aPlayer = (
+	"self isReturnSelf ifTrue: [^ #()]."
+	^ self expr asTileSetForPlayer: aPlayer
+)
+
+code = (
+	^expr code
+)
+
+emitCodeForReturn: stack encoder: encoder = (
+	expr emitCodeForReturn: stack encoder: encoder.
+	pc := encoder pc
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	expr emitCodeForReturn: stack encoder: encoder.
+	pc := encoder pc
+)
+
+explanation = (
+	^'Exit this method returning the value of ',expr explanation
+)
+
+expr = (
+	^ expr.
+)
+
+expr: e = (
+	expr := e
+)
+
+expr: e encoder: encoder sourceRange: range = (
+	expr := e.
+	encoder noteSourceRange: range forNode: self
+)
+
+getAllChildren = (
+	^ Array with: expr.
+)
+
+getElderSiblingOf: node = (
+	^ nil.
+)
+
+getFirstChild = (
+	^ expr.
+)
+
+getLastChild = (
+	^ expr.
+)
+
+isFirstChild: childNode = (
+	^ childNode = expr.
+)
+
+isImplicitReturn = (
+	^ self isReturnSelf
+)
+
+isLastChild: childNode = (
+	^ childNode = expr.
+)
+
+isReturnSelf = (
+	^expr == NodeSelf
+)
+
+isSpecialConstant = (
+	^expr isSpecialConstant
+)
+
+isVariableReference = (
+	^expr isVariableReference
+)
+
+printOn: aStream indent: level = (
+	aStream nextPutAll: '^ '. "make this a preference??"
+	expr printOn: aStream indent: level.
+	expr printCommentOn: aStream indent: level
+)
+
+printWithClosureAnalysisOn: aStream indent: level = (
+	aStream nextPutAll: '^ '. "make this a preference??"
+	expr printWithClosureAnalysisOn: aStream indent: level.
+	expr printCommentOn: aStream indent: level
+)
+
+replaceNode: childNode with: newNode = (
+	childNode = expr ifTrue: [expr := newNode].
+)
+
+sizeCodeForReturn: encoder = (
+	^expr sizeCodeForReturn: encoder
+)
+
+sizeCodeForValue: encoder = (
+	^expr sizeCodeForReturn: encoder
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+	expr visitBy: visitor.
+)
+
+
+)

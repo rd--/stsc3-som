@@ -1,0 +1,120 @@
+LeafNode = ParseNode (
+| key code index |
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	"This is a no-op except in TempVariableNode"
+	^self
+)
+
+code = (
+	^ code
+)
+
+code: index type: type = (
+	index isNil
+		ifTrue: [^type negated].
+	(CodeLimits at: type) > index
+		ifTrue: [^(CodeBases at: type) + index].
+	^type * 256 + index
+)
+
+emitCodeForEffect: stack encoder: encoder = (
+	^self
+)
+
+emitCodeForLoad: stack forValue: forValue encoder: encoder = (
+	"Default is to do nothing.
+	 Subclasses may need to override."
+)
+
+index = (
+	"Answer the index of the receiver, which has various uses depending on the class of the receiver."
+	^index
+)
+
+isLeaf = (
+	^ true.
+)
+
+key = (
+	^key
+)
+
+key: anObject = (
+	key := anObject.
+)
+
+key: object code: byte = (
+	key := object.
+	code := byte
+)
+
+key: object index: i type: type = (
+	key := object.
+	code := (self code: i type: type).
+	index := i
+)
+
+name: ignored key: object code: byte = (
+	key := object.
+	code := byte
+)
+
+name: literal key: object index: i type: type = (
+	self key: object
+		index: i
+		type: type
+)
+
+replaceNode: childNode with: newNode = (
+	childNode = key ifTrue: [key := newNode].
+)
+
+reserve: encoder = (
+	"If this is a yet unused literal of type -code, reserve it."
+	code < 0 ifTrue: [code := self code: (index := encoder litIndex: key) type: 0 - code]
+)
+
+resetFromCopy: aLeafNode = (
+	"Reset the state of the recever to match that of the argument.
+	 This is used to reset nodes that may have been repurposed
+	 while generatig the compiled method for a full block."
+	self assert: key == aLeafNode key.
+	code := aLeafNode code.
+	index := aLeafNode index
+)
+
+sizeCodeForEffect: encoder = (
+	^0
+)
+
+sizeCodeForLoad: encoder forValue: forValue = (
+	"Default is to do nothing.
+	 Subclasses may need to override."
+	^0
+)
+
+sizeCodeForValue: encoder = (
+	self subclassResponsibility
+)
+
+veryDeepFixupWith: deepCopier = (
+	"If fields were weakly copied, fix them here.  If they were in the tree being copied, fix them up, otherwise point to the originals!!"
+super veryDeepFixupWith: deepCopier.
+key := (deepCopier references at: key ifAbsent: [key]).
+)
+
+veryDeepInner: deepCopier = (
+	"Copy all of my instance variables.  Some need to be not copied at all, but shared.  	Warning!!  Every instance variable defined in this class must be handled.  We must also implement veryDeepFixupWith:.  See DeepCopier class comment."
+super veryDeepInner: deepCopier.
+"key := key.		Weakly copied"
+code := code veryDeepCopyWith: deepCopier.
+index := index veryDeepCopyWith: deepCopier.
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+)
+
+
+)

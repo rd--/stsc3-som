@@ -1,0 +1,1216 @@
+Parser = Scanner (
+
+| here hereType hereMark hereEnd prevMark prevEnd encoder parseNode failBlock requestorOffset tempsMark doitFlag properties queriedUnusedTemporaries cue |
+
+addComment = (
+	parseNode ~~ nil
+		ifTrue:
+			[parseNode comment: currentComment.
+			currentComment := nil]
+)
+
+addPragma: aPragma = (
+	properties := self properties copyWith: aPragma
+)
+
+addWarning: aString = (
+	"ignored by the default compiler."
+)
+
+advance = (
+	| this |
+	prevMark := hereMark.
+	prevEnd := hereEnd.
+	this := here.
+	here := token.
+	hereType := tokenType.
+	hereMark := mark.
+	hereEnd := source position - (aheadChar == DoItCharacter
+		ifTrue: [hereChar == DoItCharacter
+			ifTrue: [0]
+			ifFalse: [1]]
+		ifFalse: [2]).
+	self scanToken.
+	"Transcript show: 'here: ', here printString, ' mark: ', hereMark printString, ' end: ', hereEnd printString; cr."
+	^this
+)
+
+allocateLiteral: lit = (
+	encoder litIndex: lit
+)
+
+allowUnderscoreAssignments = (
+	"Query class + preference"
+	^ (encoder ifNotNil: [:e |
+		e == self
+			ifTrue: [nil]
+			ifFalse: [e classEncoding allowUnderscoreAssignments]])
+		ifNil: [super allowUnderscoreAssignments]
+)
+
+ambiguousSelector: aString inRange: anInterval = (
+	| correctedSelector intervalWithOffset |
+	self interactive ifFalse: [
+		"In non interactive mode, compile with backward comapatibility: $- is part of literal argument"
+		Transcript cr; store: encoder classEncoding; nextPutAll:#'>>';store: encoder selector; show: ' would send ' , token , '-'.
+		^super ambiguousSelector: aString inRange: anInterval].
+	"handle the text selection"
+	intervalWithOffset := anInterval first + requestorOffset to: anInterval last + requestorOffset.
+	self selectFrom: intervalWithOffset first to: intervalWithOffset last
+		during:
+			["Build the menu with alternatives"
+			correctedSelector := AmbiguousSelector
+					signalName: aString
+					inRange: intervalWithOffset.
+			correctedSelector ifNil: [^self fail]].
+	"Execute the selected action"
+	self substituteWord: correctedSelector wordInterval: intervalWithOffset offset: 0.
+	token := (correctedSelector readStream upTo: Character space) asSymbol
+)
+
+argumentName = (
+	hereType == #word
+		ifFalse: [^self expected: 'Argument name'].
+	^self advance
+)
+
+assignment: varNode = (
+	" var ':=' expression => AssignmentNode."
+	| loc start |
+	(loc := varNode assignmentCheck: encoder at: prevMark + requestorOffset) >= 0
+		ifTrue: [^self notify: 'Cannot store into' at: loc].
+	start := self startOfNextToken.
+	self advance.
+	self expression ifFalse: [^self expected: 'Expression'].
+	parseNode := AssignmentNode new
+				variable: varNode
+				value: parseNode
+				from: encoder
+				sourceRange: (start to: self endOfLastToken).
+	varNode nowHasDef.
+	^true
+)
+
+bindArg: name = (
+	^ self bindTemp: name
+)
+
+bindTemp: name = (
+	^name
+)
+
+bindTemp: name in: methodSelector = (
+	^name
+)
+
+blockExpression = (
+	"[ ({:var} |) (| {temps} |) (statements) ] => BlockNode."
+	| blockNode variableNodes temporaryBlockVariables start |
+	blockNode := BlockNode new.
+	variableNodes := OrderedCollection new.
+	start := prevMark + requestorOffset.
+	"Gather parameters."
+	[self match: #colon] whileTrue:
+		[variableNodes addLast: (encoder bindBlockArg: self argumentName within: blockNode)].
+	(variableNodes size > 0 & (hereType ~~ #rightBracket) and: [(self match: #verticalBar) not]) ifTrue:
+		[^self expected: 'Vertical bar'].
+	temporaryBlockVariables := self temporaryBlockVariablesFor: blockNode.
+	self statements: variableNodes innerBlock: true blockNode: blockNode.
+	blockNode temporaries: temporaryBlockVariables.
+	(self match: #rightBracket) ifFalse: [^self expected: 'Period or right bracket'].
+	blockNode noteSourceRangeStart: start end: self endOfLastToken encoder: encoder.
+	"The scope of the parameters and temporary block variables is no longer active."
+	temporaryBlockVariables do: [:variable | variable scope: -1].
+	variableNodes do: [:variable | variable scope: -1]
+)
+
+braceExpression = (
+	" { elements } => BraceNode."
+	| elements locations loc more |
+	elements := OrderedCollection new.
+	locations := OrderedCollection new.
+	self advance.
+	more := hereType ~~ #rightBrace.
+	[more]
+		whileTrue:
+			[loc := hereMark + requestorOffset.
+			self expression
+				ifTrue:
+					[elements addLast: parseNode.
+					locations addLast: loc]
+				ifFalse:
+					[^self expected: 'Variable or expression or right brace'].
+			(self match: #period)
+				ifTrue: [more := hereType ~~ #rightBrace]
+				ifFalse: [more := false]].
+	parseNode := BraceNode new elements: elements sourceLocations: locations.
+	(self match: #rightBrace)
+		ifFalse: [^self expected: 'Period or right brace'].
+	^true
+)
+
+canDeclareClassVariable = (
+	^encoder classEncoding ~~ UndefinedObject
+)
+
+canDeclareInstanceVariable = (
+	^encoder classEncoding ~~ UndefinedObject
+)
+
+cascade = (
+	" {; message} => CascadeNode."
+	| rcvr msgs |
+	parseNode canCascade ifFalse:
+		[^self expected: 'Cascading not'].
+	parseNode ensureCanCascade: encoder.
+	rcvr := parseNode cascadeReceiver.
+	msgs := OrderedCollection with: parseNode.
+	[self match: #semicolon]
+		whileTrue:
+			[parseNode := rcvr.
+			(self messagePart: 3 repeat: false)
+				ifFalse: [^self expected: 'Cascade'].
+			parseNode canCascade ifFalse:
+				[^self expected: '<- No special messages'].
+			parseNode ensureCanCascade: encoder.
+				parseNode cascadeReceiver.
+			msgs addLast: parseNode].
+	parseNode := CascadeNode new receiver: rcvr messages: msgs
+)
+
+collectTemporaryDeclarationsFrom: methodNode = (
+	| tempsMarks str |
+	tempsMarks := OrderedCollection new.
+	str := cue requestor text asString.
+	methodNode accept: (ParseNodeEnumerator
+		ofBlock: [ :aNode |
+			| mark |
+			(aNode class canUnderstand: #tempsMark)
+				ifTrue:
+					[mark := aNode tempsMark.
+					(mark notNil and: [ mark between: 1 and: str size ] and: [ (str at: mark) = $| ])
+						ifTrue: [ tempsMarks addLast: aNode ]]]).
+	(tempsMark notNil and: [ tempsMark between: 1 and: str size ] and: [ (str at: tempsMark) = $| ])
+						ifTrue: [ tempsMarks addLast: self ].
+	^ tempsMarks sorted: [ :a :b | a tempsMark > b tempsMark ]
+)
+
+correctSelector: proposedKeyword wordIntervals: spots exprInterval: expInt ifAbort: abortAction = (
+	"Correct the proposedKeyword to some selector symbol, correcting the original text if such action is indicated.  abortAction is invoked if the proposedKeyword couldn't be converted into a valid selector.  Spots is an ordered collection of intervals within the test stream of the for each of the keyword parts."
+	| correctSelector |
+	"If we can't ask the user, assume that the keyword will be defined later"
+	self interactive ifFalse: [^ proposedKeyword asSymbol].
+	self selectFrom: spots first first to: spots last last during: [
+		correctSelector := UnknownSelector name: proposedKeyword.
+		correctSelector ifNil: [^ abortAction value]].
+	self substituteSelector: correctSelector keywords wordIntervals: spots.
+	^ (proposedKeyword last ~~ $:
+	   and: [correctSelector last == $:])
+		ifTrue: [abortAction value]
+		ifFalse: [correctSelector]
+)
+
+correctVariable: proposedVariable interval: spot = (
+	"Correct the proposedVariable to a known variable, or declare it as a new
+	variable if such action is requested.  We support declaring lowercase
+	variables as temps or inst-vars, and uppercase variables as Globals or
+	ClassVars, depending on whether the context is nil (class=UndefinedObject).
+	Spot is the interval within the test stream of the variable."
+	| binding action |
+	"Check if this is an i-var, that has been corrected already (ugly)"
+	(encoder classEncoding instVarNames includes: proposedVariable) ifTrue:
+		[^InstanceVariableNode new
+			name: proposedVariable
+			index: (encoder classEncoding allInstVarNames indexOf: proposedVariable)].
+	"First check to see if the requestor knows anything about the variable"
+	(binding := cue requestor ifNotNil: [:object | object bindingOf: proposedVariable])
+		ifNotNil: [^encoder global: binding name: proposedVariable].
+	"If we can't ask the user for correction, make it undeclared"
+	self interactive ifFalse: [^encoder undeclared: proposedVariable].
+	self selectFrom: spot first to: spot last
+		during:
+			["Build the menu with alternatives"
+			action := UndeclaredVariable
+						signalFor: self
+						name: proposedVariable
+						inRange: spot.
+			action ifNil: [^self fail]].
+	"Execute the selected action"
+	^action value
+)
+
+declareClassVar: name = (
+	| sym class |
+	sym := name asSymbol.
+	class := encoder classEncoding.
+	class := class theNonMetaClass.		"not the metaclass"
+	class addClassVarName: name.
+	Smalltalk logChange: class definition.
+	^ encoder global: (class classPool associationAt: sym)
+			name: sym
+)
+
+declareGlobal: name = (
+	| sym |
+	sym := name asSymbol.
+	^encoder
+		global: (encoder environment
+					at: sym put: nil;
+					associationAt: sym)
+		name: sym
+)
+
+declareInstVar: name = (
+	"Declare an instance variable.  Since the variable will get added after any existing
+	 inst vars its index is the instSize."
+	encoder classEncoding addInstVarName: name.
+	Smalltalk logChange: encoder classEncoding definition.
+	^InstanceVariableNode new name: name index: encoder classEncoding instSize
+)
+
+declareTemp: name at: levelTag = (
+	"Defer declaring the temp until the parse has completed.  This allows
+	 the parser to declare the temp in the minimum enclosing block instead
+	 of always at method level.  See Parser>>declareUndeclaredTemps:"
+	^(encoder bindUndeclaredTemp: name)
+		tag: levelTag;
+		yourself
+)
+
+declareTempAndPaste: name = (
+	"Defer declaring the temp until the parse has completed.  This allows
+	 the parser to declare the temp in the minimum enclosing block instead
+	 of always at method level.  See Parser>>declareUndeclaredTemps:"
+	^encoder bindUndeclaredTemp: name
+)
+
+declareUndeclaredTemps: methodNode = (
+	"Declare any undeclared temps, declaring them at the smallest enclosing scope."
+	| undeclared blocksToVars |
+	(undeclared := encoder undeclaredTemps) isEmpty ifTrue:
+		[^self].
+	blocksToVars := IdentityDictionary new.
+	undeclared do:
+		[:var|
+		(blocksToVars
+			at: (var tag == #method
+					ifTrue: [methodNode block]
+					ifFalse: [methodNode accept: (VariableScopeFinder new ofVariable: var)])
+			ifAbsentPut: [SortedCollection new]) add: var name].
+	(blocksToVars removeKey: methodNode block ifAbsent: []) ifNotNil:
+		[:rootVars|
+		rootVars do: [:varName| self pasteTempAtMethodLevel: varName]].
+	(blocksToVars keys sorted: [:a :b| a tempsMark < b tempsMark]) do:
+		[:block| | decl |
+		decl := (blocksToVars at: block) reduce: [:a :b| a, ' ', b].
+		block temporaries isEmpty
+			ifTrue:
+				[self substituteWord: ' | ', decl, ' |'
+					wordInterval: (block tempsMark + 1 to: block tempsMark)
+					offset: requestorOffset]
+			ifFalse:
+				[self substituteWord: decl, ' '
+					wordInterval: (block tempsMark to: block tempsMark - 1)
+					offset: requestorOffset]].
+	ReparseAfterSourceEditing signal
+)
+
+defineClass: className = (
+	"prompts the user to define a new class,
+	asks for it's category, and lets the users edit further
+	the definition"
+	| sym cat def d2 |
+	sym := className asSymbol.
+	cat := Project uiManager request: 'Enter class category : ' initialAnswer: self encoder classEncoding theNonMetaClass category.
+	cat
+		ifEmpty: [cat := 'Unknown'].
+	def := 'Object subclass: #' , sym , '
+		instanceVariableNames: ''''
+		classVariableNames: ''''
+		poolDictionaries: ''''
+		category: ''' , cat , ''''.
+	d2 := Project uiManager request: 'Edit class definition : ' initialAnswer: def.
+	d2
+		ifEmpty: [d2 := def].
+	Compiler evaluate: d2.
+	^ encoder
+		global: (cue environment bindingOf: sym)
+		name: sym
+)
+
+encoder = (
+	^encoder ifNil:
+		[encoder := CompiledMethod preferredBytecodeSetEncoderClass new]
+)
+
+encoderClass: anEncoderClass = (
+	encoder ifNotNil: [
+		self error: 'encoder already set'].
+	encoder := anEncoderClass new
+)
+
+encoderFromCue: aCompilationCue = (
+	^encoder ifNil:
+		[encoder := (aCompilationCue encoderClass ifNil: [CompiledMethod preferredBytecodeSetEncoderClass]) new]
+)
+
+endOfLastToken = (
+	^ prevEnd ifNil: [mark]
+)
+
+expected: aString = (
+	"Notify a problem at token 'here'."
+	^ self notify: aString , ' expected' at: hereMark + requestorOffset
+)
+
+expression = (
+	(hereType == #word
+	 and: [tokenType == #leftArrow]) ifTrue:
+		[^self assignment: self variable].
+	self primaryExpression ifFalse:
+		[^false].
+	((self messagePart: 3 repeat: true)
+	 and: [hereType == #semicolon]) ifTrue:
+		[self cascade].
+	^true
+)
+
+fail = (
+	| exitBlock |
+	(encoder == nil or: [encoder == self])
+		ifFalse: [encoder release. encoder := nil]. "break cycle"
+	exitBlock := failBlock.
+	failBlock := nil.
+	^exitBlock value
+)
+
+init: sourceStream cue: aCue failBlock: aBlock = (
+	self setCue: aCue.
+	failBlock := aBlock.
+	requestorOffset := 0.
+	super scan: sourceStream.
+	prevMark := hereMark := mark.
+	self advance
+)
+
+initPattern: aString return: aBlock = (
+	| result |
+	self
+		init: (ReadStream on: aString asString)
+		cue: (CompilationCue source: aString)
+		failBlock: [^nil].
+	encoder := self.
+	result := aBlock value: (self pattern: false inContext: nil).
+	encoder := failBlock := nil.  "break cycles"
+	^result
+)
+
+interactive = (
+	"The compilation is interactive if there is a requestor and that requestor does either not care or explicitly allow interactive error correction."
+	^ cue requestor notNil
+		and: [(cue requestor respondsTo: #wantsInteractiveErrorCorrection) not
+			or: [cue requestor perform: #wantsInteractiveErrorCorrection]]
+)
+
+match: type = (
+	"Answer with true if next tokens type matches."
+	hereType == type
+		ifTrue:
+			[self advance.
+			^true].
+	^false
+)
+
+matchReturn = (
+	^ self match: #upArrow
+)
+
+matchToken: thing = (
+	"Matches the token, not its type."
+	here = thing ifTrue: [self advance. ^true].
+	^false
+)
+
+messagePart: level repeat: repeat = (
+	| start receiver selector args precedence words keywordStart |
+	[receiver := parseNode.
+	(hereType == #keyword and: [level >= 3])
+		ifTrue:
+			[start := self startOfNextToken.
+			selector := WriteStream on: (String new: 32).
+			args := OrderedCollection new.
+			words := OrderedCollection new.
+			[hereType == #keyword]
+				whileTrue:
+					[keywordStart := self startOfNextToken + requestorOffset.
+					selector nextPutAll: self advance.
+					words addLast: (keywordStart to: self endOfLastToken + requestorOffset).
+					self primaryExpression ifFalse: [^self expected: 'Argument'].
+					self messagePart: 2 repeat: true.
+					args addLast: parseNode].
+			selector := (Symbol lookup: selector contents)
+				ifNil: [ self correctSelector: selector contents
+							wordIntervals: words
+							exprInterval: (start to: self endOfLastToken)
+							ifAbort: [ ^ self fail ] ].
+			precedence := 3]
+		ifFalse: [
+			(level >= 2 and: [hereType == #verticalBar]) ifTrue: [self transformAVerticalBarIntoABinarySelector].
+			(hereType == #binary and: [level >= 2])
+				ifTrue:
+					[start := self startOfNextToken.
+					selector := self advance asOctetString asSymbol.
+					self primaryExpression ifFalse: [^self expected: 'Argument'].
+					self messagePart: 1 repeat: true.
+					args := Array with: parseNode.
+					precedence := 2]
+				ifFalse: [hereType == #word
+						ifTrue:
+							[start := self startOfNextToken.
+							selector := self advance.
+							args := #().
+							words := OrderedCollection with: (start  + requestorOffset to: self endOfLastToken + requestorOffset).
+							selector := (Symbol lookup: selector)
+								ifNil: [ self correctSelector: selector
+											wordIntervals: words
+											exprInterval: (start to: self endOfLastToken)
+											ifAbort: [ ^ self fail ] ].
+							precedence := 1]
+						ifFalse: [^args notNil]]].
+	parseNode := MessageNode new
+				receiver: receiver
+				selector: selector
+				arguments: args
+				precedence: precedence
+				from: encoder
+				sourceRange: (start to: self endOfLastToken).
+	repeat]
+		whileTrue: [].
+	^true
+)
+
+method: doit context: ctxt = (
+	" pattern [ | temporaries ] block => MethodNode."
+	| sap blk prim temps messageComment methodNode |
+	sap := self pattern: doit inContext: ctxt.
+	"sap={selector, arguments, precedence}"
+	self properties selector: (sap at: 1).
+	encoder selector: (sap at: 1).
+	(sap at: 2) do: [:argNode | argNode beMethodArg].
+	doit ifFalse: [self pragmaSequence].
+	temps := self temporaries.
+	messageComment := currentComment.
+	currentComment := nil.
+	doit ifFalse: [self pragmaSequence].
+	prim := self pragmaPrimitives.
+	self statements: #() innerBlock: false blockNode: BlockNode new.
+	blk := parseNode.
+	doit ifTrue: [blk returnLast]
+		ifFalse: [blk returnSelfIfNoOther: encoder].
+	hereType == #doIt ifFalse: [^self expected: 'Nothing more'].
+	methodNode := self newMethodNode comment: messageComment.
+	methodNode
+		selector: (sap at: 1)
+		arguments: (sap at: 2)
+		precedence: (sap at: 3)
+		temporaries: temps
+		block: blk
+		encoder: encoder
+		primitive: prim
+		properties: properties.
+	self interactive ifTrue:
+		[self declareUndeclaredTemps: methodNode.
+		 self removeUnusedTemps: methodNode].
+	^methodNode
+)
+
+newMethodNode = (
+	^self encoder methodNodeClass new
+)
+
+notify: aString = (
+	"Notify problem at token before 'here'."
+	^self notify: aString at: prevMark + requestorOffset
+)
+
+notify: string at: location = (
+	| messageText |
+	messageText := '"' , string , ' ->"'.
+	cue requestor isNil
+		ifTrue: [
+			| notification |
+			(encoder == self or: [encoder isNil])
+				ifTrue: [^ self fail "failure setting up syntax error"].
+			(notification := SyntaxErrorNotification
+				cue: (cue copy
+					source: (source contents asText
+						copyReplaceFrom: location
+						to: location - 1
+						with: messageText);
+					yourself)
+				doitFlag: doitFlag
+				errorMessage: string
+				location: location) signal.
+			notification tryNewSourceIfAvailable]
+		ifFalse: [cue requestor
+			notify: messageText
+			at: location
+			in: source].
+	^ self fail
+)
+
+offEnd: aString = (
+	"Notify a problem beyond 'here' (in lookAhead token). Don't be offEnded!"
+	requestorOffset == nil
+		ifTrue: [^ self notify: aString at: mark]
+		ifFalse: [^ self notify: aString at: mark + requestorOffset]
+)
+
+parse: sourceStreamOrString class: behavior = (
+	^ self parse: sourceStreamOrString readStream class: behavior
+		noPattern: false notifying: nil ifFail: [^nil]
+)
+
+parse: sourceStream class: class noPattern: noPattern notifying: req ifFail: aBlock = (
+	| c |
+	c := CompilationCue
+			source: sourceStream
+			class: class
+			requestor: req.
+	^ self
+		parseCue: c
+		noPattern: noPattern
+		ifFail: aBlock
+)
+
+parseArgsAndTemps: aString = (
+        "Parse the argument, aString, answer nil if an error occurs. Otherwise,
+        answer an Array of strings (the argument names and temporary variable names)."
+        aString == nil ifTrue: [^#()].
+        doitFlag := false.               "Don't really know if a doit or not!"
+        ^self initPattern: aString
+                return: [:pattern | (pattern at: 2) , (self temporariesIn: (pattern at: 1))]
+)
+
+parseCue: aCue noPattern: noPattern ifFail: aBlock = (
+	"Answer a MethodNode for the argument, sourceStream, that is the root
+	 of a parse tree. Parsing is done with respect to the CompilationCue to
+	 resolve variables, etc. Errors in parsing are reported to the cue's requestor;
+	 otherwise aBlock is evaluated. The argument noPattern is a Boolean that is
+	 true if the the sourceStream does not contain a method header (i.e., for DoIts)."
+	| methNode repeatNeeded myStream s p subSelection |
+	myStream := aCue sourceStream.
+	[repeatNeeded := false.
+	 p := myStream position.
+	 s := myStream upToEnd.
+	 myStream position: p.
+	 doitFlag := noPattern.
+	 [(self encoderFromCue: aCue) init: aCue notifying: self.
+	 self init: myStream cue: aCue failBlock: [^aBlock value].
+	 subSelection := self interactive and: [cue requestor selectionInterval = (p + 1 to: p + s size)].
+	 failBlock:= aBlock.
+	 methNode := self method: noPattern context: cue context]
+		on: ReparseAfterSourceEditing
+		do:	[ :ex |
+			repeatNeeded := true.
+			properties := nil. "Avoid accumulating pragmas and primitives Number"
+			myStream := ex newSource
+				ifNil: [subSelection
+							ifTrue:
+								[ReadStream
+									on: cue requestor text string
+									from: cue requestor selectionInterval first
+									to: cue requestor selectionInterval last]
+							ifFalse:
+								[ReadStream on: cue requestor text string]]
+				ifNotNil: [:src | myStream := src readStream]].
+	 repeatNeeded] whileTrue:
+		[encoder := self encoder class new].
+	methNode sourceText: s.
+	^methNode
+)
+
+parseMethodComment: aString setPattern: aBlock = (
+	"Answer the method comment for the argument, aString. Evaluate aBlock
+	with the message pattern in the form #(selector, arguments, precedence)."
+	self
+		initPattern: aString
+		return: aBlock.
+	currentComment==nil
+		ifTrue:	[^OrderedCollection new]
+		ifFalse:	[^currentComment]
+)
+
+parseParameterNames: aString = (
+	"Answer the parameter names for the argument, aString, which should
+	 parse successfully up to the temporary declaration or the end of the
+	 method header."
+	self initScannerForTokenization.
+	^self
+		initPattern: aString
+		return: [:pattern | pattern at: 2]
+)
+
+parseSelector: aString = (
+	"Answer the message selector for the argument, aString, which should
+	 parse successfully up to the temporary declaration or the end of the
+	 method header."
+	self allowUnderscoreSelectors ifFalse: [self initScannerForTokenization].
+	^self
+		initPattern: aString
+		return: [:pattern | pattern at: 1]
+)
+
+pasteTempAtMethodLevel: name = (
+	| insertion delta theTextString characterBeforeMark |
+	theTextString := cue requestor text string.
+	characterBeforeMark := theTextString at: tempsMark-1 ifAbsent: [$ ].
+	(theTextString at: tempsMark) = $| ifTrue: [
+  		"Paste it before the second vertical bar"
+		insertion := name, ' '.
+		characterBeforeMark isSeparator ifFalse: [insertion := ' ', insertion].
+		delta := 0.
+	] ifFalse: [
+		"No bars - insert some with CR, tab"
+		insertion := '| ' , name , ' |',String cr.
+		delta := 2.	"the bar and CR"
+		characterBeforeMark = Character tab ifTrue: [
+			insertion := insertion , String tab.
+			delta := delta + 1.	"the tab"
+		].
+	].
+	tempsMark := tempsMark +
+		(self substituteWord: insertion
+			wordInterval: (tempsMark to: tempsMark-1)
+			offset: 0) - delta
+)
+
+pattern: fromDoit inContext: ctxt = (
+	" unarySelector | binarySelector arg | keyword arg {keyword arg} =>
+	{selector, arguments, precedence}."
+	| args selector |
+	doitFlag := fromDoit.
+	fromDoit ifTrue:
+		[^ctxt == nil
+			ifTrue: [{#DoIt. {}. 1}]
+			ifFalse: [{#DoItIn:. {encoder encodeVariable: encoder doItInContextName}. 3}]].
+	hereType == #word ifTrue: [^ {self advance asSymbol. {}. 1}].
+	(hereType == #binary or: [hereType == #verticalBar]) ifTrue:
+		[selector := self advance asSymbol.
+		args := Array with: (encoder bindArg: self argumentName).
+		^ {selector. args. 2}].
+	hereType == #keyword ifTrue:
+		[selector := WriteStream on: (String new: 32).
+		args := OrderedCollection new.
+		[hereType == #keyword] whileTrue:[
+			selector nextPutAll: self advance.
+			args addLast: (encoder bindArg: self argumentName).
+		].
+		^ {selector contents asSymbol. args. 3}].
+	^self expected: 'Message pattern'
+)
+
+possibleVariablesFor: proposedVariable = (
+	^encoder possibleVariablesFor: proposedVariable
+)
+
+pragmaLiteral: selectorSoFar = (
+	"Read a pragma literal.  As a nicety we allow a variable name (rather
+	 than a literal string) as the second argument to primitive:error:"
+	(hereType == #string or: [ hereType == #literal or: [ hereType == #number or: [ hereType == #character ] ] ])
+		ifTrue: [ ^ self advance ].
+	(here == $# and: [ tokenType == #word ])
+		ifTrue: [ ^ self advance ].
+	(here == #- and: [ tokenType == #number ])
+		ifTrue: [ ^ (self advance; advance) negated ].
+	(here = 'true' or: [ here = 'false' or: [ here = 'nil' ] ])
+		ifTrue: [ ^ (Scanner new scanTokens: self advance) first ].
+	"This nicety allows one to supply a primitive error
+	 temp as a variable name, rather than a string."
+	((selectorSoFar beginsWith: 'primitive:')
+	 and: [(selectorSoFar endsWith: 'error:')
+	 and: [hereType == #word]]) ifTrue:
+		[^self advance].
+	^self expected: 'Literal constant'
+)
+
+pragmaPrimitives = (
+	| primitives |
+	self properties isEmpty ifTrue:
+		[^0].
+	primitives := properties pragmas select:
+					[:pragma|
+					self class primitivePragmaSelectors includes: pragma keyword].
+	primitives isEmpty ifTrue:
+		[^0].
+	primitives size > 1 ifTrue:
+		[^self notify: 'Ambigous primitives'].
+	^self perform: primitives first keyword withArguments: primitives first arguments
+)
+
+pragmaSequence = (
+	"Parse a sequence of method pragmas."
+	[	(hereType == #binary and: [self matchToken: #<])
+			ifFalse: [ ^ self ].
+		self pragmaStatement.
+		(hereType == #binary and: [self matchToken: #>])
+			ifFalse: [ ^ self expected: '>' ] ] repeat
+)
+
+pragmaStatement = (
+	"Parse a pragma statement. The leading '<' has already been consumed. The 'here' token is the first one in the pragma. Use that token to dispatch to a custom pragma-parsing method if one can be found with a selector that matches it.
+	Note that custom pragma parsers need to fulfill two requirements:
+		- method selector must match the current token as simple getter,
+				e.g., <apicall: ...> matches #apicall or <primitive: ...> matches #primitive
+		- method must have pragma <pragmaParser> to be called."
+	"0) Early exit"
+	(hereType = #keyword or: [ hereType = #word or: [ hereType = #binary ] ])
+		ifFalse: [  ^ self expected: 'pragma declaration' ].
+	"1) Do not consider one-word pragmas such as <primitive> and <foobar>. Only keyword pragmas."
+	here last == $: ifTrue: [
+		"2) Avoid interning new symbols for made-up pragmas such as #my for <my: 1 pragma: 2>."
+		(Symbol lookup: here allButLast) ifNotNil: [:parserSelector |
+			Parser methodDict at: parserSelector ifPresent: [:parserMethod |
+				"3) Only call methods that claim to be a custom pragma parser via <pragmaParser>."
+				(parserMethod hasPragma: #pragmaParser)
+					ifTrue: [^ self executeMethod: parserMethod]]]].
+	"X) No custom pragma parser found. Use the default one."
+	^ self pragmaStatementKeywords
+)
+
+pragmaStatementKeywords = (
+	"Read a single pragma statement. Parse all generic pragmas in the form of: <key1: val1 key2: val2 ...> and remember them, including primitives."
+	| selector arguments words index keyword |
+	selector := String new.
+	arguments := OrderedCollection new.
+	words := OrderedCollection new.
+	[ hereType = #keyword or: [ (hereType = #word or: [ hereType = #binary ]) and: [ selector isEmpty ] ] ] whileTrue: [
+		index := self startOfNextToken + requestorOffset.
+		selector := selector , self advance.
+		words add: (index to: self endOfLastToken + requestorOffset).
+		(selector last = $: or: [ selector first isLetter not ])
+			ifTrue: [ arguments add: (self pragmaLiteral: selector) ] ].
+	selector numArgs ~= arguments size
+		ifTrue: [ ^ self expected: 'pragma argument' ].
+	keyword := (Symbol lookup: selector)
+		ifNil: [ self
+				correctSelector: selector wordIntervals: words
+				exprInterval: (words first first to: words last last)
+				ifAbort: [ ^ self fail ] ].
+	self addPragma: (Pragma keyword: keyword arguments: arguments asArray).
+	^ true
+)
+
+primaryExpression = (
+	hereType == #word
+		ifTrue:
+			[parseNode := self variable.
+			(parseNode isUndefTemp and: [self interactive])
+				ifTrue: [self queryUndefined].
+			parseNode nowHasRef.
+			^ true].
+	hereType == #leftBracket
+		ifTrue:
+			[self advance.
+			self blockExpression.
+			^true].
+	hereType == #leftBrace
+		ifTrue:
+			[self braceExpression.
+			^true].
+	hereType == #leftParenthesis
+		ifTrue:
+			[self advance.
+			self expression ifFalse: [^self expected: 'expression'].
+			(self match: #rightParenthesis)
+				ifFalse: [^self expected: 'right parenthesis'].
+			^true].
+	(hereType == #string or: [hereType == #number or: [hereType == #literal or: [hereType == #character]]])
+		ifTrue:
+			[parseNode := encoder encodeLiteral: self advance.
+			^true].
+	(here == #- and: [tokenType == #number and: [1 + hereEnd = mark]])
+		ifTrue:
+			[self advance.
+			parseNode := encoder encodeLiteral: self advance negated.
+			^true].
+	^false
+)
+
+primitive = (
+	"Pragmas that encode primitive calls are parsed as normal keyword pragmas. This hook exists so that packages do not break primitive-pragma parsing by accident. Instead, this method needs to be replaced intentionally.
+	Note that primitive pragmas are special because they will be called back from the parser into the parser. See #pragmaPrimitives.
+	Examples:
+		<primitive: 42>
+		<primitive: 'primitiveDirectoryCreate' module: 'FilePlugin'>
+		<primitive: 'primitiveRegisterExternalFill' module: 'B2DPlugin' error: errorCode>"
+	"<pragmaParser>"
+	^ self pragmaStatementKeywords
+)
+
+primitive: anIntegerOrString = (
+	"Create indexed primitive."
+	^self primitive: anIntegerOrString error: nil
+)
+
+primitive: anIntegerOrString error: errorCodeVariableOrNil = (
+	"Create indexed primitive with optional error code."
+	^anIntegerOrString isInteger
+		ifTrue:
+			[errorCodeVariableOrNil ifNotNil:
+				[encoder floatTemp: (encoder bindTemp: errorCodeVariableOrNil) nowHasDef].
+			 anIntegerOrString]
+		ifFalse:
+			[anIntegerOrString isString
+				ifTrue: [self primitive: anIntegerOrString module: nil error: errorCodeVariableOrNil]
+				ifFalse: [self expected: 'Indexed primitive']]
+)
+
+primitive: aNameString error: errorCodeVariableOrNil module: aModuleStringOrNil = (
+	"Create named primitive with optional error code."
+	^self primitive: aNameString module: aModuleStringOrNil error: errorCodeVariableOrNil
+)
+
+primitive: aNameString module: aModuleStringOrNil = (
+	"Create named primitive."
+	^self primitive: aNameString module: aModuleStringOrNil error: nil
+)
+
+primitive: aNameString module: aModuleStringOrNil error: errorCodeVariableOrNil = (
+	"Create named primitive with optional error code."
+	| firstLiteral |
+	(aNameString isString and: [ aModuleStringOrNil isNil or: [ aModuleStringOrNil isString ] ])
+		ifFalse: [ ^ self expected: 'Named primitive' ].
+	firstLiteral := {	aModuleStringOrNil ifNotNil: [aModuleStringOrNil asSymbol].
+					aNameString asSymbol.
+					0.
+					0 }.
+	(encoder litIndex: firstLiteral) ~= 0 ifTrue:
+		[self error: 'parser failed to allocate [primitive binding array as first literal'].
+	firstLiteral beWritableObject. "Undo the read-only setting in litIndex:"
+	errorCodeVariableOrNil ifNotNil:
+		[encoder floatTemp: (encoder bindTemp: errorCodeVariableOrNil) nowHasDef].
+	^117
+)
+
+properties = (
+	^ properties ifNil: [ properties := AdditionalMethodState new ]
+)
+
+queriedUnusedTemporaries = (
+	queriedUnusedTemporaries ifNil:
+		[queriedUnusedTemporaries := Dictionary new].
+	^queriedUnusedTemporaries
+)
+
+queryUndefined = (
+	| varStart varName |
+	varName := parseNode key.
+	varStart := self endOfLastToken + requestorOffset - varName size + 1.
+	self selectFrom: varStart to: varStart + varName size - 1 during: [
+		(UndefinedVariable name: varName) ifFalse: [^ self fail]].
+)
+
+removeEmptyTempDeclarationsFrom: methodNode = (
+	| sourceCode madeChanges tempsMarkHolder |
+	sourceCode := cue requestor text asString.
+	tempsMarkHolder := self collectTemporaryDeclarationsFrom: methodNode.
+	madeChanges := false.
+	tempsMarkHolder do: [ :currentBlock | | tempsMarkChar0 tempsMarkChar1 tempsMarkChar2 end start |
+		tempsMarkChar0 := (sourceCode at: currentBlock tempsMark).
+		tempsMarkChar1 := (sourceCode at: currentBlock tempsMark - 1).
+		tempsMarkChar2 := (sourceCode at: currentBlock tempsMark - 2 ifAbsent: []).
+		(tempsMarkChar0 == $| and: [ tempsMarkChar1 == $| ])
+			ifTrue:
+				[ end := currentBlock tempsMark.
+				start := end - 1].
+		(tempsMarkChar0 == $| and: [ tempsMarkChar1 == $  and: [ tempsMarkChar2 == $| ] ])
+			ifTrue:
+				[ end := currentBlock tempsMark.
+				start := end - 2].
+		(start notNil and: [ end notNil ]) ifTrue: [
+			| lineStart lineEnd |
+			lineStart := 1 + (sourceCode
+				lastIndexOf: Character cr
+				startingAt: start - 1).
+			lineEnd := sourceCode
+				indexOf: Character cr
+				startingAt: end + 1
+				ifAbsent: [ sourceCode size ].
+			((sourceCode indexOfAnyOf: CharacterSet nonSeparators startingAt: lineStart) >= start
+				and: [ (sourceCode indexOfAnyOf: CharacterSet nonSeparators startingAt: end + 1) > lineEnd ]) ifTrue: [
+					start := lineStart.
+					end := lineEnd ].
+			cue requestor correctFrom: start to: end with: ''.
+			madeChanges := true.
+			currentBlock tempsMark: nil ] ].
+	madeChanges ifTrue: [ReparseAfterSourceEditing signal]
+)
+
+removeUnusedTemporaryNamed: temp from: str lookingAt: currentBlock movingTempMarksOf: someBlocks = (
+	| start end |
+	end := currentBlock tempsMark - 1.
+	["Beginning at right temp marker..."
+	start := end - temp size + 1.
+	end < temp size or: [ (str at: start) = $| ]
+		or: [ temp = (str copyFrom: start to: end)
+			and: [ ((str at: start - 1) = $| | (str at: start - 1) isSeparator)
+				& ((str at: end + 1) = $| | (str at: end + 1) isSeparator) ] ]]
+		whileFalse: [
+			"Search left for the unused temp"
+			end := cue requestor nextTokenFrom: end direction: -1 ].
+	(end < temp size or: [ (str at: start) = $| ])
+		ifFalse:
+			[(str at: start - 1) = $
+				ifTrue: [ start := start - 1 ].
+			cue requestor correctFrom: start to: end with: ''.
+			someBlocks do: [ :aBlock | aBlock tempsMark: aBlock tempsMark - (end - start + 1)].
+			^true ].
+	^false
+)
+
+removeUnusedTemps: methodNode = (
+	"Scan for unused temp names, and prompt the user about the prospect of removing each one found"
+	| madeChanges tempsMarkHolder unusedTempNames tempMarkHoldersToChange |
+	madeChanges := false.
+	tempMarkHoldersToChange := OrderedCollection new.
+	tempsMarkHolder := self collectTemporaryDeclarationsFrom: methodNode.
+	unusedTempNames := encoder unusedTempNames select:
+		[ :temp | (encoder lookupVariable: temp ifAbsent: [ ]) isUndefTemp
+			and: [ self queriedUnusedTemporaries at: temp ifAbsentPut: [
+				(UnusedVariable name: temp) ifNil: [ ^ self fail ]] ]].
+	tempsMarkHolder do: [ :currentBlock |
+		tempMarkHoldersToChange add: currentBlock.
+		unusedTempNames do:
+			[ :temp |
+			(self
+				removeUnusedTemporaryNamed: temp
+				from: cue requestor text asString
+				lookingAt: currentBlock
+				movingTempMarksOf: tempMarkHoldersToChange) ifTrue: [ madeChanges := true ]]].
+	madeChanges
+		ifTrue: [ self removeEmptyTempDeclarationsFrom: methodNode.
+			ReparseAfterSourceEditing signal ]
+)
+
+selectFrom: start to: stop during: aBlock = (
+	"Temporarily focus user attention on a zone of error thru text section.
+	Then restore original user selection.
+	Note: the original selection is restored invisibly (not displayed).
+	This will avoid flickering when chaining multiple corrections."
+	| userSelection |
+	userSelection := cue requestor selectionInterval.
+	cue requestor selectFrom: start to: stop.
+	aBlock value.
+	cue requestor selectIntervalInvisibly: userSelection
+)
+
+setCue: aCue = (
+	cue := aCue
+)
+
+startOfNextToken = (
+	"Return starting position in source of next token."
+	hereType == #doIt ifTrue: [^source position + 1].
+	^hereMark
+)
+
+statements: argNodes innerBlock: inner = (
+	^self statements: argNodes innerBlock: inner blockNode: BlockNode new
+)
+
+statements: argNodes innerBlock: inner blockNode: theBlockNode = (
+	| stmts returns start |
+	"give initial comment to block, since others trail statements"
+	theBlockNode comment: currentComment.
+	currentComment := nil.
+	stmts := OrderedCollection new.
+	returns := false.
+	hereType ~~ #rightBracket ifTrue:
+		[[theBlockNode startOfLastStatement: (start := self startOfNextToken).
+		  (returns := self matchReturn)
+			ifTrue:
+				[self expression ifFalse:
+					[^self expected: 'Expression to return'].
+				 self addComment.
+				 stmts addLast: (parseNode isReturningIf
+								ifTrue: [parseNode]
+								ifFalse: [ReturnNode new
+											expr: parseNode
+											encoder: encoder
+											sourceRange: (start to: self endOfLastToken)])]
+			ifFalse:
+				[self expression
+					ifTrue:
+						[self addComment.
+						"if both branches return, following code is unreachable, let's avoid this.
+						But only if interactive, we don't want to prevent loading of legacy code"
+						self interactive ifTrue: [returns := parseNode isReturningIf].
+						 stmts addLast: parseNode]
+					ifFalse:
+						[self addComment.
+						 stmts size = 0 ifTrue:
+							[stmts addLast:
+								(encoder encodeVariable:
+									(inner ifTrue: ['nil'] ifFalse: ['self']))]]].
+		  returns ifTrue:
+			[self match: #period.
+			 (hereType == #rightBracket or: [hereType == #doIt]) ifFalse:
+				[^self expected: 'End of block']].
+		  returns not and: [self match: #period]] whileTrue].
+	theBlockNode
+		arguments: argNodes
+		statements: stmts
+		returns: returns
+		from: encoder.
+	parseNode := theBlockNode.
+	^true
+)
+
+substituteSelector: selectorParts wordIntervals: spots = (
+	"Substitute the correctSelector into the (presumed interactive) receiver."
+	| offset |
+	offset := 0.
+	selectorParts with: spots do:
+		[ :word :interval |
+		offset := self substituteWord: word wordInterval: interval offset: offset ]
+)
+
+substituteVariable: each atInterval: anInterval = (
+	self
+		substituteWord: each
+		wordInterval: anInterval
+		offset: 0.
+	^encoder encodeVariable: each
+)
+
+substituteWord: correctWord wordInterval: spot offset: o = (
+	"Substitute the correctSelector into the (presumed interactive) receiver.
+	 Update requestorOffset based on the delta size and answer the updated offset."
+	cue requestor correctFrom: spot first + o to: spot last + o with: correctWord.
+	requestorOffset := requestorOffset + correctWord size - spot size.
+	^o + correctWord size - spot size
+)
+
+temporaries = (
+	" [ '|' (variable)* '|' ]"
+	| vars theActualText |
+	(self match: #verticalBar) ifFalse:
+		["no temps"
+		doitFlag ifTrue:
+			[tempsMark := self interactive
+								ifTrue: [cue requestor selectionInterval first]
+								ifFalse: [1].
+			^ #()].
+		tempsMark := hereMark	"formerly --> prevMark + prevToken".
+		tempsMark > 0 ifTrue:
+			[theActualText := source contents.
+			[tempsMark < theActualText size and: [(theActualText at: tempsMark) isSeparator]]
+				whileTrue: [tempsMark := tempsMark + 1]].
+			^ #()].
+	vars := OrderedCollection new.
+	[hereType == #word]
+		whileTrue: [vars addLast: (encoder bindTemp: self advance)].
+	(self match: #verticalBar) ifTrue:
+		[tempsMark := prevMark.
+		^ vars].
+	^ self expected: 'Vertical bar'
+)
+
+temporariesIn: methodSelector = (
+	" [ '|' (variable)* '|' ]"
+	| vars theActualText |
+	(self match: #verticalBar) ifFalse:
+		["no temps"
+		doitFlag ifTrue:
+			[tempsMark := self interactive
+								ifTrue: [cue requestor selectionInterval first]
+								ifFalse: [1].
+			^ #()].
+		tempsMark := hereMark	"formerly --> prevMark + prevToken".
+		tempsMark > 0 ifTrue:
+			[theActualText := source contents.
+			[tempsMark < theActualText size and: [(theActualText at: tempsMark) isSeparator]]
+				whileTrue: [tempsMark := tempsMark + 1]].
+			^ #()].
+	vars := OrderedCollection new.
+	[hereType == #word]
+		whileTrue: [vars addLast: (encoder bindTemp: self advance in: methodSelector)].
+	(self match: #verticalBar) ifTrue:
+		[tempsMark := prevMark.
+		^ vars].
+	^ self expected: 'Vertical bar'
+)
+
+temporaryBlockVariablesFor: aBlockNode = (
+	"Scan and answer temporary block variables."
+	| variables |
+	(self match: #verticalBar) ifFalse:
+		"There are't any temporary variables."
+		[aBlockNode tempsMark: prevMark + requestorOffset.
+		 ^#()].
+	variables := OrderedCollection new.
+	[hereType == #word] whileTrue:
+		[variables addLast: (encoder bindBlockTemp: self advance within: aBlockNode)].
+	(self match: #verticalBar) ifFalse:
+		[^self expected: 'Vertical bar'].
+	aBlockNode tempsMark: prevMark + requestorOffset.
+	^variables
+)
+
+tempsMark = (
+	^ tempsMark
+)
+
+tempsMark: aNumber = (
+	tempsMark := aNumber
+)
+
+transformAVerticalBarIntoABinarySelector = (
+	"Transform a vertical bar into a binary selector.
+	Eventually aggregate a series of immediately following vertical bars and a binary selector.
+	Note that this aggregation cannot occur at scan time, because a pair of vertical bars can be encountered in two valid constructs:
+	- either as an empty temporaries specification,
+	- or as a local temporaries specification in a block of arity > 0"
+	here := '|'.
+	hereType := #binary.
+	[tokenType == #verticalBar and: [hereMark + here size = mark]]
+		whileTrue: [
+			here := here , '|'.
+			hereEnd := hereEnd + 1.
+			self scanToken].
+	(tokenType == #binary and: [hereMark + here size = mark])
+		ifTrue: [
+			here := here asString , token.
+			hereType := #binary.
+			hereEnd := hereEnd + token size.
+			self scanToken].
+)
+
+variable = (
+	| varName varStart varEnd |
+	varStart := self startOfNextToken + requestorOffset.
+	varName := self advance.
+	varEnd := self endOfLastToken + requestorOffset.
+	^ encoder encodeVariable: varName
+		sourceRange: (varStart to: varEnd)
+		ifUnknown: [self correctVariable: varName interval: (varStart to: varEnd)]
+)
+
+----------------------------
+
+primitivePragmaSelectors = (
+	"Answer the selectors of pragmas that specify VM primitives.
+	 Needed for compile and decompile."
+	^#(primitive:
+		primitive:error:
+		primitive:error:module:
+		primitive:module:
+		primitive:module:error:)
+)
+
+comment = (^'
+I parse Smalltalk syntax and create a MethodNode that is the root of the parse tree. I look one token ahead.
+')
+
+)

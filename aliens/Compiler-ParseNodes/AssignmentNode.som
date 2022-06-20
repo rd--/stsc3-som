@@ -1,0 +1,158 @@
+AssignmentNode = ParseNode (
+| variable value |
+
+accept: aVisitor = (
+	^aVisitor visitAssignmentNode: self
+)
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	"N.B.  since assigment happens _after_ the value is evaluated the value is sent the message _first_."
+	value analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools.
+	variable beingAssignedToAnalyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools
+)
+
+asMorphicSyntaxIn: parent = (
+	^parent assignmentNode: self variable: variable value: value
+)
+
+emitCodeForEffect: stack encoder: encoder = (
+	variable emitCodeForLoad: stack forValue: false encoder: encoder.
+	value emitCodeForValue: stack encoder: encoder.
+	pc := encoder nextPC. "debug pc is first byte of the store, i.e. the next byte".
+	variable emitCodeForStorePop: stack encoder: encoder
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	variable emitCodeForLoad: stack forValue: true encoder: encoder.
+	value emitCodeForValue: stack encoder: encoder.
+	pc := encoder nextPC. "debug pc is first byte of the store, i.e. the next byte".
+	variable emitCodeForStore: stack encoder: encoder
+)
+
+explanation = (
+	^'The value of ',value explanation,' is being stored in ',variable explanation
+)
+
+getAllChildren = (
+	^ Array with: variable with: value.
+)
+
+getElderSiblingOf: node = (
+	node = value ifTrue: [^ variable].
+	^ nil.
+)
+
+getFirstChild = (
+	^ variable.
+)
+
+getLastChild = (
+	^ value.
+)
+
+ifNilTemporary = (
+	"(temp := object) == nil ifTrue: [...] ifFalse: [...]"
+	^ self variable
+)
+
+ifNilValue = (
+	"(temp := object) == nil ifTrue: [...] ifFalse: [...]"
+	^ self value
+)
+
+isAssignmentNode = (
+	^true
+)
+
+isFirstChild: childNode = (
+	^ childNode = variable.
+)
+
+isLastChild: childNode = (
+	^ childNode = value.
+)
+
+printOn: aStream indent: level = (
+	variable printOn: aStream indent: level.
+	aStream nextPutAll: ' := '.
+	value printOn: aStream indent: level + 2
+)
+
+printOn: aStream indent: level precedence: p = (
+	aStream nextPut: $(.
+	self printOn: aStream indent: level.
+	aStream nextPut: $)
+)
+
+printWithClosureAnalysisOn: aStream indent: level = (
+	variable printWithClosureAnalysisOn: aStream indent: level.
+	aStream nextPutAll: ' := '.
+	value printWithClosureAnalysisOn: aStream indent: level + 2
+)
+
+printWithClosureAnalysisOn: aStream indent: level precedence: p = (
+	aStream nextPut: $(.
+	self printWithClosureAnalysisOn: aStream indent: level.
+	aStream nextPut: $)
+)
+
+replaceNode: childNode with: newNode = (
+	childNode = variable ifTrue: [variable := newNode. ^ self].
+	childNode = value ifTrue: [value := newNode. ^ self].
+)
+
+sizeCodeForEffect: encoder = (
+	^(variable sizeCodeForLoad: encoder forValue: false)
+	+ (value sizeCodeForValue: encoder)
+	+ (variable sizeCodeForStorePop: encoder)
+)
+
+sizeCodeForValue: encoder = (
+	^(variable sizeCodeForLoad: encoder forValue: true)
+	+ (value sizeCodeForValue: encoder)
+	+ (variable sizeCodeForStore: encoder)
+)
+
+toDoIncrement: var = (
+	^(var = variable
+	   and: [value isMessageNode]) ifTrue:
+		[value toDoIncrement: var]
+)
+
+value = (
+	^ value
+)
+
+variable = (
+	^variable
+)
+
+variable: aVariable value: expression = (
+	variable := aVariable.
+	value := expression
+)
+
+variable: aVariable value: expression from: encoder = (
+	(aVariable isMemberOf: MessageAsTempNode)
+		ifTrue: ["Case of remote temp vars"
+				^ aVariable store: expression from: encoder].
+	variable := aVariable.
+	value := expression
+)
+
+variable: aVariable value: expression from: encoder sourceRange: range = (
+	encoder noteSourceRange: range forNode: self.
+	^self
+		variable: aVariable
+		value: expression
+		from: encoder
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+	variable visitBy: visitor.
+	value visitBy: visitor.
+)
+
+
+)

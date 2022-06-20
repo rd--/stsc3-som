@@ -1,0 +1,31 @@
+NewArrayNode = ParseNode (
+| numElements |
+
+accept: aVisitor = (
+	^aVisitor visitNewArrayNode: self
+)
+
+analyseTempsWithin: scopeBlock rootNode: rootNode assignmentPools: assignmentPools = (
+	"This is a no-op except in TempVariableNode"
+	^self
+)
+
+emitCodeForValue: stack encoder: encoder = (
+	encoder genPushNewArray: numElements.
+	stack push: 1
+)
+
+numElements = (
+	^numElements
+)
+
+numElements: n = (
+	numElements := n
+)
+
+sizeCodeForValue: encoder = (
+	^encoder sizePushNewArray: numElements
+)
+
+
+)

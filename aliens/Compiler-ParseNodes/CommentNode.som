@@ -1,0 +1,27 @@
+CommentNode = ParseNode (
+accept: aVisitor = (
+	^aVisitor visitCommentNode: self
+)
+
+asTileSetForPlayer: aPlayer = (
+	^ #()
+)
+
+getAllChildren = (
+	^ nil.
+)
+
+getElderSiblingOf: node = (
+	^ nil.
+)
+
+isLeaf = (
+	^ true.
+)
+
+visitBy: visitor = (
+	visitor visit: self.
+)
+
+
+)
