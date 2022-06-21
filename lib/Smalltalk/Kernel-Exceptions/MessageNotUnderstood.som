@@ -1,0 +1,52 @@
+MessageNotUnderstood = NotImplemented (
+
+| message receiver reachedDefaultHandler |
+
+defaultAction = (
+	reachedDefaultHandler := true.
+	super defaultAction
+)
+
+initialize = (
+	super initialize.
+	reachedDefaultHandler := false
+)
+
+isResumable = (
+	"Determine whether an exception is resumable."
+	^true
+)
+
+message = (
+	"Answer the selector and arguments of the message that failed."
+	^message
+)
+
+message: aMessage = (
+	message := aMessage
+)
+
+messageText = (
+	"Return an exception's message text."
+	^messageText == nil
+		ifTrue:
+			[message == nil
+				ifTrue: [super messageText]
+				ifFalse: [message lookupClass printString, '>>', message selector asString]]
+		ifFalse: [messageText]
+)
+
+reachedDefaultHandler = (
+	^reachedDefaultHandler
+)
+
+receiver = (
+	"Answer the receiver that did not understand the message"
+	^ receiver
+)
+
+receiver: obj = (
+	receiver := obj
+)
+
+)

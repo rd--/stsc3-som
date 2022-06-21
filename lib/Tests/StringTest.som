@@ -123,7 +123,6 @@ testFindLastOccurenceOfStringStartingAt = (
 	self assert: ('aaa' findLastOccurrenceOfString: 'aa' startingAt: 1) = 2.
 )
 
-"
 testFormat = (
 	#(
 		'\{ \} \\ foo {1} bar {2}' #(12 'string') '{ } \ foo 12 bar string'
@@ -134,7 +133,6 @@ testFormat = (
 	) groupsDo: [ :receiver :argument :expectedResult |
 		self assert: expectedResult equals: (receiver format: argument) ].
 )
-"
 
 testIndexOf = (
 	self assert: ((String with: 803 asCharacter with: 811 asCharacter) indexOfAnyOf: (CharacterSet newFrom: (String with: 811 asCharacter with: 812 asCharacter))) = 2.

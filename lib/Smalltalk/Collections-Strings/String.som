@@ -386,23 +386,30 @@ findSubstring: key in: body startingAt: start = (
 		^0
 )
 
-format: aCollection = (
-	^self class new: self size * 11 // 10 "+10%" streamContents: [ :output |
+format: arguments  = (
+	"Format the receiver with arguments.
+	Simplest example:
+		'foo {1} bar' format: {Date today}.
+	Complete example:
+		'\{ \} \\ foo {1} bar {2}' format: {12. 'string'}.
+	"
+	^ self class new: self size * 11 // 10 "+10%" streamContents: [ :output |
 		| lastIndex nextIndex |
 		lastIndex := 1.
 		[ (nextIndex := self indexOfAnyOf: String formatCharacterSet startingAt: lastIndex) = 0 ] whileFalse: [
 			nextIndex = lastIndex ifFalse: [
 				output next: nextIndex - lastIndex putAll: self startingAt: lastIndex ].
-			(self at: nextIndex) == $\
-				ifTrue: [ output nextPut: (self at: (nextIndex := nextIndex + 1)) ]
-				ifFalse: [ "${"
+			(self at: nextIndex) caseOf: {
+				[ $\ ] -> [ output nextPut: (self at: (nextIndex := nextIndex + 1)) ].
+				[ ${ ] -> [
 					"Parse the index - a positive integer in base 10."
 					| digitValue collectionIndex |
 					collectionIndex := 0.
-					[ (digitValue := self basicAt: (nextIndex := nextIndex + 1)) between: 48 "$0 asciiValue" and: 57 "$9 asciiValue" ] whileTrue: [
-						collectionIndex := collectionIndex * 10 + digitValue - 48. "$0 asciiValue" ].
-					digitValue =  125 "$} asciiValue" ifFalse: [ self error: '$} expected' ].
-					output nextPutAll: (aCollection at: collectionIndex) asString ].
+					"Important Note: Squeak String basicAt: returns an Integer not a Character.  At present this is rewritten to call at: and asInteger."
+					[ (digitValue := (self at: (nextIndex := nextIndex + 1)) asInteger) between: 48 "$0 asciiValue" and: 57 "$9 asciiValue" ] whileTrue: [
+						collectionIndex := collectionIndex * 10 + digitValue - 48 "$0 asciiValue". ].
+					digitValue =  125 "$} asciiValue" ifFalse: [ self error: ('{1} expected' translated format: {$}}) ].
+					output nextPutAll: (arguments at: collectionIndex) asString ] }.
 			lastIndex := nextIndex + 1 ].
 		lastIndex <= self size ifTrue: [
 			output next: self size - lastIndex + 1 putAll: self startingAt: lastIndex ] ]
@@ -432,7 +439,7 @@ isOctetString = (
 	This is different from asking whether the receiver *is* a ByteString
 	(i.e., #isByteString)"
 	1 to: self size do: [:pos |
-		(self basicAt: pos) >= 256 ifTrue: [^ false].
+		(self at: pos) asInteger >= 256 ifTrue: [^ false].
 	].
 	^ true.
 )
@@ -775,6 +782,10 @@ subStrings: separators = (
 	^ result asArray
 )
 
+translated = (
+	"No translation"
+)
+
 withBlanksTrimmed = (
 	"Return a copy of the receiver from which leading and trailing blanks have been trimmed."
 	| first last |
@@ -809,6 +820,8 @@ withoutQuoting = (
 
 ----
 
+| FormatCharacterSet |
+
 cr = (
 	"Answer a string containing a single carriage return character."
 	^ self with: Character cr
@@ -825,7 +838,7 @@ empty = (
 )
 
 formatCharacterSet = (
-	^ CharacterSet newFrom: #(${ $\)
+	^ FormatCharacterSet ifNil: [ FormatCharacterSet := CharacterSet newFrom: #(${ $\) ]
 )
 
 isVariable = (

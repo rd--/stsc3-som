@@ -207,11 +207,11 @@ testPredicates = (
 		self
 			assert: expectedCaseSensitiveResult
 			equals: (input matchesRegex: regexString)
-			description: 'cs'. "('{1} matchesRegex: {2} should be {3}' format: { input. regexString. expectedCaseSensitiveResult })."
+			description: ('{1} matchesRegex: {2} should be {3}' format: { input. regexString. expectedCaseSensitiveResult }).
 		self
 			assert: expectedCaseInsensitiveResult
 			equals: (input matchesRegexIgnoringCase: regexString)
-			description: 'ci'. "('{1} matchesRegexIgnoringCase: {2} should be {3}' format: { input. regexString. expectedCaseInsensitiveResult })"
+			description: ('{1} matchesRegexIgnoringCase: {2} should be {3}' format: { input. regexString. expectedCaseInsensitiveResult })
 	]
 )
 

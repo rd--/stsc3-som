@@ -30,10 +30,10 @@ testAccessing = (
 
 testArithmetic = (
 	| ts |
-	ts := timestamp minusDays: 123.  	"9 September 1999, 11:55 am"
-	ts := ts minusSeconds: 1056.			"9 September 1999, 11:37:24 am"
-	ts := ts plusDays: 123.				"10 January 2000, 11:37:24 am"
-	ts := ts plusSeconds: 1056.			"10 January 2000, 11:55 am"
+	ts := timestamp minusDays: 123.
+	ts := ts minusSeconds: 1056.
+	ts := ts plusDays: 123.
+	ts := ts plusSeconds: 1056.
 	self
 		assert: ts  = timestamp.
 )
@@ -143,7 +143,7 @@ testPrinting = (
 
 testReadFromA1 = (
 	|ts|
-	ts := TimeStamp current offset: Duration zero. "current as UTC"
+	ts := TimeStamp current offset: Duration zero.
 	self assert: (ts = (TimeStamp fromString: ts asString)).
 	ts := TimeStamp current offset: (Duration hours: 1).
 	self deny: (ts = (TimeStamp fromString: ts asString)).

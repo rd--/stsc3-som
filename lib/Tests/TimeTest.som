@@ -47,7 +47,7 @@ testAddTime = (
 
 testArithmetic = (
 	| t1 t2 t3 |
-	t1 := time addSeconds: 70.		"4:03:57 am"
+	t1 := time addSeconds: 70.
 	self
 		assert: t1 hours = 4;
 		assert: t1 minutes = 3;
@@ -100,9 +100,9 @@ testAsYear = (
 
 testComparing = (
 	| t1 t2 t3 |
-	t1 := Time fromSeconds: 14567.		"4:02:47 am"
-	t2 := Time fromSeconds: 5000.		"1:23:20 am"
-	t3 := Time fromSeconds: 80000.		"10:13:20 pm"
+	t1 := Time fromSeconds: 14567.
+	t2 := Time fromSeconds: 5000.
+	t3 := Time fromSeconds: 80000.
 	self
 		assert: time = t1;
 		assert: time hash = t1 hash;
@@ -134,13 +134,12 @@ testFromSeconds = (
 
 testGeneralInquiries = (
 	| now d t dt epsilon |
-	"vm clocks seem to work differently across platforms, so an epsilon is required"
-	epsilon := 1. "second"
+	epsilon := 1.
 	now  := Time dateAndTimeNow.
 	self
 		assert: now size = 2;
 		assert: (now last asSeconds - Time now asSeconds) abs <= epsilon.
-	"self should: [ Time timeWords ] raise: MessageNotUnderstood."
+	self should: [ Time timeWords ] raise: MessageNotUnderstood.
 	d := '2 June 1973' asDate.
 	t := '4:02:47 am' asTime.
 	dt := Time dateAndTimeFromSeconds: (2285280000 + 14567).
@@ -165,7 +164,6 @@ testHour = (
 	self assert: aTime hours =  12.
 )
 
-"
 testHumanWordsForSecondsAgo = (
 	self assert: (Time humanWordsForSecondsAgo: 0.999999999)
 			= 'a second ago'.
@@ -187,7 +185,6 @@ testHumanWordsForSecondsAgoWithDays = (
 	self assert: (Time humanWordsForSecondsAgo: 24 * 60 * 60)
 					= 'yesterday'.
 )
-"
 
 testLessThan = (
 	self assert: aTime < (Time readFromString: '12:34:57').
@@ -204,7 +201,6 @@ testMinute = (
 
 testNanoSecond = (
 	self assert: aTime nanoSecond = 0
-	"Right now all times all seconds"
 )
 
 testNew = (
@@ -283,7 +279,6 @@ testSecond = (
 	self assert: aTime seconds =  56
 )
 
-"
 testSqueakInquiries = (
 	| timewords totalseconds condensed corrected |
 	self assert:
@@ -302,7 +297,6 @@ testSqueakInquiries = (
 	self
 		assert: (corrected includesAllOf: #(20 400 401 20000 40000 45000 200000)).
 )
-"
 
 testStoreOn = (
 	| referenceString stored |
