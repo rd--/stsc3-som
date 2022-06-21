@@ -1,5 +1,5 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
@@ -67,6 +67,9 @@ IdentityBagTest suite run printOn: Transcript
 
 IntegerTest testSelectors do: [ :each | Transcript show: each; cr. IntegerTest run: each ]
 IntegerTest suite run printOn: Transcript
+
+IntegerDigitLogicTest testSelectors do: [ :each | Transcript show: each; cr. IntegerDigitLogicTest run: each ]
+IntegerDigitLogicTest suite run printOn: Transcript
 
 IntervalTest testSelectors do: [ :each | Transcript show: each; cr. IntervalTest run: each ]
 IntervalTest suite run printOn: Transcript
