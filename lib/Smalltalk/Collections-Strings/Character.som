@@ -50,8 +50,8 @@ asUppercase = (
 					ifTrue: [^Character value: self asciiValue - 32]]
 )
 
-isCharacter = (
-	^ true
+canBeIdentifierInitial = (
+	^ self == $_ or: [self isLetter]
 )
 
 deepCopy = (
@@ -73,6 +73,10 @@ hash = (
 
 identityHash = (
 	^self asInteger
+)
+
+isCharacter = (
+	^ true
 )
 
 shallowCopy = (

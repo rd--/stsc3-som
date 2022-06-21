@@ -41,6 +41,10 @@ isNil = (
 	^true
 )
 
+jsonWriteOn: aWriteStream = (
+	aWriteStream nextPutAll: 'null'
+)
+
 notNil = (
 	^false
 )

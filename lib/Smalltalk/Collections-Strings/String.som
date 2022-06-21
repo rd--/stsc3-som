@@ -448,6 +448,19 @@ isString = (
 	^ true
 )
 
+jsonWriteOn: aStream = (
+	| index start |
+	aStream nextPut: $".
+	start := 1.
+	[ (index := self indexOfAnyOf: Json escapeSet startingAt: start) = 0 ] whileFalse: [
+		aStream next: index - start putAll: self startingAt: start.
+		aStream nextPutAll: (Json escapeForCharacter: (self at: index)).
+		start := index + 1 ].
+	start <= self size ifTrue: [
+		aStream next: self size + 1 - start putAll: self startingAt: start ].
+	aStream nextPut: $".
+)
+
 keywords = (
 	"Answer an array of the keywords that compose the receiver."
 	| keywords |

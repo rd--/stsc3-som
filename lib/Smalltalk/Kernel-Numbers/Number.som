@@ -275,6 +275,10 @@ isZero = (
 	^self = 0
 )
 
+jsonWriteOn: aWriteStream = (
+	self printOn: aWriteStream base: 10
+)
+
 log = (
 	^self asFloat log
 )

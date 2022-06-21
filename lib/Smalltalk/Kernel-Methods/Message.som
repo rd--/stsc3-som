@@ -1,0 +1,163 @@
+Message = Object (
+
+| selector args lookupClass |
+
+= anObject = (
+	^self class == anObject class
+	  and: [selector == anObject selector "selector lookup is by identity"
+	  and: [lookupClass == anObject lookupClass
+	  and: [args literalEqual: anObject arguments]]]
+)
+
+analogousCodeTo: anObject = (
+	"For MethodPropertires comparison."
+	^self class == anObject class
+	  and: [selector == anObject selector
+	  and: [args = anObject arguments
+	  and: [lookupClass == anObject lookupClass]]]
+)
+
+argument = (
+	"Answer the first (presumably sole) argument"
+	^args at: 1
+)
+
+argument: newValue = (
+	"Change the first argument to newValue and answer self"
+	args at: 1 put: newValue
+)
+
+arguments = (
+	"Answer the arguments of the receiver."
+	^args
+)
+
+createStubMethod = (
+	| argNames |
+	argNames := Set new.
+	^ String streamContents: [ :s |
+		self selector keywords withIndexDo: [ :key :i |
+			| aOrAn argName arg argClassName |
+			s nextPutAll: key.
+			((key last = $:) or: [self selector isInfix]) ifTrue: [
+				arg := self arguments at: i.
+				argClassName := arg canonicalArgumentName.
+				aOrAn := argClassName first isVowel ifTrue: ['an'] ifFalse: ['a'].
+				argName := aOrAn, argClassName.
+				[argNames includes: argName] whileTrue: [argName := argName, i asString].
+				argNames add: argName.
+				s nextPutAll: ' '; nextPutAll: argName; space
+			].
+		].
+		s cr; tab.
+		s nextPutAll: 'self shouldBeImplemented'
+	].
+)
+
+hasIdenticalContentsAs: aMessage = (
+	"Answer if the argument's selector and arguments are identically equal to those of the receiver.
+	 It is assumed that the argument aMessage is, in fact, a message."
+       selector ~~ aMessage selector ifTrue:
+		[^false].
+	1 to: args size do:
+		[:i| (args at: i) ~~ (aMessage arguments at: i) ifTrue: [^false]].
+	^true
+)
+
+hash = (
+	"#hash is implemented, because #= is implemented."
+	^(selector hash bitXor: args hash) bitXor: lookupClass hash
+)
+
+lookupClass = (
+	^ lookupClass
+)
+
+lookupClass: aClass = (
+	lookupClass := aClass
+)
+
+numArgs = (
+	"Answer the number of arguments in this message"
+	^args size
+)
+
+printOn: stream = (
+	args isEmpty ifTrue: [^ stream nextPutAll: selector].
+	args with: selector keywords do: [:arg :word |
+		stream nextPutAll: word.
+		stream space.
+		arg printOn: stream.
+		stream space.
+	].
+	stream skip: -1.
+)
+
+selector = (
+	"Answer the selector of the receiver."
+	^selector
+)
+
+sendTo: receiver = (
+	"answer the result of sending this message to receiver"
+	^ receiver perform: selector withArguments: args
+)
+
+sends: aSelector = (
+	"answer whether this message's selector is aSelector"
+	^selector == aSelector
+)
+
+sentTo: receiver = (
+	"answer the result of sending this message to receiver"
+	lookupClass == nil
+		ifTrue: [^ receiver perform: selector withArguments: args]
+		ifFalse: [^ receiver perform: selector withArguments: args inSuperclass: lookupClass]
+)
+
+setSelector: aSymbol = (
+	selector := aSymbol.
+)
+
+setSelector: aSymbol arguments: anArray = (
+	selector := aSymbol.
+	args := anArray
+)
+
+storeOn: aStream = (
+	"Refer to the comment in Object|storeOn:."
+	aStream nextPut: $(;
+	 nextPutAll: self class name;
+	 nextPutAll: ' selector: ';
+	 store: selector;
+	 nextPutAll: ' arguments: ';
+	 store: args;
+	 nextPut: $)
+)
+
+----------------------------
+
+selector: aSymbol = (
+	"Answer an instance of me with unary selector, aSymbol."
+	^self new setSelector: aSymbol arguments: (Array new: 0)
+)
+
+selector: aSymbol argument: anObject = (
+	"Answer an instance of me whose selector is aSymbol and single
+	argument is anObject."
+	^self new setSelector: aSymbol arguments: (Array with: anObject)
+)
+
+selector: aSymbol arguments: anArray = (
+	"Answer an instance of me with selector, aSymbol, and arguments,
+	anArray."
+	^self new setSelector: aSymbol arguments: anArray
+)
+
+comment = (^'
+I represent a selector and its argument values.
+
+Generally, the system does not use instances of Message for efficiency reasons. However, when a message is not understood by its receiver, the interpreter will make up an instance of me in order to capture the information involved in an actual message transmission. This instance is sent it as an argument with the message doesNotUnderstand: to the receiver.
+')
+
+)

@@ -282,6 +282,10 @@ isPrime = (
 	^true
 )
 
+jsonWriteOn: aWriteStream = (
+	^ self printOn: aWriteStream base: 10
+)
+
 lcm: n = (
 	^self // (self gcd: n) * n
 )
@@ -343,6 +347,10 @@ printOn: aStream asFixedPoint: base = (
 	(n := n \\ b) = 0] whileFalse: [
 		b = base ifTrue: [aStream nextPut: $.].
 		b := b // 10].
+)
+
+printStringHex = (
+	^self printStringBase: 16
 )
 
 quo: aNumber = (

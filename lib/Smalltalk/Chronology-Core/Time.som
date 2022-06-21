@@ -107,6 +107,12 @@ intervalString = (
 		d seconds > 0 ifTrue: [s space; print: d seconds; nextPutAll: ' seconds'] ]
 )
 
+jsonWriteOn: stream = (
+	stream nextPut: $".
+	self print24: true showSeconds: true on: stream.
+	stream nextPut: $"
+)
+
 meridianAbbreviation = (
 	^ self hour < 12 ifTrue: ['AM'] ifFalse: ['PM']
 )

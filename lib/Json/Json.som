@@ -1,0 +1,330 @@
+Json = Object (
+
+| stream currentCharacter arrayBufferStream stringBufferStream numberParser ctorMap dictionaryClass |
+
+arrayBufferStream = (
+	^arrayBufferStream ifNil: [ arrayBufferStream := (Array new: 10) writeStream ]
+)
+
+consume: aString = (
+	| message |
+	1 to: aString size do: [ :index |
+		(currentCharacter := stream next) == (aString at: index) ifFalse: [
+			message := 'Expected ', (aString at: index)  printString.
+			currentCharacter
+				ifNil: [ self incomplete: message ]
+				ifNotNil: [ self invalid: message ] ] ].
+	currentCharacter := stream next
+)
+
+ctorMap = (
+	^ ctorMap
+)
+
+ctorMap: m = (
+	ctorMap := m
+)
+
+dictionaryClass: aClass = (
+	"This method allows you to override the default dictionary class to be created while parsing a stream. Instances of aClass are expected to understand #at:put:."
+	dictionaryClass := aClass
+)
+
+error: aString = (
+	(currentCharacter isNil and: [ stream atEnd ])
+		ifTrue: [ self incomplete: aString ]
+		ifFalse: [ self invalid: aString ]
+)
+
+incomplete: aString = (
+	JsonIncompleteError signal: aString
+)
+
+initialize = (
+	dictionaryClass := JsonObject
+)
+
+interpretStringEscape: aCharacter = (
+	aCharacter == $b ifTrue: [ ^Character backspace ].
+	aCharacter == $n ifTrue: [ ^Character lf ].
+	aCharacter == $f ifTrue: [ ^Character newPage ].
+	aCharacter == $r ifTrue: [ ^Character cr ].
+	aCharacter == $t ifTrue: [ ^Character tab ].
+	aCharacter == $u ifTrue: [ ^self unescapeUnicode ].
+	aCharacter == $" ifTrue: [ ^aCharacter ].
+	aCharacter == $\ ifTrue: [ ^aCharacter ].
+	aCharacter == $/ ifTrue: [ ^aCharacter ].
+	self error: 'Unexpected escaped character: ', aCharacter asString
+)
+
+invalid: aString = (
+	JsonInvalidError signal: aString
+)
+
+readAny = (
+	self skipWhitespace.
+	currentCharacter == ${ ifTrue: [ ^self readDictionary ].
+	currentCharacter == $[ ifTrue: [ ^self readArray ].
+	currentCharacter == $" ifTrue: [ ^self readString ].
+	currentCharacter == $t ifTrue: [ self consume: 'rue'. ^true ].
+	currentCharacter == $f ifTrue: [ self consume: 'alse'. ^false ].
+	currentCharacter == $n ifTrue: [ self consume: 'ull'. ^nil ].
+	currentCharacter == $- ifTrue: [ ^self readNumber: true ].
+	(#($0 $1 $2 $3 $4 $5 $6 $7 $8 $9) instVarsInclude: currentCharacter) ifTrue: [
+		^self readNumber: false ].
+	currentCharacter == $@ ifTrue: [ ^self readConstructor ].
+	self invalid: 'Unknown Json input'
+)
+
+readArray = (
+	| initialPosition |
+	currentCharacter := stream next.
+	self skipWhitespace.
+	currentCharacter == $] ifTrue: [
+		currentCharacter := stream next.
+		^#() ].
+	initialPosition := self arrayBufferStream position.
+	[
+		arrayBufferStream nextPut: self readAny.
+		self skipWhitespace.
+		currentCharacter == $] ifTrue: [
+			|  result |
+			result := arrayBufferStream originalContents copyFrom: initialPosition + 1 to: arrayBufferStream position.
+			arrayBufferStream position: initialPosition.
+			currentCharacter := stream next.
+			^result ].
+		currentCharacter == $, ifFalse: [ self error: 'Unexpected character: ', currentCharacter asString ].
+		currentCharacter := stream next ] repeat.
+)
+
+readConstructor = (
+	ctorMap ifNil: [ ^self error: 'No constructors were declared.' ].
+	self resetStringBufferStream.
+	[ (currentCharacter := stream next) == $. or: [ currentCharacter isLetter ] ] whileTrue: [
+		stringBufferStream nextPut: currentCharacter ].
+	(ctorMap at: stringBufferStream contents ifAbsent: nil) ifNotNil: [ :constructor |
+		^constructor constructFromJson: self readAny ].
+	self error: 'Unknown constructor: ', stringBufferStream contents
+)
+
+readDictionary = (
+	| result key commaNeeded |
+	result := dictionaryClass new.
+	commaNeeded := false.
+	currentCharacter := stream next.
+	[
+		self skipWhitespace.
+		currentCharacter == $} ifTrue: [
+			currentCharacter := stream next.
+			^result ].
+		commaNeeded
+			ifFalse: [ commaNeeded := true ]
+			ifTrue: [
+				currentCharacter == $, ifFalse: [ self error: 'Missing comma' ].
+				currentCharacter := stream next.
+				self skipWhitespace ].
+		currentCharacter == $" ifFalse: [  self error: 'Key in dictionary must be string' ].
+		key := self readString.
+		self skipWhitespace.
+		currentCharacter == $: ifFalse: [ self error: 'Missing colon' ].
+		currentCharacter := stream next.
+		result at: key put: self readAny ] repeat
+)
+
+readFrom: aStream = (
+	| result |
+	stream := aStream.
+	numberParser ifNotNil: [ numberParser on: stream ].
+	currentCharacter := stream next.
+	result := self readAny.
+	currentCharacter ifNotNil: [ stream skip: -1 ]. "Undo prereading."
+	^result
+)
+
+readNumber: negative = (
+	| result |
+	negative ifFalse: [ stream skip: -1 ].
+	result := (numberParser ifNil: [
+		numberParser := JsonNumberParser new
+			on: stream;
+			failBlock: [ self error: 'Invalid number.' ];
+			yourself ])
+		nextNumber: negative.
+	currentCharacter := stream next.
+	^result
+)
+
+readString = (
+	self resetStringBufferStream.
+	[
+		currentCharacter := stream next ifNil: [self incomplete: 'Unexpected end of string' ].
+		currentCharacter == $" ifTrue: [
+			currentCharacter := stream next.
+			^stringBufferStream contents ].
+		currentCharacter == $\
+			ifTrue: [
+				stringBufferStream nextPut: (self interpretStringEscape: (stream next ifNil: [
+					self incomplete: 'Unexpected end of string' ])) ]
+			ifFalse: [ stringBufferStream nextPut: currentCharacter ] ] repeat
+)
+
+resetStringBufferStream = (
+	stringBufferStream
+		ifNil: [ stringBufferStream := ReadWriteStream on: (String new: 64) ]
+		ifNotNil: [ stringBufferStream resetToStart ]
+)
+
+skipWhitespace = (
+	currentCharacter ifNil: [
+		self incomplete: 'Input stream is empty' ].
+	[ currentCharacter isSeparator ] whileTrue: [
+		currentCharacter := stream next ifNil: [
+			self incomplete: 'Input stream is empty' ]. ]
+)
+
+stream = (
+	"Answer the value of stream"
+	^ stream
+)
+
+stream: aStream = (
+	"For testing purposes only"
+	stream := aStream.
+	numberParser ifNotNil: [ numberParser on: stream ].
+	currentCharacter := stream next
+)
+
+unescapeUnicode = (
+	| code digitValue lowSurrogateCode |
+	code := 0.
+	1 to: 4 do: [ :index |
+		(digitValue := (stream next ifNil: [ self incomplete: 'Unexpected end of stream' ]) digitValue) < 0 ifTrue: [
+			self invalid: 'Invalid hexadecimal digit' ].
+		digitValue < 16
+			ifTrue: [ code := code * 16 + digitValue ]
+			ifFalse: [ self invalid: 'Invalid hexadecimal digit' ] ].
+	code < 16rD800 ifTrue: [ ^code asCharacter ].
+	code > 16rDFFF ifTrue: [ ^code asCharacter ].
+	code <= 16rDBFF ifFalse: [ self invalid: 'High surrogate value expected' ].
+	"Parse the escaped low surrogate"
+	(stream next ifNil: [ self incomplete: 'Unexpected end of string' ]) == $\
+		ifFalse: [ self invalid: 'Escaped low surrogate expected.' ].
+	(stream next ifNil: [ self incomplete: 'Unexpected end of string' ]) == $u
+		ifFalse: [ self invalid: 'Escaped low surrogate expected.' ].
+	lowSurrogateCode := 0.
+	1 to: 4 do: [ :index |
+		(digitValue := (stream next ifNil: [ self incomplete: 'Unexpected end of stream' ]) digitValue) < 0 ifTrue: [
+			self invalid: 'Invalid hexadecimal digit' ].
+		digitValue < 16
+			ifTrue: [ lowSurrogateCode := lowSurrogateCode * 16 + digitValue ]
+			ifFalse: [ self invalid: 'Invalid hexadecimal digit' ] ].
+	(lowSurrogateCode >= 16rDC00 and: [ lowSurrogateCode <= 16rDFFF ])
+		ifFalse: [ ^self invalid: 'Escaped low surrogate expected.' ].
+	^((code - 16rD800 bitShift: 10) + lowSurrogateCode + '16r2400') asCharacter
+)
+
+
+----------------------------
+
+| EscapeArray EscapeSet |
+
+escapeArray = (
+	^ EscapeArray ifNil: [ self initialize. EscapeArray ]
+)
+
+escapeForCharacter: c = (
+	| asciiValue |
+	(asciiValue := c asciiValue) < 128
+		ifTrue: [ ^self escapeArray at: asciiValue + 1 ].
+	^nil
+)
+
+escapeSet = (
+	^ EscapeSet ifNil: [ self initialize. EscapeSet ]
+)
+
+initialize = (
+	"Json initialize."
+	| newEscapeArray newEscapeSet |
+	newEscapeArray := Array new: 128.
+	newEscapeSet := CharacterSet new.
+	(0 to: 31), #(127) do: [ :each |
+		newEscapeArray at: each + 1 put: '\u', (each printStringHex padded: #left to: 4 with: $0).
+		newEscapeSet add: (Character value: each) ].
+	{
+		$" -> '\"'.
+		$\ -> '\\'.
+		$/ -> '\/'. "A hack, so the generated JSON will always be HTML+Javascript compatible, because the generated JSON will not contain the seqence </script>."
+		Character backspace -> '\b'.
+		Character lf -> '\n'.
+		Character newPage -> '\f'.
+		Character cr -> '\r'.
+		Character tab -> '\t'.
+	} do: [ :each |
+		newEscapeArray at: each key asciiValue + 1 put: each value.
+		newEscapeSet add: each key ].
+	EscapeArray := newEscapeArray.
+	EscapeSet := newEscapeSet
+)
+
+mimeType = (
+	^'application/json'
+)
+
+newWithConstructors: aCollection = (
+	| m |
+	m := Dictionary new.
+	aCollection do: [:each |
+		(each isKindOf: Association)
+			ifTrue: [m add: each]
+			ifFalse: [m at: each name asString put: each]].
+	^ self new ctorMap: m; yourself.
+)
+
+readFrom: aStream = (
+	^ self new readFrom: aStream.
+)
+
+render: anObject = (
+	^String streamContents: [ :stream |
+		anObject jsonWriteOn: stream ]
+)
+
+render: anObject withConstructor: aConstructorName on: aStream = (
+	aStream nextPutAll: '@', aConstructorName.
+	anObject jsonWriteOn: aStream.
+)
+
+renderInstanceVariables: aCollection of: anObject on: aStream = (
+	| map |
+	map := Dictionary new.
+	aCollection do: [:ivarName | map at: ivarName put: (anObject instVarNamed: ivarName)].
+	self render: map withConstructor: anObject class name asString on: aStream
+)
+
+comment = (^'
+I support reading and writing JSON (see http://json.org) formatted data - strings, numbers, boolean, nil, arrays and dictionaries.
+The implementation is mainly based on RFC 7159 (https://www.ietf.org/rfc/rfc7159.txt). It has been extended with syntax for invoking a prearranged list of constructors on read objects.
+Character encoding is not handled here. That''s something you have to do before reading or after writing. Mixed processing is possible, but it''s entirely your responsibility to keep things correct.
+
+Instance Variables
+	stream:				<PositionableStream>
+	currentCharacter:	<Character>
+	arrayBufferStream:	<WriteStream>
+	stringBufferStream: <ReadWriteStream>
+	numberParser: <ExtendedNumberParser>
+	ctorMap: <Dictionary>
+
+For parsing, stream has to be initialized by sending #readFrom: to my instance. The parser will pre-read one character, which will be stored in currentCharacter, so the stream is expected to support position manipulation, hence it should be a PositionableStream.
+arrayBufferStream is WriteStream on an Array, which holds the values during array parsing (see #readArray). When there''s a recursive call, this stream is used as a stack to separate the elements parsed in the previous invocation from the current one.
+stringBufferStream is a ReadWriteStream on a String, which holds the currently parsed String (see #readString), the currently parsed number (see #readNumber) or the name of the currently parsed constructor (see #readConstructor). Recursion has no effect on this.
+numberParser is a cached instance of ExtendedNumberParser. It''s initialized on stringBufferStream, so it can quickly parse the number stored in it.
+ctorMap is the Dictionary holding the constructor classes by name.
+
+arrayBufferStream, stringBufferStream and numberParser are initialized lazily, and should not be accessed externally. Since these are shared objects, along with stream and currentCharacter, holding state, therefore a single instance of me shouldn''t be used to parse multiple streams at the same time.
+
+For writing, you can use the methods in the class-side rendering category. To convert individual objects to a string, you can use #asJsonString, to serialize it on a stream, you can use #jsonWriteOn:.
+
+')
+
+)

@@ -1,0 +1,149 @@
+JsonNumberParser = NumberParser (
+
+| fraction leadingZeroesAllowed |
+
+allowPlusSign = (
+	^false
+)
+
+allowPlusSignInExponent = (
+	^true
+)
+
+error: aString = (
+	JsonSyntaxError signal: aString
+)
+
+exponentLetters = (
+	^'eE'
+)
+
+fiveRaisedTo: anInteger = (
+	anInteger >= 0 ifFalse: [ ^1 / (self fiveRaisedTo: 0 - anInteger) ].
+	anInteger >= 28 ifTrue: [ ^5 raisedToInteger: anInteger ].
+	^#(1 5 25 125 625 3125 15625 78125 390625 1953125 9765625 48828125 244140625 1220703125 6103515625 30517578125 152587890625 762939453125 3814697265625 19073486328125 95367431640625 476837158203125 2384185791015625 11920928955078125 59604644775390625 298023223876953125 1490116119384765625 7450580596923828125) at: anInteger + 1
+)
+
+initialize = (
+	super initialize.
+	base := 10.
+	fraction := Fraction numerator: 0 denominator: 1.
+	leadingZeroesAllowed := false
+)
+
+makeFloatFromMantissa: mantissa exponent: exponent = (
+	"Return a Float equal to mantissa * 10 ^ exponent."
+	exponent = 0 ifTrue: [ ^mantissa asFloat ].
+	exponent > 0 ifTrue: [
+		exponent <= 22 "Can 5 raisedToInteger: exponent be represented exactly as a Float? ((1 << Float precision - 1) log: 5) floor => 22"
+			ifFalse: [
+				exponent > 324 ifTrue: [ "(Float emax + Float precision * (2 log: 10)) ceiling => 324"
+					mantissa isZero ifTrue: [ ^0.0 ].
+					mantissa positive ifTrue: [ ^Float infinity ].
+					^Float negativeInfinity ].
+				^(mantissa * (self fiveRaisedTo: exponent)) asFloat timesTwoPower: exponent ]
+			ifTrue: [
+				mantissa highBitOfMagnitude <= Float precision ifTrue: [ "Mantissa can also be represented as an exact Float. Float >> #* should be exact."
+					^mantissa asFloat * (self fiveRaisedTo: exponent) asFloat timesTwoPower: exponent ] ].
+		^(mantissa * (self fiveRaisedTo: exponent)) asFloat timesTwoPower: exponent ].
+	"exponent < 0"
+	exponent >= -22 "Can 5 raisedToInteger: 0 - exponent be represented exactly as a Float?"
+		ifTrue: [
+			mantissa highBitOfMagnitude <= Float precision ifTrue: [ "Mantissa can also be represented as an exact Float. Float >> #/ should be exact."
+				^mantissa asFloat / (self fiveRaisedTo: 0 - exponent) asFloat timesTwoPower: exponent ] ]
+		ifFalse: [
+			exponent < -324 ifTrue: [ "-1 * (Float precision - Float emin * (2 log: 10)) ceiling => -324"
+				mantissa positive ifTrue: [ ^0.0 ].
+				^-0.0 ] ].
+	"No luck. Let Fraction >> #asFloat do the heavy lifting."
+	^(fraction setNumerator: mantissa denominator: ((self fiveRaisedTo: 0 - exponent) bitShift: 0 - exponent)) asFloat "Can't use #timesTwoPower: here. No #reduced here, because there's none in NumberParser either"
+)
+
+nextElementaryLargeInteger = (
+	"Form an unsigned integer with incoming digits from sourceStream.
+	Return this integer, or zero if no digits found.
+	Stop reading if end of digits or if a LargeInteger is formed.
+	Count the number of digits and the position of lastNonZero digit and store them in instVar."
+	| digit value |
+	value := 0.
+	nDigits := 0.
+	lastNonZero := 0.
+	[
+		value isLarge ifTrue: [ ^value ].
+		((digit := (sourceStream next ifNil: [ ^value ]) asInteger - 48 "$0 asInteger") < 0
+			or: [ digit >= 10 ]) ifTrue: [
+			sourceStream skip: -1.
+			^value ].
+		nDigits := nDigits + 1.
+		digit = 0
+			ifFalse: [
+				(lastNonZero = 0 and: [ nDigits > 1 and: [ leadingZeroesAllowed not ] ]) ifTrue: [ self error: 'Leading zeroes are not allowed.' ].
+				lastNonZero := nDigits.
+				value := value * 10 + digit ]
+			ifTrue: [ value := value * 10 ] ] repeat
+)
+
+nextNumber: negative = (
+	| numberOfTrailingZeroInIntegerPart oldLeadingZeroesAllowed numberOfTrailingZeroInFractionPart numberOfNonZeroFractionDigits mantissa value |
+	integerPart := self nextUnsignedIntegerOrNil ifNil: [ ^self error: 'Missing integer part!' ].
+	numberOfTrailingZeroInIntegerPart := nDigits - lastNonZero.
+	(sourceStream peekFor: $.) ifFalse: [ "No fraction part"
+		negative ifTrue: [ integerPart := integerPart negated ].
+		self readExponent ifFalse: [ ^integerPart ].
+		exponent > 0 ifTrue: [ ^integerPart * (self fiveRaisedTo: exponent) bitShift: exponent ].
+		^self makeFloatFromMantissa: integerPart exponent: exponent ].
+	oldLeadingZeroesAllowed := leadingZeroesAllowed.
+	leadingZeroesAllowed := true.
+	fractionPart := self nextUnsignedIntegerOrNil.
+	leadingZeroesAllowed := oldLeadingZeroesAllowed.
+	fractionPart ifNil: [ self error: 'Missing fraction part!' ].
+	fractionPart isZero ifTrue: [
+		self readExponent ifFalse: [
+			negative ifTrue: [
+				integerPart isZero ifTrue: [ ^Float negativeZero ].
+				^integerPart negated ].
+			^integerPart ].
+		exponent >= 0 ifTrue: [
+			negative ifTrue: [ integerPart := integerPart negated ].
+			^integerPart * (self fiveRaisedTo: exponent) bitShift: exponent ].
+		value := self makeFloatFromMantissa: integerPart exponent: exponent.
+		negative ifTrue: [ ^value negated ].
+		^value ].
+	numberOfTrailingZeroInFractionPart := nDigits - lastNonZero.
+	numberOfNonZeroFractionDigits := lastNonZero.
+	self readExponent.
+	exponent := exponent - numberOfNonZeroFractionDigits.
+	mantissa := (integerPart * (self fiveRaisedTo: numberOfNonZeroFractionDigits) bitShift: numberOfNonZeroFractionDigits) + (fractionPart // (self fiveRaisedTo: numberOfTrailingZeroInFractionPart) bitShift: 0 - numberOfTrailingZeroInFractionPart).
+	value := self makeFloatFromMantissa: mantissa exponent: exponent.
+	negative ifTrue: [ ^value negated ].
+	^value
+)
+
+nextUnsignedIntegerOrNil = (
+	"Form an unsigned integer with incoming digits from sourceStream.
+	Answer this integer, or nil if no digit found.
+	Count the number of digits and the position of lastNonZero digit and store them in instVar"
+	| nPackets high nDigitsHigh lastNonZeroHigh low |
+	"read no more digits than one elementary LargeInteger"
+	high := self nextElementaryLargeInteger.
+	nDigits = 0 ifTrue: [^nil].
+	"Not enough digits to form a LargeInteger, stop iteration"
+	high isLarge ifFalse: [^high].
+	"We now have to engage arithmetic with LargeInteger
+	Decompose the integer in a high and low packets of growing size:"
+	nPackets := 1.
+	nDigitsHigh := nDigits.
+	lastNonZeroHigh := lastNonZero.
+	[
+	low := self nextLargeIntegerBase: 10 nPackets: nPackets .
+	high := (high * (self fiveRaisedTo: nDigits) bitShift: nDigits) + low.
+	lastNonZero = 0 ifFalse: [lastNonZeroHigh := lastNonZero + nDigitsHigh].
+	nDigitsHigh := nDigitsHigh + nDigits.
+	low isLarge]
+		whileTrue: [nPackets := nPackets * 2].
+	nDigits := nDigitsHigh.
+	lastNonZero := lastNonZeroHigh.
+	^high
+)
+
+)

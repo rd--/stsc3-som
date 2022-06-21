@@ -1,0 +1,55 @@
+JsonObject = Dictionary (
+
+at: aKey = (
+	"make it work more like javascript objects"
+	^ self at: aKey ifAbsent: [nil]
+)
+
+at: aString put: anObject = (
+	aString isString ifFalse: [ self error: 'String expected' ].
+	super at: aString put: anObject.
+	^self
+)
+
+doesNotUnderstand: aMessage = (
+	| key precedence |
+	key := aMessage selector.
+	(precedence := key precedence) = 1 ifTrue: [ ^self at: key ifAbsent: nil ].
+	(precedence = 3 and: [ (key indexOf: $:) = key size ]) ifTrue: [
+		^self
+			at: key allButLast asSymbol
+			put: aMessage arguments first ].
+	^super doesNotUnderstand: aMessage
+)
+
+name = (
+"override 'cause Object defines this"
+	^self at: 'name'
+)
+
+respondsTo: aSymbol = (
+	| precedence |
+	(super respondsTo: aSymbol) ifTrue: [ ^true ].
+	(precedence := aSymbol precedence) = 1 ifTrue: [
+		^self includesKey: aSymbol ].
+	(precedence = 3 and: [ (aSymbol indexOf: $:) = aSymbol size ]) ifTrue: [
+		^self includesKey: aSymbol allButLast ].
+	^false
+)
+
+value = (
+"override 'cause Object defines this"
+	^self at: 'value'
+)
+
+----------------------------
+
+fromAssociations: collectionOfAssociations = (
+	| result |
+	result := self new.
+	collectionOfAssociations do: [:each |
+		result at: each key put: each value ].
+	^ result
+)
+
+)

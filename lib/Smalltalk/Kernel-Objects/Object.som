@@ -239,12 +239,13 @@ dependentsFields = (
 	^ DependentsFields ifNil: [ DependentsFields := IdentityDictionary new: 4]
 )
 
-doesNotUnderstand: selector = (
-	self error: ('Method ' , selector , ' not found in class ' , self class name)
+doesNotUnderstand: aMessage = (
+	self error: ('Method ' , aMessage selector , ' not found in class ' , self class name)
 )
 
-doesNotUnderstand: selector arguments: arguments = (
-	self error: ('Method ' , selector , ' not found in class ' , self class name)
+doesNotUnderstand: aSymbol arguments: anArray = (
+	"This is the Som form."
+	self doesNotUnderstand: (Message selector: aSymbol arguments: anArray)
 )
 
 enclosedSetElement = (

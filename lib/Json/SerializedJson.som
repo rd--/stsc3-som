@@ -1,0 +1,25 @@
+SerializedJson = Object (
+
+| jsonString |
+
+jsonString = (
+	^jsonString
+)
+
+jsonString: aString = (
+	jsonString := aString
+)
+
+jsonWriteOn: stream = (
+	stream nextPutAll: jsonString
+)
+
+----------------------------
+
+on: aString = (
+	^self new
+		jsonString: aString;
+		yourself
+)
+
+)

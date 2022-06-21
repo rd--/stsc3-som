@@ -1,0 +1,52 @@
+JsonDummyTestObject = Object (
+
+| a b c |
+
+= other = (
+	^ other class == self class and: [
+		a = other a and: [
+		b = other b and: [
+		c = other c]]]
+)
+
+a = (
+	"Answer the value of a"
+	^ a
+)
+
+a: anObject = (
+	"Set the value of a"
+	a := anObject
+)
+
+b = (
+	"Answer the value of b"
+	^ b
+)
+
+b: anObject = (
+	"Set the value of b"
+	b := anObject
+)
+
+c = (
+	"Answer the value of c"
+	^ c
+)
+
+c: anObject = (
+	"Set the value of c"
+	c := anObject
+)
+
+jsonWriteOn: s = (
+	Json renderInstanceVariables: {#a. #b. #c} of: self on: s
+)
+
+----------------------------
+
+constructFromJson: j = (
+	^ self new a: (j at: 'a'); b: (j at: 'b'); c: (j at: 'c'); yourself
+)
+
+)

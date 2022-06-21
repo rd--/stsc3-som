@@ -1,5 +1,5 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
@@ -73,6 +73,9 @@ IntervalTest suite run printOn: Transcript
 
 KeyedSetTest testSelectors do: [ :each | Transcript show: each; cr. KeyedSetTest run: each ]
 KeyedSetTest suite run printOn: Transcript
+
+JsonTest testSelectors do: [ :each | Transcript show: each; cr. JsonTest run: each ]
+JsonTest suite run printOn: Transcript
 
 LinkedListTest testSelectors do: [ :each | Transcript show: each; cr. LinkedListTest run: each ]
 LinkedListTest suite run printOn: Transcript

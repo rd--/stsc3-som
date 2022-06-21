@@ -44,6 +44,10 @@ ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock = (
 	^falseAlternativeBlock value
 )
 
+jsonWriteOn: aStream = (
+	aStream nextPutAll: 'false'
+)
+
 not = (
 	^true
 )

@@ -1,4 +1,5 @@
 Association = LookupKey (
+
 | value |
 
 = anAssociation = (
@@ -10,6 +11,12 @@ hash = (
 	The super implementation is used to avoid hashing the value
 	which can be extremely expensive."
 	^super hash
+)
+
+jsonWriteOn: aStream = (
+	self key asString jsonWriteOn: aStream.
+	aStream nextPut: $:; space.
+	self value jsonWriteOn: aStream.
 )
 
 key: aKey value: anObject = (

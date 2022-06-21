@@ -433,6 +433,15 @@ isSequenceable = (
 	^ false
 )
 
+jsonWriteOn: aStream = (
+	"By default, use array braces "
+	aStream nextPut: $[.
+	self do: [:each |
+		each jsonWriteOn: aStream
+		  ] separatedBy: [ aStream nextPut: $, ].
+	aStream nextPut: $]
+)
+
 log2 = (
 	^ self collect: [:each | each log2]
 )

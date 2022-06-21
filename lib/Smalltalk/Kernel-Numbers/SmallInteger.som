@@ -235,6 +235,10 @@ identityHash = (
 	^self
 )
 
+isLarge = (
+	^false
+)
+
 lowBit = (
 	" Answer the index of the low order one bit.
 		2r00101000 lowBit       (Answers: 4)
