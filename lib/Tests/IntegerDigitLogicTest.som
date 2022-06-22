@@ -1,24 +1,20 @@
 IntegerDigitLogicTest = TestCase (
 
 testAndSingleBitWithMinusOne = (
-	"And a single bit with -1 and test for same value"
 	1 to: 100 do: [:i | self assert: ((1 bitShift: i) bitAnd: -1) = (1 bitShift: i)].
 )
 
 testMixedSignDigitLogic = (
-	"Verify that mixed sign logic with large integers works."
 	self assert: (-2 bitAnd: 16rFFFFFFFF) = 16rFFFFFFFE
 )
 
 testNBitAndNNegatedEqualsN = (
-	"Verify that (n bitAnd: n negated) = n for single bits"
 	| n |
 	1 to: 100 do: [:i | n := 1 bitShift: i.
 				self assert: (n bitAnd: n negated) = n]
 )
 
 testNNegatedEqualsNComplementedPlusOne = (
-	"Verify that n negated = (n complemented + 1) for single bits"
 	| n |
 	1 to: 100 do: [:i | n := 1 bitShift: i.
 				self assert: n negated = ((n bitXor: -1) + 1)]

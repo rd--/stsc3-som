@@ -155,7 +155,7 @@ caseOf: aBlockAssociationCollection otherwise: aBlock = (
 	 of evaluating aBlock."
 	aBlockAssociationCollection associationsDo:
 		[:assoc | (assoc key value = self) ifTrue: [^assoc value value]].
-	^ aBlock value
+	^ aBlock cull: self
 )
 
 changed = (

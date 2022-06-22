@@ -1,6 +1,6 @@
 NumberParser = Object (
 
-| sourceStream base neg integerPart fractionPart exponent nDigits lastNonZero requestor failBlock |
+| sourceStream base neg integerPart fractionPart exponent nDigits lastNonZero requestor failBlock defaultBase |
 
 allowPlusSign = (
 	"return a boolean indicating if plus sign is allowed or not"
@@ -10,6 +10,23 @@ allowPlusSign = (
 allowPlusSignInExponent = (
 	"return a boolean indicating if plus sign is allowed or not in exponent"
 	^self allowPlusSign
+)
+
+defaultBase = (
+	^ defaultBase
+)
+
+defaultBase: anInteger = (
+	self assert: anInteger < 28 description: 'Default base must be lower than 28 to keep radix r distinguishable from digits. For higher bases, pass the base manually to #nextNumberBase: autc.'.
+	defaultBase := anInteger
+)
+
+defaultRadixBase = (
+	^ 10
+)
+
+error: aString = (
+	NumberParserError signal: aString
 )
 
 expected: aString = (
@@ -31,6 +48,10 @@ exponentLetters = (
 
 failBlock: aBlockOrNil = (
 	failBlock := aBlockOrNil
+)
+
+initialize = (
+	defaultBase := 10
 )
 
 isExponentLetter: aCharacter = (
@@ -72,7 +93,7 @@ nextInteger = (
 	"Read an Integer from sourceStream, asnwser that Integer.
 	This is a generic version dealing with an optional sign and a simple sequence of decimal digits.
 	Subclass might define extended syntax."
-	base := 10.
+	base := self defaultBase.
 	^self nextIntegerBase: base ifFail: [^self expected: ('a digit between 0 and ' copyWith: (Character digitValue: base - 1))]
 )
 
@@ -107,7 +128,7 @@ nextUnsignedInteger = (
 	"Read an Integer from sourceStream, asnwser that Integer.
 	This is a generic version dealing with a simple sequence of decimal digits.
 	Subclass might define extended syntax."
-	base := 10.
+	base := self defaultBase.
 	^self nextUnsignedIntegerBase: base ifFail: [^self expected: ('a digit between 0 and ' copyWith: (Character digitValue: base - 1))]
 )
 

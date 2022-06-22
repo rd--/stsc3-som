@@ -201,6 +201,20 @@ whileFalse = (
 	^ self whileFalse: []
 )
 
+whileNil = (
+	"Unlike #whileTrue/False this is not compiled inline."
+	| result |
+	[(result := self value) isNil] whileTrue.
+	^ result
+)
+
+whileNil: aBlock = (
+	"Unlike #whileTrue/False: this is not compiled inline."
+	| result |
+	[(result := self value) isNil] whileTrue: [aBlock value].
+	^ result
+)
+
 whileTrue: aBlock = (
 	self value ifFalse: [ ^nil ] ifTrue: [ aBlock value. ^ self whileTrue: aBlock ]
 )
