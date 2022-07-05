@@ -18,6 +18,12 @@ Integer = Number (
 	^ self bitShift: 0 - shiftAmount
 )
 
+adaptToScaledDecimal: receiverScaledDecimal andSend: arithmeticOpSelector = (
+	"Convert me to a ScaledDecimal and do the arithmetic.
+	receiverScaledDecimal arithmeticOpSelector self."
+	^ receiverScaledDecimal perform: arithmeticOpSelector with: (self asScaledDecimal: 0)
+)
+
 allMask: mask = (
 	"Treat the argument as a bit mask. Answer whether all of the bits that are 1 in the argument are 1 in the receiver."
 	^mask = (self bitAnd: mask)
@@ -37,11 +43,22 @@ asFloat = (
 	self subclassResponsibility
 )
 
+asFraction = (
+	"Answer a Fraction that represents the value of the receiver.
+	Since an Integer already behaves as a special kind of Fraction, no conversion is required, see #isFraction."
+	^self
+)
+
 asHexDigit = (
 	^'0123456789ABCDEF' at: self+1
 )
 
 asInteger = (
+)
+
+asScaledDecimal = (
+	"The number of significant digits of the answer is the same as the number of decimal digits in the receiver."
+	^ ScaledDecimal newFromNumber: self scale: 0
 )
 
 asStringWithCommas = (
@@ -388,6 +405,16 @@ printStringBase: base length: minimum padded: zeroFlag = (
 
 printStringHex = (
 	^self printStringBase: 16
+)
+
+printTruncatedOn: aStream showingDecimalPlaces: placesDesired = (
+	"Print a representation of the receiver on aStream in decimal notation with prescribed number of places after decimal separator.
+	Print as if the receiver was truncated to requested precision."
+	self printOn: aStream.
+	placesDesired > 0
+		ifTrue:
+			[aStream nextPut: $..
+			aStream next: placesDesired put: $0]
 )
 
 quo: aNumber = (

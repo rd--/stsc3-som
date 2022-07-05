@@ -96,6 +96,12 @@ adaptToInteger: rcvr andSend: selector = (
 	^ (Fraction numerator: rcvr denominator: 1) perform: selector with: self
 )
 
+adaptToScaledDecimal: receiverScaledDecimal andSend: arithmeticOpSelector = (
+	"Convert self to a ScaledDecimal and do the arithmetic.
+	receiverScaledDecimal arithmeticOpSelector self."
+	^ receiverScaledDecimal perform: arithmeticOpSelector with: (self asScaledDecimal: receiverScaledDecimal scale)
+)
+
 asExactFloat = (
 	"When we know that this Fraction is an exact Float, this conversion is much faster than asFloat."
 	^numerator asFloat timesTwoPower: 1 - denominator highBit
@@ -113,6 +119,23 @@ asFraction = (
 asNonFraction = (
 	"Answer a number equivalent to the receiver that is not a fraction."
 	^self asFloat
+)
+
+asScaledDecimal = (
+	"Convert the receiver to a ScaledDecimal.
+	If there is a finite decimal representation of the receiver, then use the exact number of decimal places required.
+	Else, use a default number of decimals."
+	| pow2 pow5 q q5 |
+	pow2 := denominator lowBit - 1.
+	q := denominator bitShift: pow2 negated.
+	pow5 := 0.
+	[q = 1]
+		whileFalse: [
+			q5 := q // 5.
+			(q - (5 * q5)) = 0 ifFalse: [^super asScaledDecimal].
+			q := q5.
+			pow5 := pow5 + 1].
+	^self asScaledDecimal: (pow2 max: pow5)
 )
 
 denominator = (

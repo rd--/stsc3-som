@@ -112,9 +112,9 @@ asIntegerSigned: signed = (
 )
 
 asNumber = (
-	(self anySatisfy: [ :char | char = $. ])
-		ifTrue: [ ^ Float readFrom: self ]
-		ifFalse: [ ^ Integer readFrom: self ]
+	"Answer the Number created by interpreting the receiver as the string
+	representation of a number."
+	^Number readFromString: self
 )
 
 asRegex = (

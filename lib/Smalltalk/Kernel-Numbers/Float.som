@@ -24,6 +24,12 @@ adaptToFraction: rcvr andSend: selector = (
 	^ rcvr asFloat perform: selector with: self
 )
 
+adaptToScaledDecimal: receiverScaledDecimal andSend: arithmeticOpSelector = (
+	"Convert receiverScaledDecimal to a Float and do the arithmetic.
+	receiverScaledDecimal arithmeticOpSelector self."
+	^ receiverScaledDecimal asFloat perform: arithmeticOpSelector with: self
+)
+
 arCosh = (
 	"Answer receiver's area hyperbolic cosine.
 	That is the inverse function of cosh."
@@ -81,6 +87,14 @@ arcTan: denominator = (
 )
 
 asFloat = (
+)
+
+asFraction = (
+	^ self asTrueFraction 
+)
+
+asTrueFraction = (
+	self error: 'asTrueFraction: not implemented'
 )
 
 closeTo: num = (
@@ -254,6 +268,11 @@ timesTwoPower: anInteger = (
 
 e = (
 	^ 2.718281828459045235360287471353
+)
+
+emax = (
+	"Answer exponent of maximal representable value"
+	^1023
 )
 
 emin = (

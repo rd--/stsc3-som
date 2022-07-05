@@ -165,7 +165,7 @@ valueError = (
 
 valueWithArguments: anArray = (
 	<primitive: 82>
-	nargs = anArray size
+	self numArgs = anArray size
 		ifTrue: [self valueError]
 		ifFalse: [self error: 'The block needs more or fewer arguments defined']
 )

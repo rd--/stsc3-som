@@ -82,6 +82,12 @@ adaptToFraction: rcvr andSend: selector = (
 	^ self subclassResponsibility
 )
 
+adaptToScaledDecimal: receiverScaledDecimal andSend: arithmeticOpSelector = (
+	"Do any required conversion and then the arithmetic.
+	receiverScaledDecimal arithmeticOpSelector self."
+	^ self subclassResponsibility
+)
+
 arCosh = (
 	^self asFloat arCosh
 )
@@ -132,6 +138,17 @@ asInteger = (
 
 asNumber = (
 	^ self
+)
+
+asScaledDecimal = (
+	"Answer a scaled decimal number approximating the receiver."
+	^ self asScaledDecimal: 8
+)
+
+asScaledDecimal: scale = (
+	"Answer a scaled decimal number, with a fractional precision of scale,
+	approximating the receiver."
+	^ ScaledDecimal newFromNumber: self scale: scale
 )
 
 ceiling = (
@@ -612,11 +629,11 @@ one = (
 readFrom: stringOrStream = (
 	"Answer a number as described on stringOrStream.
 	If stringOrStream does not start with a valid number description, fail."
-	^(FortranNumberParser on: stringOrStream) nextNumber
+	^(ExtendedNumberParser on: stringOrStream) nextNumber
 )
 
 readFrom: stringOrStream ifFail: aBlock = (
-	^(FortranNumberParser on: stringOrStream) failBlock: aBlock; nextNumber
+	^(ExtendedNumberParser on: stringOrStream) failBlock: aBlock; nextNumber
 )
 
 zero = (

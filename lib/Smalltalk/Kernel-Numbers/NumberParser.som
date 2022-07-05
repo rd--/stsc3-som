@@ -1,6 +1,6 @@
 NumberParser = Object (
 
-| sourceStream base neg integerPart fractionPart exponent nDigits lastNonZero requestor failBlock defaultBase |
+| sourceStream base neg integerPart fractionPart exponent scale nDigits lastNonZero requestor failBlock defaultBase |
 
 allowPlusSign = (
 	"return a boolean indicating if plus sign is allowed or not"
@@ -65,6 +65,20 @@ makeFloatFromMantissa: m exponent: k base: aRadix = (
 	k = 0 ifTrue: [ ^m asFloat ].
 	k > 0 ifTrue: [ ^(m * (aRadix raisedToInteger: k)) asFloat ].
 	^m asFloat / (aRadix raisedToInteger: k negated) asFloat
+)
+
+makeScaledDecimalWithNumberOfNonZeroFractionDigits: numberOfNonZeroFractionDigits andNumberOfTrailingZeroInFractionPart: numberOfTrailingZeroInFractionPart = (
+	"at this point integerPart fractionPart and scale have been read out (in inst var).
+	Form a ScaledDecimal.
+	Care of eliminating trailing zeroes from the fractionPart"
+	| decimalMultiplier decimalFraction |
+	decimalMultiplier := base raisedToInteger: numberOfNonZeroFractionDigits.
+	decimalFraction := integerPart * decimalMultiplier + (fractionPart // (base raisedTo: numberOfTrailingZeroInFractionPart)) / decimalMultiplier.
+	^ ScaledDecimal
+		newFromNumber: (neg
+			ifTrue: [decimalFraction negated]
+			ifFalse: [decimalFraction])
+		scale: scale
 )
 
 nextElementaryIntegerBase: aRadix = (
@@ -168,7 +182,7 @@ on: aStringOrStream = (
 		ifFalse: [ aStringOrStream ].
 	base := 10.
 	neg := false.
-	integerPart := fractionPart := exponent := 0.
+	integerPart := fractionPart := exponent := scale := 0.
 	requestor := failBlock := nil
 )
 
@@ -243,6 +257,7 @@ neg <Boolean> true in case of minus sign
 integerPart <Integer> the integer part of the number
 fractionPart <Integer> the fraction part of the number if any
 exponent <Integer> the exponent used in scientific notation if any
+scale <Integer> the scale used in case of ScaledDecimal number if any
 nDigits <Integer> number of digits read to form an Integer
 lastNonZero <Integer> position of last non zero digit, starting at 1 from left, 0 if all digits are zero
 requestor <TextEditor | nil> can be used to insert an error message in the requestor

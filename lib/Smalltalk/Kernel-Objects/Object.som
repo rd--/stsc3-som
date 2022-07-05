@@ -52,6 +52,18 @@ adaptToInteger: rcvr andSend: selector = (
 	^ self adaptToNumber: rcvr andSend: selector
 )
 
+adaptToScaledDecimal: rcvr andCompare: selector = (
+	"If I am involved in comparison with a ScaledDecimal.
+	Default behaviour is to process comparison as any other selectors."
+	^ self adaptToScaledDecimal: rcvr andSend: selector
+)
+
+adaptToScaledDecimal: rcvr andSend: selector = (
+	"If no method has been provided for adapting an object to a ScaledDecimal,
+	then it may be adequate to simply adapt it to a number."
+	^ self adaptToNumber: rcvr andSend: selector
+)
+
 addDependent: anObject = (
 	"Add anObject as one of the receiver's dependents."
 	(self dependentsFields at: self ifAbsent: [self setDependents])
@@ -86,6 +98,16 @@ asSetElement = (
 
 asString = (
 	^ self printString
+)
+
+assert: aBlock description: aStringOrBlock = (
+	"Throw an assertion error if aBlock does not evaluates to true."
+	aBlock value ifFalse: [ AssertionFailure signal: aStringOrBlock value ]
+)
+
+assert: aBlock descriptionBlock: descriptionBlock = (
+	"Throw an assertion error if aBlock does not evaluate to true."
+	aBlock value ifFalse: [AssertionFailure signal: descriptionBlock value asString ]
 )
 
 at: index = (
@@ -702,6 +724,10 @@ readFromString: aString = (
 respondsTo: aSymbol = (
 	"Answer whether the method dictionary of the receiver's class contains aSymbol as a message selector."
 	^self class canUnderstand: aSymbol
+)
+
+shouldBePrintedAsLiteral = (
+	^self isLiteral
 )
 
 shouldNotImplement = (

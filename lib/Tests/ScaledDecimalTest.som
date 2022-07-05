@@ -1,0 +1,331 @@
+ScaledDecimalTest = TestCase (
+
+testAsNumber = (
+	"Ensure no loss of precision"
+	| sd |
+	sd := '1.40s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '1.40s2' = sd printString.
+)
+
+testAsNumberNegatedWithoutDecimalPoint = (
+	| sd |
+	sd := '-123s0' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 0.
+	self assert: '-123s0' = sd printString.
+)
+
+testAsNumberNegatedWithoutDecimalPoint2 = (
+	| sd |
+	sd := '-123s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '-123.00s2' = sd printString.
+)
+
+testAsNumberWithExtendedScale = (
+	| sd |
+	sd := '123s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '123.00s2' = sd printString.
+)
+
+testAsNumberWithRadix = (
+	| sd |
+	sd := '10r-22.2s5' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 5.
+	self assert: '-22.20000s5' = sd printString.
+)
+
+testAsNumberWithSuperfluousDecimalPoint = (
+	| sd |
+	sd := '123.s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '123.00s2' = sd printString.
+)
+
+testAsNumberWithoutDecimalPoint = (
+	| sd |
+	sd := '123s0' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 0.
+	self assert: '123s0' = sd printString.
+)
+
+testAsNumberWithoutDecimalPoint2 = (
+	| sd |
+	sd := '123s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '123.00s2' = sd printString.
+)
+
+testCoercion = (
+	| sd1 sd2 |
+	sd1 := '1.0s1' asNumber.
+	sd2 := '2.0s1' asNumber.
+	#( #* #+ #- #/) do: [:op |
+		self assert: (sd1 perform: op with: 2) class = ScaledDecimal.
+		self assert: (sd1 perform: op with: 1/2) class = ScaledDecimal.
+		self deny: (sd1 perform: op with: 1.0) class = ScaledDecimal.
+		self assert: (1 perform: op with: sd2) class = ScaledDecimal.
+		self assert: (1/2 perform: op with: sd2) class = ScaledDecimal.
+		self deny: (1.0 perform: op with: sd1) class = ScaledDecimal]
+)
+
+"
+testConvertFromFloat = (
+	| aFloat sd f2 diff |
+	aFloat := 11/13 asFloat.
+	sd := aFloat asScaledDecimal: 2.
+	self assert: 2 = sd scale.
+	self assert: '0.84s2' = sd printString.
+	self assert: '-0.84s2' = sd negated printString.
+	f2 := sd asFloat.
+	diff := f2 - aFloat.
+	self assert: diff abs < 1.0e-9.
+)
+"
+
+testConvertFromFraction = (
+	"Converting a Fractionwith asScaledDecimal use strictly necessary number of decimal places when possible."
+	| defaultNumberOfDecimals |
+	0 to: 11 do: [:pow2 |
+		0 to: 11 do: [:pow5 |
+			| fraction sd sd2 |
+			fraction := 13 / (2 raisedTo: pow2) / (5 raisedTo: pow5).
+			sd := fraction asScaledDecimal.
+			self assert: sd scale = (pow2 max: pow5).
+			sd2 := ScaledDecimal readFrom: sd printString.
+			self assert: sd = sd2]].
+	defaultNumberOfDecimals := (1/3) asScaledDecimal scale.
+	#(6 7 9 11 12 13 14 17 18 19 21 22 23 24) do: [:den |
+		| sd sd2 |
+		sd := (1/den) asScaledDecimal.
+		self assert: sd scale = defaultNumberOfDecimals.
+		sd2 := ScaledDecimal readFrom: sd printString.
+		self deny: sd = sd2
+		]
+)
+
+testConvertFromFractionWithScale = (
+	| sd |
+	sd := (13 / 11) asScaledDecimal: 6.
+	self assert: ScaledDecimal == sd class.
+	self assert: ('1.181818s6' = sd printString).
+	self assert: 6 = sd scale.
+	sd := (-13 / 11) asScaledDecimal: 6.
+	self assert: ScaledDecimal == sd class.
+	self assert: ('-1.181818s6' = sd printString).
+	self assert: 6 = sd scale
+)
+
+testConvertFromInteger = (
+	"Converting an Integer with asScaledDecimal use strictly necessary number of decimal places: 0."
+	| sd |
+	sd := 13 asScaledDecimal.
+	self assert: 0 = sd scale.
+	self assert: ('13s0' = sd printString).
+	sd := -13 asScaledDecimal.
+	self assert: 0 = sd scale.
+	self assert: ('-13s0' = sd printString).
+	sd := 130000000013 asScaledDecimal.
+	self assert: 0 = sd scale.
+	self assert: ('130000000013s0' = sd printString).
+	sd := -130000000013 asScaledDecimal.
+	self assert: 0 = sd scale.
+	self assert: ('-130000000013s0' = sd printString)
+)
+
+testConvertFromIntegerWithScale = (
+	"Converting an Integer with asScaledDecimal: does now honour the scale passed as message argument."
+	| sd |
+	sd := 13 asScaledDecimal: 6.
+	self assert: 6 = sd scale.
+	self assert: ('13.000000s6' = sd printString).
+	sd := -13 asScaledDecimal: 4.
+	self assert: 4 = sd scale.
+	self assert: ('-13.0000s4' = sd printString).
+	sd := 130000000013 asScaledDecimal: 3.
+	self assert: 3 = sd scale.
+	self assert: ('130000000013.000s3' = sd printString).
+	sd := -130000000013 asScaledDecimal: 1.
+	self assert: 1 = sd scale.
+	self assert: ('-130000000013.0s1' = sd printString)
+)
+
+"
+testExactNthRoot = (
+	| eight thousandth tenth two |
+	eight := '8.0s1' asNumber.
+	two := eight raisedTo: 1/3.
+	self assert: two = 2.
+	self assert: (two class = eight class and: [two scale = eight scale]).
+	thousandth := '0.001s3' asNumber.
+	tenth := thousandth raisedTo: 1/3.
+	self assert: tenth * 10 = 1.
+	self assert: (tenth class = thousandth class and: [tenth scale = thousandth scale]).
+)
+"
+
+testExactSqrt = (
+	| four hundredth tenth two |
+	four := '4.0s1' asNumber.
+	two := four sqrt.
+	self assert: two = 2.
+	self assert: (two class = four class and: [two scale = four scale]).
+	hundredth := '0.01s2' asNumber.
+	tenth := hundredth sqrt.
+	self assert: tenth * 10 = 1.
+	self assert: (tenth class = hundredth class and: [tenth scale = hundredth scale]).
+)
+
+"
+testFloorLogExactness = (
+	1 + (Float fminDenormalized floorLog: 10) to: (Float fmax floorLog: 10) do: [:n |
+		self assert: ((10 raisedTo: n) asScaledDecimal floorLog: 10) = n description: 'floorLog should be exact for ScaledDecimals'.]
+)
+"
+
+testInexactNthRoot = (
+	| tenth cubicRoot3 fifthRootTenth three |
+	three := '3.0s1' asNumber.
+	cubicRoot3 := three raisedTo: 1/3.
+	self assert: cubicRoot3 isFloat.
+	self deny: cubicRoot3 squared = 3.
+	tenth := '0.10s2' asNumber.
+	fifthRootTenth := tenth raisedTo: 1/5.
+	self assert: fifthRootTenth isFloat.
+	self deny: fifthRootTenth squared = tenth
+)
+
+testInexactSqrt = (
+	| tenth sqrt3 sqrtTenth three |
+	three := '3.0s1' asNumber.
+	sqrt3 := three sqrt.
+	self assert: sqrt3 isFloat.
+	self deny: sqrt3 squared = 3.
+	tenth := '0.10s2' asNumber.
+	sqrtTenth := tenth sqrt.
+	self assert: sqrtTenth isFloat.
+	self deny: sqrtTenth squared = tenth
+)
+
+testIsLiteral = (
+	"This test is related to http://bugs.squeak.org/view.php?id=6796"
+	self assert: '1.00s2' asNumber isLiteral description: 'every literal obviously isLiteral'.
+	"Note that (1 / 3.00s2) is not a well behaved literal,
+	because it does not re-evaluate to self...
+	Every literal should be evaluated as self (see isSelfEvaluating).
+	There is currently no way to print it as a literal.
+	So i propose it shall not answer true."
+	self deny: (1 / '3.00s2' asNumber) isLiteral description: 'this number cannot represent itself as a literal'.
+)
+
+testLiteral = (
+	| sd |
+	sd := '1.40s2' asNumber.
+	self assert: ScaledDecimal == sd class.
+	self assert: sd scale = 2.
+	self assert: '1.40s2' = sd printString
+)
+
+testLn = (
+	self assert: ('100.0s1' asNumber ln closeTo: 10 ln*2).
+"
+	self assert: ((2 raisedTo: Float emax + 3) asScaledDecimal ln closeTo: 2 ln*(Float emax + 3)) description: 'ScaledDecimal>>ln should not overflow'
+"
+)
+
+"
+testLog = (
+	self assert: ((10 raisedTo: 400) asScaledDecimal log closeTo: 400) description: 'log should be immune to intermediate Float overflow'.
+	self assert: ((10 raisedTo: -400) asScaledDecimal log closeTo: -400) description: 'log should be immune to intermediate Float underflow'
+)
+"
+
+testOneRaisedToInteger = (
+	"One might be handled specially"
+	| sd |
+	sd := '1.0s1' asNumber.
+	self assert: (sd raisedToInteger: -1) scale = 1.
+	self assert: (sd raisedToInteger: -1) = 1.
+	self assert: (sd raisedToInteger: 0) scale = 1.
+	self assert: (sd raisedToInteger: 0) = 1.
+	self assert: (sd raisedToInteger: 1) scale = 1.
+	self assert: (sd raisedToInteger: 1) = 1.
+	self assert: (sd raisedToInteger: 2) scale = 1.
+	self assert: (sd raisedToInteger: 2) = 1.
+)
+
+testPrintString = (
+	"The printed representation of a ScaledDecimal is truncated, not rounded.
+	Not sure if this is right, so this test describes the current Squeak implementation.
+	If someone knows a reason that rounding would be preferable, then update
+	this test."
+	| sd |
+	sd := (13 / 11) asScaledDecimal: 6.
+	self assert: ('1.181818s6' = sd printString).
+	sd := (13 / 11) asScaledDecimal: 5.
+	self deny: ('1.18182s5' = sd printString).
+	sd := (13 / 11) asScaledDecimal: 5.
+	self assert: ('1.18181s5' = sd printString)
+)
+
+testRaisedToInteger = (
+	"Raising to integer should preserve class and scale"
+	| sd |
+	sd := '3.0s1' asNumber.
+	self assert: (sd raisedToInteger: -1) scale = 1.
+	self assert: (sd raisedToInteger: -1) = (1/3).
+	self assert: (sd raisedToInteger: 0) scale = 1.
+	self assert: (sd raisedToInteger: 0) = 1.
+	self assert: (sd raisedToInteger: 1) scale = 1.
+	self assert: (sd raisedToInteger: 1) = 3.
+	self assert: (sd raisedToInteger: 2) scale = 1.
+	self assert: (sd raisedToInteger: 2) = 9.
+)
+
+testReadFrom = (
+	"This is related to http://bugs.squeak.org/view.php?id=6779"
+	self should: [(ScaledDecimal readFrom: '5.3') isKindOf: ScaledDecimal]
+		description: 'Reading a ScaledDecimal should answer a ScaledDecimal'.
+	self should: [((ScaledDecimal readFrom: '5.3') asScaledDecimal: 1) = (53/10 asScaledDecimal: 1)]
+		description: 'ScaledDecimal readFrom: should not use Float intermediate because it would introduce round off errors'.
+)
+
+testScaleExtension = (
+	"The scale is extended to the larger one in case of arithmetic operation"
+	#( #* #+ #- #/) do: [:op |
+		self assert: ('2.5s1' asNumber perform: op with: '1.000s3' asNumber) scale = 3.
+		self assert: ('3.5000s4' asNumber perform: op with: '1.0s1' asNumber) scale = 4.]
+)
+
+"
+testStoreOn = (
+	self assert:
+    		(Compiler evaluate: ('0.5s1' asNumber squared storeString)) * 4
+		= ('0.5s1' asNumber squared * 4).
+	self assert:
+    		'0.25s2' asNumber storeString = '0.25s2'
+)
+"
+
+testZeroRaisedToInteger = (
+	| sd |
+	sd := '0.0s1' asNumber.
+	"self should: [sd raisedToInteger: -1] raise: Error."
+	self assert: (sd raisedToInteger: 0) = 1.
+	self assert: (sd raisedToInteger: 0) scale = 1.
+	self assert: (sd raisedToInteger: 1) = 0.
+	self assert: (sd raisedToInteger: 1) scale = 1.
+	self assert: (sd raisedToInteger: 2) = 0.
+	self assert: (sd raisedToInteger: 2) scale = 1.
+)
+
+)

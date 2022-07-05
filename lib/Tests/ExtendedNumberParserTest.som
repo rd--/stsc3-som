@@ -1,0 +1,130 @@
+ExtendedNumberParserTest = TestCase (
+
+testFractionPartWithoutIntegerPart = (
+	"The integer part before the decimal is optional"
+	self assert: (ExtendedNumberParser parse: '.5') = (1/2).
+	self assert: (ExtendedNumberParser parse: '.5') isFloat.
+	self assert: (ExtendedNumberParser parse: '.3e2') = 30.
+	self assert: (ExtendedNumberParser parse: '.3e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-.4e2') = -40.
+	self assert: (ExtendedNumberParser parse: '-.4e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+.5e2') = 50.
+	self assert: (ExtendedNumberParser parse: '+.5e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+.6e+2') = 60.
+	self assert: (ExtendedNumberParser parse: '+.6e+2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-.7e+2') = -70.
+	self assert: (ExtendedNumberParser parse: '-.7e+2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+2r.1e-2') = (1/8).
+	self assert: (ExtendedNumberParser parse: '+2r.1e-2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-4r.1e-2') = (-1/64).
+	self assert: (ExtendedNumberParser parse: '-4r.1e-2') isFloat.
+)
+
+testIntegerPartWithoutFraction = (
+	"The fraction part after the decimal is optional"
+	self assert: (ExtendedNumberParser parse: '1.') = 1.
+	self assert: (ExtendedNumberParser parse: '1.') isFloat.
+	self assert: (ExtendedNumberParser parse: '3.e2') = 300.
+	self assert: (ExtendedNumberParser parse: '3.e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-4.e2') = -400.
+	self assert: (ExtendedNumberParser parse: '-4.e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+5.e2') = 500.
+	self assert: (ExtendedNumberParser parse: '+5.e2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+6.e+2') = 600.
+	self assert: (ExtendedNumberParser parse: '+6.e+2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-7.e+2') = -700.
+	self assert: (ExtendedNumberParser parse: '-7.e+2') isFloat.
+	self assert: (ExtendedNumberParser parse: '+2r1.e-2') = (1/4).
+	self assert: (ExtendedNumberParser parse: '+2r1.e-2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-4r1.e-2') = (-1/16).
+	self assert: (ExtendedNumberParser parse: '-4r1.e-2') isFloat.
+)
+
+testInvalidExponent = (
+	"The leading number is returned, the invalid part is ignored"
+	self assert: (ExtendedNumberParser parse: '1e') = 1.
+	self assert: (ExtendedNumberParser parse: '1eZ') = 1.
+	self assert: (ExtendedNumberParser parse: '+1eW') = 1.
+	self assert: (ExtendedNumberParser parse: '-1eX') = -1.
+	self assert: (ExtendedNumberParser parse: '2e-') = 2.
+	self assert: (ExtendedNumberParser parse: '2e--1') = 2.
+	self assert: (ExtendedNumberParser parse: '2e-+1') = 2.
+	self assert: (ExtendedNumberParser parse: '2e-Z') = 2.
+	self assert: (ExtendedNumberParser parse: '+2e-W') = 2.
+	self assert: (ExtendedNumberParser parse: '-2e-X') = -2.
+	self assert: (ExtendedNumberParser parse: '3e+') = 3.
+	self assert: (ExtendedNumberParser parse: '3e+-') = 3.
+	self assert: (ExtendedNumberParser parse: '3e+-1') = 3.
+	self assert: (ExtendedNumberParser parse: '+3e+W') = 3.
+	self assert: (ExtendedNumberParser parse: '-3e+Z') = -3.
+)
+
+testInvalidRadix = (
+	"The leading number is returned, the invalid part is ignored"
+	self assert: (ExtendedNumberParser parse: '1r') = 1.
+	self assert: (ExtendedNumberParser parse: '+1r') = 1.
+	self assert: (ExtendedNumberParser parse: '-1r') = -1.
+	self assert: (ExtendedNumberParser parse: '-1r+') = -1.
+	self assert: (ExtendedNumberParser parse: '-1r-') = -1.
+	self assert: (ExtendedNumberParser parse: '-2r.') = -2.
+	self assert: (ExtendedNumberParser parse: '-2r-.') = -2.
+	self assert: (ExtendedNumberParser parse: '+2r-.') = 2.
+	self assert: (ExtendedNumberParser parse: '+2r3.') = 2.
+	self assert: (ExtendedNumberParser parse: '+2r.3') = 2.
+	self assert: (ExtendedNumberParser parse: '+2r-.3') = 2.
+)
+
+testInvalidScale = (
+	"The leading number is returned, the invalid part is ignored"
+	self assert: (ExtendedNumberParser parse: '1s') = 1.
+	self assert: (ExtendedNumberParser parse: '1sZ') = 1.
+	self assert: (ExtendedNumberParser parse: '+1sW') = 1.
+	self assert: (ExtendedNumberParser parse: '-1sX') = -1.
+	self assert: (ExtendedNumberParser parse: '2s-') = 2.
+	self assert: (ExtendedNumberParser parse: '2s--1') = 2.
+	self assert: (ExtendedNumberParser parse: '2s-+1') = 2.
+	self assert: (ExtendedNumberParser parse: '2s-1') = 2.
+	self assert: (ExtendedNumberParser parse: '+2s-2') = 2.
+	self assert: (ExtendedNumberParser parse: '-2s-3') = -2.
+	self assert: (ExtendedNumberParser parse: '3s+') = 3.
+	self assert: (ExtendedNumberParser parse: '3s+-') = 3.
+	self assert: (ExtendedNumberParser parse: '3s+-1') = 3.
+	self assert: (ExtendedNumberParser parse: '+3s+2') = 3.
+	self assert: (ExtendedNumberParser parse: '-3s+3') = -3.
+)
+
+testPositive = (
+	"A leading + sign is allowed"
+	self assert: (ExtendedNumberParser parse: '+1') = 1.
+	self assert: (ExtendedNumberParser parse: '+22') = 22.
+	self assert: (ExtendedNumberParser parse: '+2r11') = 3.
+	self assert: (ExtendedNumberParser parse: '+2r+101') = 5.
+	self assert: (ExtendedNumberParser parse: '+2r-101') = -5.
+	self assert: (ExtendedNumberParser parse: '-2r+101') = -5.
+	self assert: (ExtendedNumberParser parse: '+1.') isFloat.
+	self assert: (ExtendedNumberParser parse: '+1.') = 1.
+	self assert: (ExtendedNumberParser parse: '+21.') = 21.
+	self assert: (ExtendedNumberParser parse: '+3r21.') = 7.
+	self assert: (ExtendedNumberParser parse: '+3r+201.') = 19.
+	self assert: (ExtendedNumberParser parse: '+3r-201.') = -19.
+	self assert: (ExtendedNumberParser parse: '-3r+201.') = -19.
+)
+
+testPositiveExponent = (
+	"A leading + sign is allowed in exponent"
+	self assert: (ExtendedNumberParser parse: '1e+2') = 100.
+	self assert: (ExtendedNumberParser parse: '1e+2') isInteger.
+	self assert: (ExtendedNumberParser parse: '-1e+2') = -100.
+	self assert: (ExtendedNumberParser parse: '1.e+2') = 100.
+	self assert: (ExtendedNumberParser parse: '1.e+2') isFloat.
+	self assert: (ExtendedNumberParser parse: '-1.0e+2') = -100.
+)
+
+testUppercaseExponent = (
+	"An uppercase exponent is allowed"
+	self assert: 0.01 equals: (ExtendedNumberParser parse: '1.00E-2').
+	self assert: 305.0 equals: (ExtendedNumberParser parse: '3.05D+2').
+)
+
+
+)

@@ -1,0 +1,232 @@
+SqNumberParserTest = TestCase (
+
+areLowercaseDigitsAllowed = (
+	"Answer true if lowercase letter are allowed digits."
+	^(SqNumberParser parse: '16re' onError: [-1]) = 16rE
+)
+
+testBases = (
+	self assert: (SqNumberParser parse: '16r20') equals: 32.
+	self assert: (SqNumberParser parse: '2r10') equals: 2.
+	self assert: ((SqNumberParser on: '10')
+		nextIntegerBase: 2) equals: 2.
+	self assert: ((SqNumberParser on: '10')
+		defaultBase: 2;
+		nextNumber) equals: 2.
+	self assert: ((SqNumberParser on: '1000r10')
+		defaultBase: 2;
+		nextNumber) equals: 8.
+)
+
+testFail = (
+	"Verify that the value of a failblock is returned."
+	self assert: (SqNumberParser parse: 'blablabla' onError: [42]) equals: 42
+)
+
+testFloatFromStreamAsNumber = (
+	"This covers parsing in Number>>readFrom:"
+	| rs aFloat |
+	rs := '10r-12.3456' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -12.3456 = aFloat.
+	self assert: rs atEnd.
+	rs := '10r-12.3456e2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '10r-12.3456e2e2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs upToEnd = 'e2'.
+	rs := '10r-12.3456d2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '10r-12.3456q2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '-12.3456q2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: -1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '12.3456q2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1234.56 = aFloat.
+	self assert: rs atEnd.
+	rs := '12.3456z2' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 12.3456 = aFloat.
+	self assert: rs upToEnd = 'z2'.
+)
+
+testFloatFromStreamWithExponent = (
+	"This covers parsing in Number>>readFrom:"
+	| rs aFloat |
+	rs := '1.0e-14' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs atEnd.
+	rs := '1.0e-14 1' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs upToEnd = ' 1'.
+	rs := '1.0e-14eee' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0e-14 = aFloat.
+	self assert: rs upToEnd = 'eee'.
+	rs := '1.0e14e10' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0e14 = aFloat.
+	self assert: rs upToEnd = 'e10'.
+	rs := '1.0e+14e' readStream. "Plus sign is not parseable"
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0 = aFloat.
+	self assert: rs upToEnd = 'e+14e'.
+	rs := '1.0e' readStream.
+	aFloat := SqNumberParser parse: rs.
+	self assert: 1.0 = aFloat.
+	self assert: rs upToEnd = 'e'.
+)
+
+"
+testFloatGradualUnderflow = (
+	| float trueFraction str |
+	trueFraction := 16r2D2593D58B4FC4 / (16 raisedTo: 256+13).
+	float := self areLowercaseDigitsAllowed
+		ifFalse: [SqNumberParser parse: '16r2.D2593D58B4FC4e-256']
+		ifTrue: [trueFraction asFloat].
+	self assert: float asTrueFraction = trueFraction.
+	self assert: float = trueFraction asFloat.
+	str := (String new: 32) writeStream.
+	float printOn: str base: 10.
+	self assert: (SqNumberParser parse: str contents) = float.
+)
+"
+
+"
+testFloatPrintString = (
+	| f r bases |
+	f := Float basicNew: 2.
+	r := Random new seed: 1234567.
+	bases := self areLowercaseDigitsAllowed
+		ifTrue: [#(10)]
+		ifFalse: [#(2 8 10 16)].
+	100
+		timesRepeat: [f basicAt: 1 put: (r nextInt: 16r100000000)- 1.
+			f basicAt: 2 put: (r nextInt: 16r100000000) - 1.
+			bases
+				do: [:base | | str |
+						str := (String new: 64) writeStream.
+						f negative ifTrue: [str nextPut: $-].
+						str print: base; nextPut: $r.
+						f abs printOn: str base: base.
+						self assert: (SqNumberParser parse: str contents) = f]].
+	10
+		timesRepeat: [f basicAt: 1 put: 16r7FE00000 + ((r nextInt: 16r100000) - 1).
+			f basicAt: 2 put: (r nextInt: 16r100000000) - 1.
+			bases
+				do: [:base | | str |
+						str := (String new: 64) writeStream.
+						f negative ifTrue: [str nextPut: $-].
+						str print: base; nextPut: $r.
+						f abs printOn: str base: base.
+						self assert: (SqNumberParser parse: str contents) = f]].
+	10
+		timesRepeat: [f basicAt: 1 put: 0 + ((r nextInt: 16r100000) - 1).
+			f basicAt: 2 put: (r nextInt: 16r100000000) - 1.
+			bases
+				do: [:base | | str |
+						str := (String new: 64) writeStream.
+						f negative ifTrue: [str nextPut: $-].
+						str print: base; nextPut: $r.
+						f abs printOn: str base: base.
+						self assert: (SqNumberParser parse: str contents) = f]].
+)
+"
+
+testFloatReadError = (
+	"This covers parsing in Number>>readFrom:"
+	| rs num |
+	rs := '1e' readStream.
+	num := SqNumberParser parse: rs.
+	self assert: 1 = num.
+	self assert: rs upToEnd = 'e'.
+	rs := '1.' readStream.
+	num := SqNumberParser parse: rs.
+	self assert: 1 = num.
+	self assert: num isInteger.
+	self assert: rs upToEnd = '.'.
+	rs := '' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+	rs := 'foo' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+	rs := 'radix' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+	rs := '.e0' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+	rs := '-.e0' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+	rs := '--1' readStream.
+	self should: [SqNumberParser parse: rs] raise: Error.
+)
+
+testFloatReadWithRadix = (
+	| aNumber rs |
+"
+	aNumber := '2r1.0101e9' asNumber.
+	self assert: 672.0 = aNumber.
+"
+	self assert: (SqNumberParser parse: '2r1.0101e9') = (1.3125 * (2 raisedTo: 9)).
+	rs := ReadStream on: '2r1.0101e9e9'.
+	self assert: (SqNumberParser parse: rs) = 672.0.
+	self assert: rs upToEnd = 'e9'
+)
+
+testIntegerReadFrom = (
+	"Ensure remaining characters in a stream are not lost when parsing an integer."
+	| rs i s |
+	rs := ReadStream on: '123.s could be confused with a ScaledDecimal'.
+	i := SqNumberParser parse: rs.
+	self assert: (i isInteger and: [ i = 123 ]).
+	s := rs upToEnd.
+	self assert: '.s could be confused with a ScaledDecimal' = s
+)
+
+testIntegerReadWithRadix = (
+	| aNumber rs |
+"
+	aNumber := '2r1e26' asNumber.
+	self assert: 67108864 = aNumber.
+"
+	self assert: (SqNumberParser parse: '2r1e26') = (2 raisedTo: 26).
+	rs := '2r1e26eee' readStream.
+	self assert: (SqNumberParser parse: rs) = 67108864.
+	self assert: rs upToEnd = 'eee'
+)
+
+"
+testScaledDecimalWithImplicitScale = (
+	#(
+		('123s' 123s0)
+		('0.5s' 0.5s1)
+		('1.60s' 1.60s2)
+		('23.070s' 23.070s3)
+	) do: [:each |
+		[:string :scaledDecimal |
+		| value |
+		value := SqNumberParser parse: string readStream.
+		self assert: value = scaledDecimal.
+		self assert: value class = scaledDecimal class.
+		self assert: value scale = scaledDecimal scale] valueWithArguments: each]
+)
+"
+
+testScaledDecimalWithTrailingZeroes = (
+	"This is a non regression tests for http://bugs.squeak.org/view.php?id=7169"
+	self assert: (SqNumberParser parse: '0.50s2') = (1/2).
+	self assert: (SqNumberParser parse: '0.500s3') = (1/2).
+	self assert: (SqNumberParser parse: '0.050s3') = (1/20).
+)
+
+)

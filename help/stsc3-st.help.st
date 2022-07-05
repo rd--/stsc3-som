@@ -1,11 +1,11 @@
 "Since classes are loaded lazily, asking for TestCase subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BitSetTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MessageSendTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RunArrayTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest. "Non-class tests: " HexTest. TestSpaceshipOperator. }
+allTests := {ArrayTest. AssociationTest. BagTest. BitSetTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MessageSendTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RunArrayTest. RxMatcherTest. RxParserTest. ScaledDecimalTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. SqNumberParserTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest. "Non-class tests: " HexTest. TestSpaceshipOperator. }
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
 
-allTests size = 60
-TestCase subclasses size = 60
+allTests size = 62
+TestCase subclasses size = 62
 
 "Individual tests"
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
@@ -49,6 +49,9 @@ DictionaryTest suite run printOn: Transcript
 
 DurationTest testSelectors do: [ :each | Transcript show: each; cr. DurationTest run: each ]
 DurationTest suite run printOn: Transcript
+
+ExtendedNumberParserTest testSelectors do: [ :each | Transcript show: each; cr. ExtendedNumberParserTest run: each ]
+ExtendedNumberParserTest suite run printOn: Transcript
 
 FalseTest testSelectors do: [ :each | Transcript show: each; cr. FalseTest run: each ]
 FalseTest suite run printOn: Transcript
@@ -131,6 +134,9 @@ RxMatcherTest suite run printOn: Transcript
 RxParserTest testSelectors do: [ :each | Transcript show: each; cr. RxParserTest run: each ]
 RxParserTest suite run printOn: Transcript
 
+ScaledDecimalTest testSelectors do: [ :each | Transcript show: each; cr. ScaledDecimalTest run: each ]
+ScaledDecimalTest suite run printOn: Transcript
+
 SequenceableCollectionTest testSelectors do: [ :each | Transcript show: each; cr. SequenceableCollectionTest run: each ]
 SequenceableCollectionTest suite run printOn: Transcript
 
@@ -148,6 +154,9 @@ SortedCollectionTest suite run printOn: Transcript
 
 SortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. SortFunctionTest run: each ]
 SortFunctionTest suite run printOn: Transcript
+
+SqNumberParserTest testSelectors do: [ :each | Transcript show: each; cr. SqNumberParserTest run: each ]
+SqNumberParserTest suite run printOn: Transcript
 
 StackTest testSelectors do: [ :each | Transcript show: each; cr. StackTest run: each ]
 StackTest suite run printOn: Transcript
