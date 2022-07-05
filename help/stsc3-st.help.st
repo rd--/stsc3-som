@@ -1,11 +1,11 @@
 "Since classes are loaded lazily, asking for TestCase subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BitSetTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MessageSendTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RunArrayTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BitSetTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MessageSendTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RunArrayTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest. "Non-class tests: " HexTest. TestSpaceshipOperator. }
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
 
-allTests size = 59
-TestCase subclasses size = 59
+allTests size = 60
+TestCase subclasses size = 60
 
 "Individual tests"
 ArrayTest testSelectors do: [ :each | Transcript show: each; cr. ArrayTest run: each ]
@@ -158,9 +158,6 @@ StringTest suite run printOn: Transcript
 SymbolTest testSelectors do: [ :each | Transcript show: each; cr. SymbolTest run: each ]
 SymbolTest suite run printOn: Transcript
 
-TestSpaceshipOperator testSelectors do: [ :each | Transcript show: each; cr. TestSpaceshipOperator run: each ]
-TestSpaceshipOperator suite run printOn: Transcript
-
 TimeTest testSelectors do: [ :each | Transcript show: each; cr. TimeTest run: each ]
 TimeTest suite run printOn: Transcript
 
@@ -184,6 +181,13 @@ WriteStreamTest suite run printOn: Transcript
 
 YearTest testSelectors do: [ :each | Transcript show: each; cr. YearTest run: each ]
 YearTest suite run printOn: Transcript
+
+"Non-class tests"
+HexTest testSelectors do: [ :each | Transcript show: each; cr. HexTest run: each ]
+HexTest suite run printOn: Transcript
+
+TestSpaceshipOperator testSelectors do: [ :each | Transcript show: each; cr. TestSpaceshipOperator run: each ]
+TestSpaceshipOperator suite run printOn: Transcript
 
 Smalltalk globalKeys
 Smalltalk globals

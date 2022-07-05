@@ -37,6 +37,10 @@ asFloat = (
 	self subclassResponsibility
 )
 
+asHexDigit = (
+	^'0123456789ABCDEF' at: self+1
+)
+
 asInteger = (
 )
 
@@ -196,6 +200,18 @@ fractionPart = (
 	^0
 )
 
+hex = (
+	"Print the receiver as hex, prefixed with 16r.  DO NOT CHANGE THIS!  The Cog VMMaker depends on this.
+	 Consider using any of
+		printStringHex
+		printStringBase: 16
+		printStringBase: 16 length: 8 padded: true
+		storeStringHex
+		storeStringBase: 16
+		storeStringBase: 16 length: 11 padded: true"
+	^self storeStringBase: 16
+)
+
 highBit = (
 	^ self subclassResponsibility
 )
@@ -331,6 +347,17 @@ numerator = (
 	^self
 )
 
+print: positiveNumberString on: aStream prefix: prefix length: minimum padded: zeroFlag = (
+	| padLength |
+	padLength := minimum - positiveNumberString size - prefix size.
+	padLength > 0
+		ifTrue: [zeroFlag
+				ifTrue: [aStream nextPutAll: prefix; nextPutAll: (String new: padLength withAll: $0)]
+				ifFalse: [aStream nextPutAll: (String new: padLength withAll: Character space); nextPutAll: prefix]]
+		ifFalse: [aStream nextPutAll: prefix].
+	aStream nextPutAll: positiveNumberString
+)
+
 printAsLiteralOn: aStream = (
 	^self printOn: aStream
 )
@@ -347,6 +374,16 @@ printOn: aStream asFixedPoint: base = (
 	(n := n \\ b) = 0] whileFalse: [
 		b = base ifTrue: [aStream nextPut: $.].
 		b := b // 10].
+)
+
+printOn: aStream base: base length: minimum padded: zeroFlag = (
+	| prefix |
+	prefix := self negative ifTrue: ['-'] ifFalse: [String new].
+	self print: (self abs printStringBase: base) on: aStream prefix: prefix length: minimum padded: zeroFlag
+)
+
+printStringBase: base length: minimum padded: zeroFlag = (
+	^String streamContents: [:s| self printOn: s base: base length: minimum padded: zeroFlag]
 )
 
 printStringHex = (
@@ -453,6 +490,35 @@ sqrtRem = (
 	2) (self sqrtRem first + 1) squared > self
 	3) self sqrtRem first squared + self sqrtRem last = self"
 	self subclassResponsibility
+)
+
+storeOn: aStream base: base = (
+	"Print a representation of the receiver on the stream
+	<aStream> in base <base> where
+	2 <= <baseInteger> <= 16. If <base> is other than 10
+	it is written first separated by $r followed by the number
+	like for example: 16rFCE2"
+	| integer |
+	integer := self negative
+		ifTrue: [aStream nextPut: $-. self negated]
+		ifFalse: [self].
+	base = 10 ifFalse: [aStream nextPutAll: base printString; nextPut: $r].
+	aStream nextPutAll: (integer printStringBase: base).
+)
+
+storeOn: aStream base: base length: minimum padded: zeroFlag = (
+	| prefix |
+	prefix := self negative ifTrue: ['-'] ifFalse: [String new].
+	base = 10 ifFalse: [prefix := prefix, base printString, 'r'].
+	self print: (self abs printStringBase: base) on: aStream prefix: prefix length: minimum padded: zeroFlag
+)
+
+storeStringBase: base length: minimum padded: zeroFlag = (
+	^String streamContents: [:s| self storeOn: s base: base length: minimum padded: zeroFlag]
+)
+
+storeStringHex = (
+	^self storeStringBase: 16
 )
 
 take: kk = (

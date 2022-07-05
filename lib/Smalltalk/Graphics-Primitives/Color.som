@@ -106,6 +106,18 @@ asColorref = (
 	^ (self red * 255) rounded + ((self green * 255) rounded << 8) + ((self blue * 255) rounded << 16)
 )
 
+asHTMLColor = (
+	| s |
+	s := '#000000' copy.
+	s at: 2 put: (Character digitValue: ((rgb bitShift: -6 - Color redShift) bitAnd: 15)).
+	s at: 3 put: (Character digitValue: ((rgb bitShift: -2 - Color redShift) bitAnd: 15)).
+	s at: 4 put: (Character digitValue: ((rgb bitShift: -6 - Color greenShift) bitAnd: 15)).
+	s at: 5 put: (Character digitValue: ((rgb bitShift: -2 - Color greenShift) bitAnd: 15)).
+	s at: 6 put: (Character digitValue: ((rgb bitShift: -6 - Color blueShift) bitAnd: 15)).
+	s at: 7 put: (Character digitValue: ((rgb bitShift: -2 - Color blueShift) bitAnd: 15)).
+	^ s
+)
+
 asNontranslucentColor = (
 	^ self
 )
