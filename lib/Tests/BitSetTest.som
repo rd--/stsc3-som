@@ -1,0 +1,209 @@
+BitSetTest = TestCase (
+
+| bitset |
+
+assertBitsetIsEmpty = (
+	self assert: 0 equals: bitset size.
+	self assert: (bitset bytes allSatisfy: [ :each | each = 0 ]).
+	self assert: #() equals: self bitsetElements
+)
+
+bitsetElements = (
+	^Array new: bitset size streamContents: [ :stream |
+		bitset do: [ :each | stream nextPut: each ] ]
+)
+
+initializeBitset: anInteger = (
+	self assert: anInteger equals: anInteger // 8 * 8.
+	bitset := Bitset new: anInteger.
+	self assertBitsetIsEmpty.
+	self assert: anInteger equals: bitset capacity
+)
+
+testBitManipulationAPI = (
+	#(0 8 16 24 32) do: [ :each |
+		self testBitManipulationAPI: each ]
+)
+
+testBitManipulationAPI: capacity = (
+	self initializeBitset: capacity.
+	0 to: capacity - 1 do: [ :index |
+		self assert: 0 equals: (bitset bitAt: index).
+		self assert: #() equals: self bitsetElements.
+		self assert: false equals: (bitset clearBitAt: index).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: false equals: (bitset clearBitAt: index).
+		self assert: true equals: (bitset setBitAt: index).
+		self assert: 1 equals: (bitset bitAt: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: false equals: (bitset setBitAt: index).
+		self assert: 1 equals: (bitset bitAt: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: true equals: (bitset clearBitAt: index).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset bitAt: index).
+		self assert: false equals: (bitset clearBitAt: index).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset bitAt: index).
+		self assert: capacity equals: bitset capacity ].
+	self
+		should: [ bitset bitAt: -1 ] raise: Error;
+		should: [ bitset bitAt: capacity ] raise: Error.
+	self
+		should: [ bitset setBitAt: -1 ] raise: Error;
+		should: [ bitset setBitAt: capacity ] raise: Error.
+	self
+		should: [ bitset clearBitAt: -1 ] raise: Error;
+		should: [ bitset clearBitAt: capacity ] raise: Error
+)
+
+testCopy = (
+	#(0 8 16 24 32) do: [ :each |
+		self testCopy: each ]
+)
+
+testCopy: n = (
+	| copy |
+	self initializeBitset: n.
+	copy := bitset copy.
+	self assert: copy equals: bitset.
+	self assert: copy hash equals: bitset hash.
+	self deny: bitset == copy.
+	self deny: bitset bytes == copy bytes
+)
+
+testDictionaryAPI = (
+	#(0 8 16 24 32) do: [ :each |
+		self testDictionaryAPI: each ]
+)
+
+testDictionaryAPI: capacity = (
+	self initializeBitset: capacity.
+	0 to: capacity - 1 do: [ :index |
+		self assert: 0 equals: (bitset at: index).
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset at: index put: 0).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset at: index put: 0).
+		self assert: 1 equals: (bitset at: index put: 1).
+		self assert: 1 equals: (bitset at: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: 1 equals: (bitset at: index put: 1).
+		self assert: 1 equals: (bitset at: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: 0 equals: (bitset at: index put: 0).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset at: index).
+		self assert: 0 equals: (bitset at: index put: 0).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self assert: 0 equals: (bitset at: index).
+		self assert: capacity equals: bitset capacity ].
+	self
+		should: [ bitset at: capacity ] raise: Error;
+		should: [ bitset at: capacity put: 0 ] raise: Error;
+		should: [ bitset at: capacity put: 1 ] raise: Error.
+	self
+		should: [ bitset at: -1 ] raise: Error;
+		should: [ bitset at: -1 put: 0 ] raise: Error;
+		should: [ bitset at: -1 put: 1 ] raise: Error.
+	self
+		should: [ bitset at: 0 put: -1 ] raise: Error;
+		should: [ bitset at: 0 put: 2 ] raise: Error;
+		should: [ bitset at: 0 put: nil ] raise: Error
+)
+
+testNew = (
+	self should: [ Bitset new ] raise: Error
+)
+
+testRemoveAll = (
+	#(0 8 16 24 32) do: [ :each |
+		self testRemoveAll: each ]
+)
+
+testRemoveAll: n = (
+	self initializeBitset: n.
+	0 to: n - 1 do: [ :index |
+		bitset setBitAt: index ].
+	self assert: n equals: bitset size.
+	self assert: (bitset bytes allSatisfy: [ :each | each = 255 ]).
+	bitset removeAll.
+	self assert: 0 equals: bitset size.
+	self assert: #() equals: self bitsetElements.
+	self assert: (bitset bytes allSatisfy: [ :each | each = 0 ]).
+)
+
+testSetAPI = (
+	#(0 8 16 24 32) do: [ :each |
+		self testSetAPI: each ]
+)
+
+testSetAPI: capacity = (
+	self initializeBitset: capacity.
+	self assert: capacity equals: capacity // 8 * 8 description: 'capacity must be a multiple of eight.'.
+	self assert: capacity equals: bitset capacity.
+	self assert: 0 equals: bitset size.
+	self assert: #() equals: self bitsetElements.
+	0 to: capacity - 1 do: [ :index |
+		self deny: (bitset includes: index).
+		self assert: #() equals: self bitsetElements.
+		self assert: nil equals: (bitset remove: index ifAbsent: [ nil ]).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self deny: (bitset includes: index).
+		self assert: index equals: (bitset add: index).
+		self assert: (bitset includes: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: index equals: (bitset add: index).
+		self assert: (bitset includes: index).
+		self assert: 1 equals: bitset size.
+		self assert: { index } equals: self bitsetElements.
+		self assert: index equals: (bitset remove: index).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self deny: (bitset includes: index).
+		self assert: nil equals: (bitset remove: index ifAbsent: [ nil ]).
+		self assert: 0 equals: bitset size.
+		self assert: #() equals: self bitsetElements.
+		self deny: (bitset includes: index).
+		self assert: capacity equals: bitset capacity  ].
+	self
+		deny: (bitset includes: -1);
+		deny: (bitset includes: capacity).
+	self
+		should: [ bitset add: capacity ] raise: Error;
+		should: [ bitset add: -1 ] raise: Error;
+		should: [ bitset remove: capacity ] raise: Error;
+		should: [ bitset remove: -1 ] raise: Error
+)
+
+testSize = (
+	#(0 8 16 24 32) do: [ :each |
+		self testSize: each ]
+)
+
+testSize: n = (
+	self initializeBitset: n.
+	0 to: n - 1 do: [ :index |
+		self assert: index equals: bitset size.
+		bitset setBitAt: index ].
+	self assert: n equals: bitset size.
+	0 to: n - 1 do: [ :index |
+		self assert: n - index equals: bitset size.
+		bitset clearBitAt: index ].
+	self assertBitsetIsEmpty
+)
+
+
+)
