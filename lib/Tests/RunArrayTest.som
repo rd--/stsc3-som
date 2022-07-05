@@ -1,0 +1,167 @@
+RunArrayTest = TestCase (
+
+testAddRemove = (
+	| reference runArray |
+	reference := 'aaabcddcccbba' asOrderedCollection.
+	runArray := reference as: RunArray.
+	#((#addLast: $a) (#addLast: $d) (#addFirst: $a) (#addFirst: $d)
+		(#remove: $b) (#remove: $d) (#remove: $a) (#removeAll))
+		do: [:selectorAndArgs |
+			reference perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst.
+			runArray perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst.
+			self assert: (reference as: RunArray)
+				equals: runArray].
+)
+
+testAt = (
+	"self debug: #testAt"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self assert: (array at: 3) = 2.
+	array at: 3 put: 5.
+	self assert: (array at: 3) = 5
+)
+
+testAt2 = (
+	"self debug: #testAt2"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self should: [array at: 0] raise: Error.
+	self should: [array at: 6] raise: Error.
+	self should: [array at: $b] raise: Error.
+)
+
+testAtPut = (
+	"self debug: #testAtPut"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	array at: 3 put: 5.
+	self assert: array asArray = #(2 2 5 2 2).
+	array at: 1 put: 1.
+	self assert: array asArray = #(1 2 5 2 2).
+)
+
+testAtPut2 = (
+	"self debug: #testAtPut2"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self should: [array at: 0 put: 5] raise: Error.
+	self should: [array at: 6 put: 5] raise: Error.
+	self should: [array at: $b put: 5] raise: Error.
+)
+
+testCopy = (
+	| reference runArray |
+	reference := 'aaabcddcccbba'.
+	runArray := reference as: RunArray.
+	#((#copyFrom:to: 2 9) (#copyFrom:to: 3 2) (#copyEmpty) (#copyWith: $e) (#copyWith: $a)
+		(#copyUpTo: $d) (#copyUpToLast: $c) (#copyUpThrough: $d))
+		do: [:selectorAndArgs |
+			self assert: ((reference perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst) as: RunArray)
+				equals: (runArray perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst)].
+)
+
+testFirst = (
+	"self debug: #testFirst"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self assert: array first = 2.
+	array := #($a $b $c $d) as: RunArray.
+	self assert: array first = $a.
+)
+
+testIndexOf = (
+	| reference runArray |
+	reference := 'aaabcddcccbba'.
+	runArray := reference as: RunArray.
+	#((#indexOf: $d) (#lastIndexOf: $c) (#indexOf: $e) (#indexOfAnyOf: 'cd') (#lastIndexOfAnyOf: 'cd') (#lastIndexOf: $e)
+		(#indexOf:startingAt: $a 7) (#lastIndexOf:startingAt: $b 7) (#indexOfAnyOf:startingAt: 'cd' 6) (#lastIndexOfAnyOf:startingAt: 'cd' 7))
+		do: [:selectorAndArgs |
+			self assert: (reference perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst)
+				equals: (runArray perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst)].
+)
+
+testLast = (
+	"self debug: #testLast"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self assert: array last = 2.
+	array := #($a $b $c $d) as: RunArray.
+	self assert: array last = $d.
+)
+
+testNew = (
+	"self debug: #testNew"
+	| array |
+	array := RunArray new.
+	self assert: array size = 0.
+)
+
+testNewFrom = (
+	"self debug: #testNewFrom"
+	| array |
+	array := RunArray newFrom: #($a $b $b $b $b $c $c $a).
+	self assert: array size = 8.
+	self assert: array asArray = #($a $b $b $b $b $c $c $a).
+)
+
+testNewWithAll = (
+	"self debug: #testNewWithAll"
+	| array |
+	array := RunArray new: 5 withAll: 2.
+	self assert: array size = 5.
+	self assert: array asArray = #(2 2 2 2 2)
+)
+
+testNewWithSize = (
+	|array|
+	array := RunArray new: 5.
+	self assert: array size = 5.
+	1 to: 5 do: [:index | self assert: (array at: index) isNil]
+)
+
+testRunLengthAt = (
+	"self debug: #testRunLengthAt"
+	| array |
+	array := #($a $b $b $c $c $c $d $d) as: RunArray.
+	self assert: (array runLengthAt: 1) = 1.
+	self assert: (array runLengthAt: 2) = 2.
+	self assert: (array runLengthAt: 3) = 1.
+	self assert: (array runLengthAt: 4) = 3.
+	self assert: (array runLengthAt: 5) = 2.
+	self assert: (array runLengthAt: 6) = 1.
+	self assert: (array runLengthAt: 7) = 2.
+	self assert: (array runLengthAt: 8) = 1.
+)
+
+testRunsValues = (
+	"self debug: #testRunsValues"
+	| array |
+	array := RunArray runs: #(1 4 2 1) values: #($a $b $c $a).
+	self assert: array size = 8.
+	self assert: array asArray = #($a $b $b $b $b $c $c $a).
+)
+
+testSelectAndCollect = (
+	| reference runArray |
+	reference := 'aaabaccaabb' as: Array.
+	runArray := reference as: RunArray.
+	{{#select: . #isVowel} . {#reject: . #isVowel} .
+		{#collect: . [:e | 'de' atWrap: e codePoint]} . {#replace: . [:e | e codePoint // 2]}}
+		do: [:selectorAndArgs |
+			self assert: ((reference perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst) as: RunArray)
+				equals: (runArray perform: selectorAndArgs first withArguments: selectorAndArgs allButFirst)].
+)
+
+testWithStartStopAndValueDo = (
+	"self debug: #testWithStartStopAndValueDo"
+	| array elements startStops |
+	array := #($a $b $b $c $c $c $d $d) as: RunArray.
+	elements := OrderedCollection new.
+	startStops := OrderedCollection new.
+	array withStartStopAndValueDo: [:start :stop :value | elements add: value. startStops add: start->stop].
+	self assert: elements asArray = #($a $b  $c  $d).
+	self assert: startStops asArray = {1->1 . 2->3 . 4->6 . 7->8}
+)
+
+)

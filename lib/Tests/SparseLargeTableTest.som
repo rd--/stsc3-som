@@ -1,0 +1,72 @@
+SparseLargeTableTest = TestCase (
+
+classUnderTest = (
+	^ SparseLargeTable
+)
+
+testAccessing = (
+	| size chunkSize indices table |
+	size := 60.
+	chunkSize := 8.
+	indices := #(20 22 23 27 28 29 54 56 57 58).
+	table := self classUnderTest new: size chunkSize: chunkSize arrayClass: DoubleByteArray base: 11 defaultValue: 0.
+	indices do: [:index |
+		table at: index put: index squared].
+	self shouldRaiseError: [table at: 40 put: 2 << 15].
+	table zapDefaultOnlyEntries.
+	self assert: size equals: table size.
+	self assert: chunkSize equals: table chunkSize.
+	indices do: [:index |
+		self assert: index squared equals: (table at: index)].
+)
+
+testNew = (
+	| table |
+	table := self classUnderTest new.
+	self assert: 0 equals: table size.
+)
+
+testNewFrom = (
+	| array table |
+	array := Array streamContents: [:stream |
+		15 timesRepeat: [stream nextPutAll: #($a $b $b $b $b $c $c $a)]]. "must be longer than defaultChunkSize"
+	table := self classUnderTest newFrom: array.
+	self assert: array size equals: table size.
+	self assert: array equals: table asArray.
+)
+
+testNewWithAll = (
+	| size table |
+	size := 150. "must be longer than defaultChunkSize"
+	table := self classUnderTest new: size withAll: 2.
+	self assert: size equals: table size.
+	self assert: (Array new: size withAll: 2) equals: table asArray.
+)
+
+testNewWithSize = (
+	| size table |
+	size := 14.
+	table := self classUnderTest new: size chunkSize: 5.
+	self assert: size equals: table size.
+	1 to: size do: [:index | self assert: (table at: index) isNil].
+	self shouldRaiseError: [table at: 0].
+	self shouldRaiseError: [table at: size + 1].
+)
+
+testSparseElementsAndIndicesDo = (
+	| defaultValue indices table sparse |
+	defaultValue := 0.
+	indices := #(20 22 23 27 28 29 54 56 57 58).
+	table := self classUnderTest new: 60 chunkSize: 8 arrayClass: DoubleByteArray base: 11 defaultValue: defaultValue.
+	indices do: [:index |
+		table at: index put: index squared].
+	table zapDefaultOnlyEntries.
+	sparse := Dictionary new.
+	table sparseElementsAndIndicesDo: [:element :index |
+		self deny: (sparse includesKey: index).
+		sparse at: index put: element].
+	table withIndexDo: [:element :index |
+		self assert: element equals: (sparse at: index ifAbsent: [0])].
+)
+
+)

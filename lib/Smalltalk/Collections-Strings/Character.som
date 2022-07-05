@@ -54,6 +54,16 @@ canBeIdentifierInitial = (
 	^ self == $_ or: [self isLetter]
 )
 
+charCode = (
+	"Drop the #leadingChar. See #leadingChar:code:."
+	^ self asInteger "bitAnd: 16r3FFFFF"
+)
+
+codePoint = (
+	"Return the encoding value of the receiver. Until we stop supporting #leadingChar, we must forward to #charCode not #asInteger to get actual Unicode code points."
+	^ self charCode
+)
+
 deepCopy = (
 	"Answer the receiver, because Characters are unique."
 	^self

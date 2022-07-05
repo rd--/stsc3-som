@@ -1,5 +1,5 @@
 "Since classes are loaded lazily, asking for subclasses initially gives an empty set"
-allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
+allTests := {ArrayTest. AssociationTest. BagTest. BlockClosureTest. ByteArrayTest. ChainedSortFunctionTest. CharacterTest. CollectionTest. ComplexTest. DateAndTimeTest. DateTest. DictionaryTest. DurationTest. FalseTest. FloatTest. FractionTest. GeneratorTest. HeapTest. IdentityBagTest. IntegerTest. IntegerDigitLogicTest. IntervalTest. JsonTest. KeyedSetTest. LinkedListTest. LRUCacheTest. MatrixTest. MonthTest. NumberTest. NumberParsingTest. ObjectTest. OrderedCollectionTest. OrderedDictionaryTest. RandomTest. ReadStreamTest. ReadWriteStreamTest. RunArrayTest. RxMatcherTest. RxParserTest. SequenceableCollectionTest. SetTest. SetWithNilTest. SmallIntegerTest. SortFunctionTest. SortedCollectionTest. TestSpaceshipOperator. StackTest. StringTest. SymbolTest. TimeTest. TimespanTest. TimeStampTest. TrueTest. UndefinedObjectTest. WeekTest. WriteStreamTest. YearTest.}
 
 "Run all tests"
 allTests do: [ :each | each suite run printOn: Transcript ]
@@ -116,6 +116,9 @@ ReadStreamTest suite run printOn: Transcript
 ReadWriteStreamTest testSelectors do: [ :each | Transcript show: each; cr. ReadWriteStreamTest run: each ]
 ReadWriteStreamTest suite run printOn: Transcript
 
+RunArrayTest testSelectors do: [ :each | Transcript show: each; cr. RunArrayTest run: each ]
+RunArrayTest suite run printOn: Transcript
+
 RxMatcherTest testSelectors do: [ :each | Transcript show: each; cr. RxMatcherTest run: each ]
 RxMatcherTest suite run printOn: Transcript
 
@@ -140,9 +143,6 @@ SortedCollectionTest suite run printOn: Transcript
 SortFunctionTest testSelectors do: [ :each | Transcript show: each; cr. SortFunctionTest run: each ]
 SortFunctionTest suite run printOn: Transcript
 
-SpaceshipOperatorTest testSelectors do: [ :each | Transcript show: each; cr. SpaceshipOperatorTest run: each ]
-SpaceshipOperatorTest suite run printOn: Transcript
-
 StackTest testSelectors do: [ :each | Transcript show: each; cr. StackTest run: each ]
 StackTest suite run printOn: Transcript
 
@@ -151,6 +151,9 @@ StringTest suite run printOn: Transcript
 
 SymbolTest testSelectors do: [ :each | Transcript show: each; cr. SymbolTest run: each ]
 SymbolTest suite run printOn: Transcript
+
+TestSpaceshipOperator testSelectors do: [ :each | Transcript show: each; cr. TestSpaceshipOperator run: each ]
+TestSpaceshipOperator suite run printOn: Transcript
 
 TimeTest testSelectors do: [ :each | Transcript show: each; cr. TimeTest run: each ]
 TimeTest suite run printOn: Transcript
@@ -187,6 +190,13 @@ Smalltalk utcOffset
 [ [ (Delay forSeconds: 3) wait. Transcript nextPutAll: 'thread'; cr ] fork. Transcript nextPutAll: 'main'; cr ] value "prints main then thread"
 [ | thread | thread := [ (Delay forSeconds: 1) wait. Transcript nextPutAll: 'thread'; cr ] fork. thread kill. ] value "won't print anything..."
 [ | mvar | mvar := MVar new. [ (Delay forSeconds: 3) wait. mvar nextPut: 'delayed' ] fork. Transcript nextPutAll: mvar next; cr ] value "print after delay"
+
+"These don't work because Som has no notation for variableSubclass:"
+SparseLargeArrayTest testSelectors do: [ :each | Transcript show: each; cr. SparseLargeArrayTest run: each ]
+SparseLargeArrayTest suite run printOn: Transcript
+
+SparseLargeTableTest testSelectors do: [ :each | Transcript show: each; cr. SparseLargeTableTest run: each ]
+SparseLargeTableTest suite run printOn: Transcript
 
 "Emacs"
 (setq stsc3-interpreter (list "stsc3-st"))

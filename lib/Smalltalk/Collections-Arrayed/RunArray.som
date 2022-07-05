@@ -1,0 +1,688 @@
+RunArray = SequenceableCollection (
+
+| runs values lastIndex lastRun lastOffset |
+
+, aRunArray = (
+	"Answer a new RunArray that is a concatenation of the receiver and
+	aRunArray."
+	| new newRuns |
+	(aRunArray isMemberOf: RunArray)
+		ifFalse:
+			[new := self copy.
+			"attempt to be sociable"
+			aRunArray do: [:each | new addLast: each].
+			^new].
+	runs size = 0 ifTrue: [^aRunArray copy].
+	aRunArray runs size = 0 ifTrue: [^self copy].
+	(values at: values size) ~= (aRunArray values at: 1)
+		ifTrue: [^RunArray
+					runs: runs , aRunArray runs
+					values: values , aRunArray values].
+	newRuns := runs
+					copyReplaceFrom: runs size
+					to: runs size
+					with: aRunArray runs.
+	newRuns at: runs size put: (runs at: runs size) + (aRunArray runs at: 1).
+	^RunArray
+		runs: newRuns
+		values:
+			(values
+				copyReplaceFrom: values size
+				to: values size
+				with: aRunArray values)
+)
+
+= anObject = (
+	self == anObject ifTrue: [^ true].
+	^anObject class == self class
+		and:
+			[(runs hasEqualElements: anObject runs)
+			 and: [values hasEqualElements: anObject values]]
+)
+
+add: value withOccurrences: times = (
+	"Add value as the last element of the receiver, the given number of times"
+	times = 0 ifTrue: [ ^self ].
+	lastIndex := nil.  "flush access cache"
+	(runs size=0 or: [values last ~= value])
+	  ifTrue:
+		[runs := runs copyWith: times.
+		values := values copyWith: value]
+	  ifFalse:
+		[runs at: runs size put: runs last+times]
+)
+
+addFirst: value = (
+	"Add value as the first element of the receiver."
+	lastIndex := nil.  "flush access cache"
+	(runs size=0 or: [values first ~= value])
+	  ifTrue:
+		[runs := {1}, runs.
+		values := {value}, values]
+	  ifFalse:
+		[runs at: 1 put: runs first+1]
+)
+
+addLast: value = (
+	"Add value as the last element of the receiver."
+	lastIndex := nil.  "flush access cache"
+	(runs size=0 or: [values last ~= value])
+	  ifTrue:
+		[runs := runs copyWith: 1.
+		values := values copyWith: value]
+	  ifFalse:
+		[runs at: runs size put: runs last+1].
+	^value
+)
+
+asBag = (
+	| aBag |
+	aBag := Bag new: values size.
+	self runsAndValuesDo: [:run :value |
+		aBag add: value withOccurrences: run].
+	^aBag
+)
+
+asSet = (
+	^values asSet
+)
+
+at: index = (
+	self at: index setRunOffsetAndValue: [:run :offset :value |
+		offset < 0 ifTrue: [ self errorSubscriptBounds: index ].
+		offset >= (runs at: run) ifTrue: [ self errorSubscriptBounds: index ].
+		^value]
+)
+
+at: index put: aValue = (
+	"Set an element of the RunArray"
+	| runIndex offsetInRun lastValue runLength runReplacement valueReplacement iStart iStop |
+	index isInteger
+		ifFalse: [self errorNonIntegerIndex].
+	(index >= 1
+			and: [index <= self size])
+		ifFalse: [self errorSubscriptBounds: index].
+	self
+		at: index
+		setRunOffsetAndValue: [:run :offset :value |
+			runIndex := run.
+			offsetInRun := offset.
+			lastValue := value].
+	aValue = lastValue
+		ifTrue: [^ aValue].
+	runLength := runs at: runIndex.
+	runReplacement := Array
+				with: offsetInRun
+				with: 1
+				with: runLength - offsetInRun - 1.
+	valueReplacement := Array
+				with: lastValue
+				with: aValue
+				with: lastValue.
+	iStart := offsetInRun = 0
+				ifTrue: [2]
+				ifFalse: [1].
+	iStop := offsetInRun = (runLength - 1)
+				ifTrue: [2]
+				ifFalse: [3].
+	self
+		setRuns: (runs copyReplaceFrom: runIndex to: runIndex with: (runReplacement copyFrom: iStart to: iStop))
+		setValues: (values copyReplaceFrom: runIndex to: runIndex with: (valueReplacement copyFrom: iStart to: iStop)).
+	self coalesce.
+	^ aValue
+)
+
+at: index setRunOffsetAndValue: aBlock = (
+	"Supply all run information to aBlock."
+	"Tolerates index=0 and index=size+1 for copyReplace: "
+	| run limit offset |
+	limit := runs size.
+	(lastIndex == nil or: [index < lastIndex])
+		ifTrue:  "cache not loaded, or beyond index - start over"
+			[run := 1.
+			offset := index-1]
+		ifFalse:  "cache loaded and before index - start at cache"
+			[run := lastRun.
+			offset := lastOffset + (index-lastIndex)].
+	[run <= limit and: [offset >= (runs at: run)]]
+		whileTrue:
+			[offset := offset - (runs at: run).
+			run := run + 1].
+	lastIndex := index.  "Load cache for next access"
+	lastRun := run.
+	lastOffset := offset.
+	run > limit
+		ifTrue:
+			["adjustment for size+1"
+			run := run - 1.
+			offset := offset + (runs at: run)].
+	^aBlock
+		value: run	"an index into runs and values"
+		value: offset	"zero-based offset from beginning of this run"
+		value: (values at: run)	"value for this run"
+)
+
+atPin: index = (
+	self at: index setRunOffsetAndValue: [:run :offset :value | ^value]
+)
+
+coalesce = (
+	"Coalesce theRuns and theValues if ever the values have adjacent equal objects"
+	| lastLength lastValue mustCoalesce coalescedRuns coalescedValued runIndex |
+	mustCoalesce := false.
+	runIndex := 0.
+	lastLength := 0.
+	lastValue := Object new.
+	runs with: values do: [:run :value |
+		(lastValue = value or: [run = 0])
+			ifTrue:
+				[mustCoalesce
+					ifFalse:
+						[coalescedRuns := (Array new: runs size) writeStream.
+						coalescedValued := (Array new: values size) writeStream.
+						coalescedRuns next: runIndex putAll: runs startingAt: 1.
+						coalescedValued next: runIndex putAll: values startingAt: 1.
+						mustCoalesce := true].
+				lastLength := lastLength + run]
+			ifFalse:
+				[lastLength > 0
+					ifTrue:
+						[mustCoalesce
+							ifTrue:
+								[coalescedRuns nextPut: lastLength.
+								coalescedValued nextPut: lastValue].
+						runIndex := runIndex + 1].
+				lastLength := run.
+				lastValue := value]].
+	mustCoalesce
+		ifTrue:
+			[lastLength > 0
+				ifTrue:
+					[coalescedRuns nextPut: lastLength.
+					coalescedValued nextPut: lastValue].
+			self setRuns: coalescedRuns contents setValues: coalescedValued contents]
+)
+
+copyFrom: start to: stop = (
+	| newRuns run1 run2 offset1 offset2 |
+	stop < start ifTrue: [^RunArray new].
+	self at: start setRunOffsetAndValue: [:r :o :value1 | run1 := r. offset1
+:= o.  value1].
+	self at: stop setRunOffsetAndValue: [:r :o :value2 | run2 := r. offset2
+:= o. value2].
+	run1 = run2
+		ifTrue:
+			[newRuns := Array with: offset2 - offset1 + 1]
+		ifFalse:
+			[newRuns := runs copyFrom: run1 to: run2.
+			newRuns at: 1 put: (newRuns at: 1) - offset1.
+			newRuns at: newRuns size put: offset2 + 1].
+	^RunArray runs: newRuns values: (values copyFrom: run1 to: run2)
+)
+
+copyReplaceFrom: start to: stop with: replacement = (
+	^(self copyFrom: 1 to: start - 1)
+		, replacement
+		, (self copyFrom: stop + 1 to: self size)
+)
+
+copyUpThrough: value = (
+	"Optimized"
+	| newSize newValues newRuns |
+	newSize := values indexOf: value startingAt: 1.
+	newSize = 0 ifTrue: [^self copy].
+	newRuns := runs copyFrom: 1 to: newSize.
+	newRuns at: newSize put: 1.
+	newValues := values copyFrom: 1 to: newSize.
+	^ self class
+		runs: newRuns
+		values: newValues
+)
+
+copyUpTo: anElement = (
+	"Optimized"
+	| newValues |
+	newValues := values copyUpTo: anElement.
+	^ self class
+		runs: (runs copyFrom: 1 to: newValues size)
+		values: newValues
+)
+
+copyUpToLast: value = (
+	"Optimized"
+	| newSize run newRuns newValues |
+	newSize := values lastIndexOf: value startingAt: values size.
+	newSize = 0 ifTrue: [^self copy].
+	run := runs at: newSize.
+	run > 1
+		ifTrue:
+			[newRuns := runs copyFrom: 1 to: newSize.
+			newRuns at: newSize put: run - 1]
+		ifFalse:
+			[newSize := newSize - 1.
+			newRuns := runs copyFrom: 1 to: newSize].
+	newValues := values copyFrom: 1 to: newSize.
+	^ self class
+		runs: newRuns
+		values: newValues
+)
+
+do: aBlock = (
+	"This is refined for speed"
+	1 to: runs size do: [:i |
+		| r v |
+		v := values at: i.
+		r := runs at: i.
+		[( r := r - 1) >= 0]
+			whileTrue: [aBlock value: v]].
+)
+
+fillFrom: aCollection with: aBlock = (
+	"Evaluate aBlock with each of aCollections's elements as the argument.
+	Collect the resulting values into self. Answer self."
+	| newRuns newValues lastLength lastValue |
+	newRuns := (Array new: aCollection size) writeStream.
+	newValues := (Array new: aCollection size) writeStream.
+	lastLength := 0.
+	lastValue := Object new.
+	lastIndex := nil.  "flush access cache"
+	aCollection do: [:each |
+		| value |
+		value := aBlock value: each.
+		lastValue = value
+			ifTrue: [lastLength := lastLength + 1]
+			ifFalse:
+				[lastLength > 0
+					ifTrue:
+						[newRuns nextPut: lastLength.
+						newValues nextPut: lastValue].
+				lastLength := 1.
+				lastValue := value]].
+	lastLength > 0
+		ifTrue:
+			[newRuns nextPut: lastLength.
+			newValues nextPut: lastValue].
+	self setRuns: newRuns contents setValues: newValues contents
+)
+
+findFirst: aBlock = (
+	| index |
+	index := 1.
+	self runsAndValuesDo: [ :run :value |
+		(aBlock value: value) ifTrue: [^index].
+		index := index + run].
+	^0
+)
+
+findLast: aBlock = (
+	| index |
+	index := values size + 1.
+	[(index := index - 1) >= 1] whileTrue:
+		[(aBlock value: (values at: index)) ifTrue: [^(1 to: index) detectSum: [:i | runs at: i]]].
+	^0
+)
+
+first = (
+	^values at: 1
+)
+
+includes: anObject = (
+	"Answer whether anObject is one of the receiver's elements."
+	^values includes: anObject
+)
+
+indexOf: anElement startingAt: start = (
+	"Answer the index of the first occurence of anElement after start
+	within the receiver. If the receiver does not contain anElement,
+	answer 0."
+	| index |
+	index := 1.
+	self runsAndValuesDo: [ :run :value |
+		(index >= start and: [value = anElement]) ifTrue: [^index].
+		index := index + run].
+	^0
+)
+
+indexOfAnyOf: aCollection startingAt: start = (
+	"Answer the index of the first occurence of any element included in aCollection after start within the receiver.
+	If the receiver does not contain anElement, answer zero, which is an invalid index."
+	| index |
+	index := 1.
+	self runsAndValuesDo: [ :run :value |
+		(index >= start and: [aCollection includes: value]) ifTrue: [^index].
+		index := index + run].
+	^0
+)
+
+isSorted = (
+	^values isSorted
+)
+
+isSortedBy: aBlock = (
+	^values isSortedBy: aBlock
+)
+
+keysAndValuesDo: aBlock = (
+	"This is refined for speed"
+	| index |
+	index := 0.
+	1 to: runs size do: [:i |
+		| r v |
+		v := values at: i.
+		r := runs at: i.
+		[( r := r - 1) >= 0]
+			whileTrue: [aBlock value: (index := index + 1) value: v]].
+)
+
+last = (
+	^values at: values size
+)
+
+lastIndexOf: anElement startingAt: lastIndex = (
+	"Answer the index of the last occurence of anElement within the
+	receiver. If the receiver does not contain anElement, answer 0."
+	| lastValueIndex |
+	lastValueIndex := values lastIndexOf: anElement startingAt: values size.
+	[lastValueIndex > 0] whileTrue:
+		[| i index |
+		i := index := 0.
+		[index <= lastIndex and: [(i := i + 1) <= lastValueIndex]]
+				whileTrue: [index := index + (runs at: i)].
+		index <= lastIndex ifTrue: [^index].
+		index - (runs at: lastValueIndex) < lastIndex ifTrue: [^lastIndex].
+		lastValueIndex := values lastIndexOf: anElement startingAt: lastValueIndex - 1].
+	^0
+)
+
+lastIndexOfAnyOf: aCollection startingAt: lastIndex = (
+	"Answer the index of the last occurence of any element of aCollection
+	within the receiver. If the receiver does not contain any of those
+	elements, answer 0"
+	| lastValueIndex |
+	lastValueIndex := values lastIndexOfAnyOf: aCollection startingAt: values size.
+	[lastValueIndex > 0] whileTrue:
+		[| i index |
+		i := index := 0.
+		[index <= lastIndex and: [(i := i + 1) <= lastValueIndex]]
+				whileTrue: [index := index + (runs at: i)].
+		index <= lastIndex ifTrue: [^index].
+		index - (runs at: lastValueIndex) < lastIndex ifTrue: [^lastIndex].
+		lastValueIndex := values lastIndexOfAnyOf: aCollection startingAt: lastValueIndex - 1].
+	^0
+)
+
+mapValues: mapBlock = (
+	"NOTE: only meaningful to an entire set of runs"
+	values := values collect: mapBlock
+)
+
+postCopy = (
+	super postCopy.
+	runs := runs copy.
+	values := values copy
+)
+
+printOn: aStream = (
+	self printNameOn: aStream.
+	aStream
+		nextPutAll: ' runs: ';
+		print: runs;
+		nextPutAll: ' values: ';
+		print: values
+)
+
+rangeOf: attr startingAt: startPos = (
+	"Answer an interval that gives the range of attr at index position  startPos. An empty interval with start value startPos is returned when the attribute attr is not present at position startPos.  self size > 0 is assumed, it is the responsibility of the caller to test for emptiness of self.
+Note that an attribute may span several adjancent runs. "
+	self at: startPos
+		setRunOffsetAndValue:
+            [:run :offset :value |
+               ^(value includes: attr)
+                  ifFalse: [startPos to: startPos - 1]
+                  ifTrue:
+                    [ | firstRelevantPosition lastRelevantPosition idxOfCandidateRun |
+                     lastRelevantPosition := startPos - offset + (runs at: run) - 1.
+                     firstRelevantPosition := startPos - offset.
+                     idxOfCandidateRun := run + 1.
+                     [idxOfCandidateRun <= runs size
+                             and: [(values at: idxOfCandidateRun) includes: attr]]
+                        whileTrue:
+                          [lastRelevantPosition := lastRelevantPosition + (runs at: idxOfCandidateRun).
+                           idxOfCandidateRun := idxOfCandidateRun + 1].
+                     idxOfCandidateRun := run - 1.
+                     [idxOfCandidateRun >= 1
+                             and: [(values at: idxOfCandidateRun) includes: attr]]
+                        whileTrue:
+                          [firstRelevantPosition := firstRelevantPosition - (runs at: idxOfCandidateRun).
+                           idxOfCandidateRun := idxOfCandidateRun - 1].
+                    firstRelevantPosition to: lastRelevantPosition]
+		  ]
+)
+
+remove: anObject ifAbsent: exceptionBlock = (
+	| index mustCoalesce run |
+	lastIndex := nil.  "flush access cache"
+	index := values indexOf: anObject ifAbsent: [^exceptionBlock value].
+	(run := runs at: index) > 1
+		ifTrue: [runs at: index put: run - 1]
+		ifFalse:
+			[mustCoalesce := index > 1 and: [index < values size and: [(values at: index - 1) = (values at: index + 1)]].
+			runs := runs copyWithoutIndex: index.
+			values := values copyWithoutIndex: index.
+			mustCoalesce
+				ifTrue:
+					[runs at: index - 1 put: (runs at: index - 1) + (runs at: index).
+					runs := runs copyWithoutIndex: index.
+					values := values copyWithoutIndex: index]].
+	^anObject
+)
+
+removeAll = (
+	lastIndex := nil.  "flush access cache"
+	runs := runs copyEmpty.
+	values := values copyEmpty
+)
+
+repeatLast: times ifEmpty: defaultBlock = (
+	"add the last value back again, the given number of times.  If we are empty, add (defaultBlock value)"
+	times = 0 ifTrue: [^self ].
+	lastIndex := nil.  "flush access cache"
+	(runs size=0)
+	  ifTrue:
+		[runs := runs copyWith: times.
+		values := values copyWith: defaultBlock value]
+	  ifFalse:
+		[runs at: runs size put: runs last+times]
+)
+
+repeatLastIfEmpty: defaultBlock = (
+	"add the last value back again.  If we are empty, add (defaultBlock value)"
+	lastIndex := nil.  "flush access cache"
+	(runs size=0)
+	  ifTrue:[
+		 runs := runs copyWith: 1.
+		values := values copyWith: defaultBlock value]
+	  ifFalse:
+		[runs at: runs size put: runs last+1]
+)
+
+replace: aBlock = (
+	"destructively replace the values in this RunArray with the ones transformed by aBlock."
+	lastIndex := nil.  "flush access cache"
+	values := values replace: aBlock.
+	self coalesce
+)
+
+reverseDo: aBlock = (
+	"This is refined for speed"
+	| i |
+	i := runs size.
+	[i > 0]
+		whileTrue:
+			[ | r v |
+			v := values at: i.
+			r := runs at: i.
+			i := i - 1.
+			[( r := r - 1) >= 0]
+				whileTrue: [aBlock value: v]].
+)
+
+reversed = (
+  ^self class runs: runs reversed values: values reversed
+)
+
+runLengthAt: index = (
+	"Answer the length remaining in run beginning at index."
+	self at: index
+		setRunOffsetAndValue: [:run :offset :value | ^(runs at: run) - offset]
+)
+
+runs = (
+	^runs
+)
+
+runsAndValuesDo: aBlock = (
+	"Evaluate aBlock with run lengths and values from the receiver"
+	^runs with: values do: aBlock.
+)
+
+runsFrom: start to: stop do: aBlock = (
+	"Evaluate aBlock with all existing runs in the range from start to stop"
+	start > stop ifTrue:[^self].
+	self at: start setRunOffsetAndValue:[:firstRun :offset :firstValue|
+		| run value index |
+		run := firstRun.
+		value := firstValue.
+		index := start + (runs at: run) - offset.
+		[aBlock value: value.
+		index <= stop] whileTrue:[
+			run := run + 1.
+			value := values at: run.
+			index := index + (runs at: run)]].
+)
+
+setRuns: newRuns setValues: newValues = (
+	lastIndex := nil.  "flush access cache"
+	runs := newRuns asArray.
+	values := newValues asArray.
+)
+
+size = (
+	| size |
+	size := 0.
+	1 to: runs size do: [:i | size := size + (runs at: i)].
+	^size
+)
+
+storeOn: aStream = (
+	aStream nextPut: $(.
+	aStream nextPutAll: self class name.
+	aStream nextPutAll: ' runs: '.
+	runs storeOn: aStream.
+	aStream nextPutAll: ' values: '.
+	values storeOn: aStream.
+	aStream nextPut: $)
+)
+
+values = (
+	"Answer the values in the receiver."
+	^values
+)
+
+withIndexDo: aBlock = (
+	"This is refined for speed"
+	| index |
+	index := 0.
+	1 to: runs size do: [:i |
+		| r v |
+		v := values at: i.
+		r := runs at: i.
+		[( r := r - 1) >= 0]
+			whileTrue: [aBlock value: v value: (index := index + 1)]].
+)
+
+withStartStopAndValueDo: aBlock = (
+	| start |
+	start := 1.
+	runs with: values do:
+		[:len : val | | stop |
+		stop := start + len - 1.
+		aBlock value: start value: stop value: val.
+		start := stop + 1]
+)
+
+writeOn: aStream = (
+	aStream nextWordPut: runs size.
+	1 to: runs size do:
+		[:x |
+		aStream nextWordPut: (runs at: x).
+		aStream nextWordPut: (values at: x)]
+)
+
+----------------------------
+
+new = (
+	^self runs: Array new values: Array new
+)
+
+new: aSize = (
+	^ self new: aSize withAll: nil
+)
+
+new: size withAll: value = (
+	"Answer a new instance of me, whose every element is equal to the
+	argument, value."
+	size = 0 ifTrue: [^self new].
+	^self runs: (Array with: size) values: (Array with: value)
+)
+
+newFrom: aCollection = (
+	"Answer an instance of me containing the same elements as aCollection."
+	| newCollection |
+	newCollection := self new.
+	newCollection fillFrom: aCollection with: [:each | each].
+	^newCollection
+"	RunArray newFrom: {1. 2. 2. 3}
+	{1. $a. $a. 3} as: RunArray
+	({1. $a. $a. 3} as: RunArray) values
+"
+)
+
+readFrom: aStream = (
+	"Answer an instance of me as described on the stream, aStream."
+	| size runs values |
+	size := aStream nextWord.
+	runs := Array new: size.
+	values := Array new: size.
+	1 to: size do:
+		[:x |
+		runs at: x put: aStream nextWord.
+		values at: x put: aStream nextWord].
+	^ self runs: runs values: values
+)
+
+runs: newRuns values: newValues = (
+	"Answer an instance of me with runs and values specified by the
+	arguments."
+	| instance |
+	instance := self basicNew.
+	instance setRuns: newRuns setValues: newValues.
+	^instance
+)
+
+comment = (^'
+My instances provide space-efficient storage of data which tends to be constant over long runs of the possible indices. Essentially repeated values are stored singly and then associated with a "run" length that denotes the number of consecutive occurrences of the value.
+
+My two important variables are
+	runs	An array of how many elements are in each run
+	values	An array of what the value is over those elements
+
+The variables lastIndex, lastRun and lastOffset cache the last access
+so that streaming through RunArrays is not an N-squared process.
+Beware: methods modifying the RunArray contents should reset the lastIndex cache to nil.
+
+Many complexities of access can be bypassed by using the method
+	RunArray withStartStopAndValueDo:
+')
+
+)
