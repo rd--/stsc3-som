@@ -1,0 +1,15 @@
+MessageSendTest = TestCase (
+testNumArgs = (
+	self
+		 assert:
+			(MessageSend
+				receiver: Dictionary new
+				selector: #at:put:) numArgs = 2 ;
+		 assert:
+			(MessageSend
+				receiver: 3
+				selector: #sqrt) numArgs = 0
+)
+
+
+)
