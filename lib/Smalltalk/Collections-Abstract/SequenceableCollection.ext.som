@@ -4,5 +4,10 @@ permutations = (
 	^ (Generator on: [ :g | self permutationsDo: [ :each | g yield: each ] ]) contents
 )
 
+withIndexCollectZeroIndexed: f = (
+	"Zero indexed variant of #withIndexCollect:"
+	^self withIndexCollect: [ :e :i | f value: e value: i - 1 ]
+)
+
 )
 

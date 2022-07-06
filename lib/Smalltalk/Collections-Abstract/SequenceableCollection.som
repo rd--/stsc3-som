@@ -306,11 +306,6 @@ collect: aBlock from: firstIndex to: lastIndex = (
 	^result
 )
 
-collectWithIndex: elementAndIndexBlock = (
-	"Use the new version with consistent naming"
-	^ self withIndexCollect: elementAndIndexBlock
-)
-
 combinations: kk atATimeDo: aBlock = (
 	"Take the items in the receiver, kk at a time, and evaluate the block for each combination.  Hand in an array of elements of self as the block argument.  Each combination only occurs once, and order of the elements does not matter.  There are (self size take: kk) combinations."
 	" (1 to: 5) combinations: 3 atATimeDo: [:each | Transcript cr; show: each printString]"
@@ -549,11 +544,6 @@ do: aBlock without: anItem = (
 	"Refer to the comment in Collection|do:."
 	1 to: self size do:
 		[:index | anItem = (self at: index) ifFalse:[aBlock value: (self at: index)]]
-)
-
-doWithIndex: elementAndIndexBlock = (
-	"Use the new version with consistent naming"
-	^ self withIndexDo: elementAndIndexBlock
 )
 
 eighth = (
@@ -1584,11 +1574,6 @@ withIndexCollect: elementAndIndexBlock = (
 			value: (self at: index)
 			value: index)].
 	^ result
-)
-
-withIndexCollectZeroIndexed: f = (
-    "Zero indexed variant of #withIndexCollect:"
-    ^self withIndexCollect: [ :e :i | f value: e value: i - 1 ]
 )
 
 withIndexDo: elementAndIndexBlock = (

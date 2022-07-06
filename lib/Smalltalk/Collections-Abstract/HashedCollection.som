@@ -15,12 +15,6 @@ add: newObject withOccurrences: anInteger = (
 	^self add: newObject
 )
 
-doWithIndex: aBlock2 = (
-	| index |
-	index := 0.
-	self do: [:item | aBlock2 value: item value: (index := index+1)]
-)
-
 union: aCollection = (
 	"Answer the set theoretic union of the receiver and aCollection, using the receiver's notion of equality and not side effecting the receiver at all."
 	^ self copy addAll: aCollection; yourself
@@ -97,6 +91,13 @@ scanForEmptySlotFor: anObject = (
 		(array at: index) ifNil: [ ^index ].
 		(index := index \\ size + 1) = start ] whileFalse.
 	self errorNoFreeSpace
+)
+
+withIndexDo: aBlock2 = (
+	"Support Set enumeration with a counter, even though not ordered"
+	| index |
+	index := 0.
+	self do: [:item | aBlock2 value: item value: (index := index+1)]
 )
 
 ----------------------------
