@@ -66,6 +66,11 @@ ifNotNil: ifNotNilBlock ifNil: nilBlock = (
 	^ nilBlock value
 )
 
+notNil = (
+	"Refer to the comment in Object|notNil."
+	^false
+)
+
 printAsLiteralOn: aStream = (
 	^self printOn: aStream
 )

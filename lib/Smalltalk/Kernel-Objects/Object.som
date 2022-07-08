@@ -15,6 +15,8 @@ Object = nil (
 )
 
 ~~ anObject = (
+	"Answer whether the receiver and the argument are not the same object
+	(do not have the same object pointer).  Primitive.  Optional."
 	<primitive: 169>
 	self == anObject ifTrue: [^false].
 	^true
@@ -163,6 +165,18 @@ breakDependents = (
 	self dependentsFields removeKey: self ifAbsent: []
 )
 
+cannotInterpret: aMessage = (
+	 "Handle the fact that there was an attempt to send the given message to the receiver but a null methodDictionary was encountered while looking up the message selector.  Hopefully this is the result of encountering a stub for a swapped out class which induces this exception on purpose."
+"If this is the result of encountering a swap-out stub, then simulating the lookup in Smalltalk should suffice to install the class properly, and the message may be resent."
+	(self class lookupSelector: aMessage selector) == nil ifFalse:
+		["Simulated lookup succeeded -- resend the message."
+		^ aMessage sentTo: self].
+	"Could not recover by simulated lookup -- it's an error"
+	Error signal: 'MethodDictionary fault'.
+	"Try again in case an error handler fixed things"
+	^ aMessage sentTo: self
+)
+
 caseOf: aBlockAssociationCollection = (
 	"The elements of aBlockAssociationCollection are associations between blocks.
 	 Answer the evaluated value of the first association in aBlockAssociationCollection
@@ -262,12 +276,13 @@ dependentsFields = (
 )
 
 doesNotUnderstand: aMessage = (
+"
+	^ MessageNotUnderstood new
+		message: aMessage;
+		receiver: self;
+		signal
+"
 	self error: ('Method ' , aMessage selector , ' not found in class ' , self class name)
-)
-
-doesNotUnderstand: aSymbol arguments: anArray = (
-	"This is the Som form."
-	self doesNotUnderstand: (Message selector: aSymbol arguments: anArray)
 )
 
 enclosedSetElement = (
@@ -307,6 +322,12 @@ escapedBlock: block = (
 fatalError: aString = (
 	Transcript show: ('Object>>fatalError: ' , aString); cr.
 	Smalltalk exit: 1
+)
+
+flag: aSymbol = (
+	"Send this message, with a relevant symbol as argument, to flag a message for subsequent retrieval.  For example, you might put the following line in a number of messages:
+	self flag: #returnHereUrgently
+	Then, to retrieve all such messages, browse all senders of #returnHereUrgently."
 )
 
 fullPrintString = (
@@ -469,6 +490,11 @@ isHeap = (
 	^ false
 )
 
+isInMemory = (
+	"All normal objects are."
+	^ true
+)
+
 isInteger = (
 	^ false
 )
@@ -510,10 +536,6 @@ isSymbol = (
 	^ false
 )
 
-notNil = (
-	^true
-)
-
 instVarAt: index = (
 	"Primitive. Answer a fixed variable in an object. The numbering of the variables
 	 corresponds to the named instance variables, followed by the indexed instance
@@ -544,6 +566,27 @@ newFrom: aSimilarObject = (
 		ifTrue: [self basicNew: aSimilarObject basicSize]
 		ifFalse: [self basicNew]
 	  ) copySameFrom: aSimilarObject
+)
+
+nextInstance = (
+	"Primitive. Answer the next instance after the receiver in the
+	enumeration of all instances of this class. Fails if all instances have been
+	enumerated. Essential. See Object documentation whatIsAPrimitive."
+	<primitive: 78>
+	^nil
+)
+
+nextObject = (
+	"Primitive. Answer the next object after the receiver in the
+	enumeration of all objects. Return 0 when all objects have been
+	enumerated."
+	<primitive: 139>
+	self primitiveFailed.
+)
+
+notNil = (
+	"Coerces nil to false and everything else to true."
+	^true
 )
 
 perform: aSymbol = (
@@ -617,6 +660,13 @@ perform: selector withEnoughArguments: anArray = (
 				with: anArray
 				startingAt: 1 ].
 	^self perform: selector withArguments: args
+)
+
+pointsTo: anObject = (
+"Answers true if I hold a reference to anObject, or false otherwise. Or stated another way:
+Answers true if the garbage collector would fail to collect anObject because I hold a reference to it, or false otherwise"
+	^ (self instVarsInclude: anObject)
+		or: [self class == anObject]
 )
 
 postCopy = (
