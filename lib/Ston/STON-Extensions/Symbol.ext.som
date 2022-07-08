@@ -1,0 +1,7 @@
+Symbol = Symbol (
+
+stonOn: stonWriter = (
+	stonWriter writeSymbol: self
+)
+
+)

@@ -1,0 +1,7 @@
+Integer = Integer (
+
+stonOn: stonWriter = (
+	stonWriter writeInteger: self
+)
+
+)

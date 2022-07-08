@@ -1,0 +1,92 @@
+STON = Object (
+
+----------------------------
+
+associationClass = (
+	^ Association
+)
+
+classNameKey = (
+	^ #className
+)
+
+fromStream: readStream = (
+	^ (self reader on: readStream) next
+)
+
+fromStreamWithComments: readStream = (
+	^ (self reader on: (STONCStyleCommentsSkipStream on: readStream)) next
+)
+
+fromString: string = (
+	^ self fromStream: string readStream
+)
+
+fromStringWithComments: string = (
+	^ self fromStreamWithComments: string readStream
+)
+
+jsonWriter = (
+	^ STONWriter new
+			jsonMode: true;
+			referencePolicy: #error;
+			yourself
+)
+
+listClass = (
+	^ Array
+)
+
+mapClass = (
+	^ Dictionary
+)
+
+put: object asJsonOnStream: stream = (
+	(self jsonWriter on: stream) nextPut: object
+)
+
+put: object asJsonOnStreamPretty: stream = (
+	(self jsonWriter on: stream)
+		prettyPrint: true;
+		nextPut: object
+)
+
+put: object onStream: stream = (
+	(self writer on: stream) nextPut: object
+)
+
+put: object onStreamPretty: stream = (
+	(self writer on: stream)
+		prettyPrint: true;
+		nextPut: object
+)
+
+reader = (
+	^ STONReader new
+)
+
+toJsonString: object = (
+	^ String streamContents: [ :stream |
+		self put: object asJsonOnStream: stream ]
+)
+
+toJsonStringPretty: object = (
+	^ String streamContents: [ :stream |
+		self put: object asJsonOnStreamPretty: stream ]
+)
+
+toString: object = (
+	^ String streamContents: [ :stream |
+		self put: object onStream: stream ]
+)
+
+toStringPretty: object = (
+	^ String streamContents: [ :stream |
+		self put: object onStreamPretty: stream ]
+)
+
+writer = (
+	^ STONWriter new
+)
+
+)

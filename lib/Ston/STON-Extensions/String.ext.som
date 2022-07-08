@@ -1,0 +1,7 @@
+String = String (
+
+stonOn: stonWriter = (
+	stonWriter writeString: self
+)
+
+)

@@ -140,6 +140,10 @@ at: index ifAbsent: exceptionBlock = (
 	^exceptionBlock value
 )
 
+at: index ifPresent: aBlock = (
+	^ self at: index ifPresent: aBlock ifAbsent: []
+)
+
 at: index ifPresent: elementBlock ifAbsent: exceptionBlock = (
 	"Answer the value of elementBlock on the element at position index.  If I do not contain an element at index, answer the result of evaluating exceptionBlock."
 	^ elementBlock value:

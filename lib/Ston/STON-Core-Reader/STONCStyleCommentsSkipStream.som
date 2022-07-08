@@ -1,0 +1,212 @@
+STONCStyleCommentsSkipStream = Object (
+
+| stream peekedCharacter delimiter escape |
+
+atEnd = (
+	^ self peek isNil
+)
+
+close = (
+	stream close
+)
+
+collectionSpecies = (
+	^ String
+)
+
+consumeComment = (
+	stream peek = $/ ifTrue: [ self consumeToEOL ].
+	stream peek = $* ifTrue: [ self consumeToCommentEnd ]
+)
+
+consumeToCommentEnd = (
+	[ stream atEnd or: [ stream next = $* and: [ stream peekFor: $/ ] ] ] whileFalse
+)
+
+consumeToEOL = (
+	| eol char |
+	eol := false.
+	[ eol ] whileFalse: [
+		char := stream next.
+		(char isNil or: [ char = Character lf ])
+			ifTrue: [ eol := true ]
+			ifFalse: [
+				char = Character cr
+					ifTrue: [
+						eol := true.
+						stream peekFor: Character lf ] ] ]
+)
+
+escape = (
+	"Return true when we previously read a backslash escape inside a string,
+	so that the next string delimiter should be returned as is"
+	^ escape = true
+)
+
+handleStringDelimiter: char = (
+	self escape
+		ifTrue: [ escape := false ]
+		ifFalse: [
+			self insideString
+				ifTrue: [
+					char = delimiter
+						ifTrue: [ delimiter := nil ] ]
+				ifFalse: [ delimiter := char ] ].
+	^ char
+)
+
+insideString = (
+	"Return true when we are currently inside a string where comments should be ignored."
+	^ (delimiter = $') | (delimiter = $")
+)
+
+isBinary = (
+	^ false
+)
+
+next = (
+	^ peekedCharacter
+		ifNil: [
+			stream atEnd
+				ifFalse: [ self nextNonCommentChar ] ]
+		ifNotNil: [ | character |
+			character := peekedCharacter.
+			peekedCharacter := nil.
+			character ]
+)
+
+next: requestedCount = (
+	"Read requestedCount elements into new collection and return it,
+	 it could be that less elements were available"
+	^ self
+		next: requestedCount
+		into: (self collectionSpecies new: requestedCount)
+)
+
+next: requestedCount into: collection = (
+	"Read requestedCount elements into collection,
+	returning a copy if less elements are available"
+	^ self
+		next: requestedCount
+		into: collection
+		startingAt: 1
+)
+
+next: requestedCount into: collection startingAt: offset = (
+	"Read requestedCount elements into collection starting at offset,
+	returning a copy if less elements are available"
+	| readCount |
+	readCount := self
+		readInto: collection
+		startingAt: offset
+		count: requestedCount.
+	^ requestedCount = readCount
+		ifTrue: [ collection ]
+		ifFalse: [ collection copyFrom: 1 to: offset + readCount - 1 ]
+)
+
+nextLine = (
+	"Read a CR, LF or CRLF terminated line, returning the contents of the line without the EOL. Return nil when the receiver is #atEnd."
+	self atEnd ifTrue: [ ^ nil ].
+	^ self collectionSpecies streamContents: [ :out | | eol char |
+		eol := false.
+		[ eol ] whileFalse: [
+			char := self next.
+			(char isNil or: [ char = Character lf ])
+				ifTrue: [ eol := true ]
+				ifFalse: [
+					char = Character cr
+						ifTrue: [ eol := true. self peekFor: Character lf ]
+						ifFalse: [  out nextPut: char ] ] ] ]
+)
+
+nextNonCommentChar = (
+	| char |
+	char := stream next.
+	(self insideString and: [ char = $\ ])
+		ifTrue: [
+			escape := true.
+			^ char ].
+	(char = $') | (char = $")
+		ifTrue: [
+			^ self handleStringDelimiter: char ].
+	escape := false.
+	^ (char = $/ and: [ self insideString not and: [ (stream peek = $/) | (stream peek = $*) ] ])
+		ifTrue: [
+			self consumeComment.
+			stream next ]
+		ifFalse: [ char ]
+)
+
+on: readStream = (
+	stream := readStream
+)
+
+peek = (
+	^ peekedCharacter
+		ifNil: [
+			stream atEnd
+				ifFalse: [
+					peekedCharacter := self nextNonCommentChar ] ]
+)
+
+peekFor: object = (
+	^ self peek = object
+		ifTrue: [
+			self next.
+			true ]
+		ifFalse: [ false ]
+)
+
+position = (
+	^ stream position
+)
+
+readInto: collection startingAt: offset count: requestedCount = (
+	"Read count elements and place them in collection starting at offset.
+	Return the number of elements actually read."
+	^ peekedCharacter
+		ifNil: [
+			0 to: requestedCount - 1 do: [ :count | | object |
+				(object := self nextNonCommentChar) ifNil: [ ^ count ].
+				collection at: offset + count put: object ].
+			^ requestedCount ]
+		ifNotNil: [
+			collection at: offset put: peekedCharacter.
+			peekedCharacter := nil.
+			(self
+				readInto: collection
+				startingAt: offset + 1
+				count: requestedCount - 1) + 1 ]
+)
+
+skip: count = (
+	count timesRepeat: [ self next ]
+)
+
+upTo: anObject = (
+	^ self collectionSpecies
+		streamContents: [ :out | | element |
+			[ self atEnd or: [ (element := self next) = anObject ] ] whileFalse: [
+				out nextPut: element ] ]
+)
+
+upToEnd = (
+	^ self collectionSpecies
+		streamContents: [ :collectionStream |
+			[ self atEnd ] whileFalse: [ collectionStream nextPut: self next ] ]
+)
+
+wrappedStream = (
+	^ stream
+)
+
+----------------------------
+
+on: readStream = (
+	^ self new
+		on: readStream;
+		yourself
+)
+
+)

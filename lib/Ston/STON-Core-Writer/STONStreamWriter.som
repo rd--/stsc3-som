@@ -1,0 +1,22 @@
+STONStreamWriter = Object (
+
+| writer first |
+
+initialize = (
+	super initialize.
+	first := true
+)
+
+on: stonWriter = (
+	writer := stonWriter
+)
+
+----------------------------
+
+on: stonWriter = (
+	^ self new
+		on: stonWriter;
+		yourself
+)
+
+)

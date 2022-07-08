@@ -123,6 +123,10 @@ instVarIndexFor: instVarName ifAbsent: aBlock = (
 	^self allInstVarNames indexOf: instVarName ifAbsent: aBlock
 )
 
+isMeta = (
+	^ false
+)
+
 isVariable = (
            ^false
 )

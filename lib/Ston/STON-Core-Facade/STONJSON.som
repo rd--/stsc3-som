@@ -1,0 +1,29 @@
+STONJSON = Object (
+
+----------------------------
+
+fromStream: stream = (
+	^ STON fromStream: stream
+)
+
+fromString: string = (
+	^ STON fromString: string
+)
+
+put: object onStream: stream = (
+	STON put: object asJsonOnStream: stream
+)
+
+put: object onStreamPretty: stream = (
+	STON put: object asJsonOnStreamPretty: stream
+)
+
+toString: object = (
+	^ STON toJsonString: object
+)
+
+toStringPretty: object = (
+	^ STON toJsonStringPretty: object
+)
+
+)

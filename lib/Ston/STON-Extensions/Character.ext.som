@@ -1,0 +1,13 @@
+Character = Character (
+
+stonOn: stonWriter = (
+	stonWriter writeObject: self listSingleton: self asString
+)
+
+----
+
+fromSton: stonReader = (
+	^ stonReader parseListSingleton first
+)
+
+)

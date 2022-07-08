@@ -1,0 +1,30 @@
+STONReaderError = Error (
+
+| streamPosition |
+
+messageText = (
+	^ streamPosition
+		ifNil: [
+			super messageText ]
+		ifNotNil: [ :pos |
+			'At character <1P>: <2P>' expandMacrosWith: pos with: super messageText ]
+)
+
+streamPosition = (
+	^ streamPosition
+)
+
+streamPosition: aNumber = (
+	streamPosition := aNumber
+)
+
+----------------------------
+
+signal: aString streamPosition: streamPosition = (
+	^ self new
+		streamPosition: streamPosition;
+		signal: aString;
+		yourself
+)
+
+)

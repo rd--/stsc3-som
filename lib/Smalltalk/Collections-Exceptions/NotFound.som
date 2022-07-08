@@ -1,0 +1,23 @@
+NotFound = Error (
+
+| object |
+
+messageText = (
+	^ messageText ifNil: ['Object is not in the collection.' translated]
+)
+
+object = (
+	^object
+)
+
+object: anObject = (
+	object := anObject
+)
+
+----------------------------
+
+object: anObject = (
+	^self new object: anObject
+)
+
+)

@@ -1,0 +1,38 @@
+STONReference = Object (
+
+| index |
+
+= anObject = (
+	^ self class == anObject class and: [ self index = anObject index ]
+)
+
+hash = (
+	^ index hash
+)
+
+index = (
+	^ index
+)
+
+index: integer = (
+	index := integer
+)
+
+isStonReference = (
+	^ true
+)
+
+printOn: stream = (
+	super printOn: stream.
+	stream nextPut: $(; print: index; nextPut: $)
+)
+
+----------------------------
+
+index: integer = (
+	^ self new
+		index: integer;
+		yourself
+)
+
+)

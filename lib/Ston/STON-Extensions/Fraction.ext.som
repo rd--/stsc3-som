@@ -1,0 +1,7 @@
+Fraction = Fraction (
+
+stonOn: stonWriter = (
+	stonWriter writeFraction: self
+)
+
+)

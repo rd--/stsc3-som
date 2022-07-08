@@ -1,0 +1,7 @@
+Boolean = Boolean (
+
+stonOn: stonWriter = (
+	stonWriter writeBoolean: self
+)
+
+)

@@ -69,6 +69,11 @@ asIEEE32BitWord = (
 	self primitiveFailed
 )
 
+asIEEE64BitWord = (
+	<primitive: -1>
+	self primitiveFailed
+)
+
 asString = (
 	<primitive: -1>
 	self primitiveFailed
@@ -151,6 +156,11 @@ basicNew: anInteger = (
 )
 
 fromIEEE32Bit: anInteger = (
+	<primitive: -1>
+	^ self primitiveFailed
+)
+
+fromIEEE64Bit: anInteger = (
 	<primitive: -1>
 	^ self primitiveFailed
 )

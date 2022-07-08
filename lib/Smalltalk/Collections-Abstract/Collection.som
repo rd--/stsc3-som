@@ -318,7 +318,8 @@ errorKeyNotFound: key = (
 )
 
 errorNotFound: anObject = (
-	{self . anObject} error: 'anObject was not found in this collection'
+	"anObject was not found in this collection, raise appropriate error."
+	^(NotFound object: anObject) signal
 )
 
 fillFrom: aCollection with: aBlock = (

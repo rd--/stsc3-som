@@ -1,0 +1,15 @@
+ByteArray = ByteArray (
+
+stonOn: stonWriter = (
+	"Use a hex representation"
+	stonWriter writeObject: self listSingleton: self hex
+)
+
+----
+
+fromSton: stonReader = (
+	"Use a hex representation"
+	^ self readHexFrom: stonReader parseListSingleton
+)
+
+)

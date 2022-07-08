@@ -10,6 +10,12 @@ at: aKey ifAbsent: aBlock = (
 	^(self hasGlobal: aKey) ifTrue: [ ^self at: aKey ] ifFalse: [ aBlock value ]
 )
 
+at: aKey ifPresent: aBlock = (
+	"Answer the global associated with aKey or, if key isn't found,
+	answer the result of evaluating aBlock with the value."
+	^(self hasGlobal: aKey) ifTrue: [ ^ aBlock value: (self at: aKey) ] ifFalse: [ ^ nil ]
+)
+
 evaluate: aString = (
 	<primitive: -1>
 	self error: ('evaluate: ' , aString)
