@@ -8,6 +8,22 @@ import Data.Char {- base -}
 
 import Interpreter.Som.Int {- stsc3 -}
 
+-- * Char & Io
+
+lineFeed :: Char
+lineFeed = toEnum 10
+
+carriageReturn :: Char
+carriageReturn = toEnum 13
+
+putStrAllowingCr :: String -> IO ()
+putStrAllowingCr = putStr . map (\c -> if c == carriageReturn then lineFeed else c)
+
+putStrLnAllowingCr :: String -> IO ()
+putStrLnAllowingCr = putStrLn . map (\c -> if c == carriageReturn then lineFeed else c)
+
+-- * UnicodeString
+
 type UnicodeString = String
 
 toUnicodeString :: String -> UnicodeString
@@ -53,4 +69,4 @@ unicodeStringAt str ix =
      else Nothing
 
 unicodeStringWrite :: UnicodeString -> IO ()
-unicodeStringWrite = putStr
+unicodeStringWrite = putStrAllowingCr

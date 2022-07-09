@@ -558,6 +558,49 @@ literalEqual: other = (
 	^ self class == other class and: [self = other]
 )
 
+longPrintOn: aStream = (
+	"Append to the argument, aStream, the names and values of all
+	of the receiver's instance variables."
+	self class allInstVarNames withIndexDo:
+		[:title :index |
+		aStream nextPutAll: title;
+			nextPut: $:;
+			space;
+			tab;
+			print: (self instVarAt: index);
+			cr]
+)
+
+longPrintOn: aStream limitedTo: sizeLimit indent: indent = (
+	"Append to the argument, aStream, the names and values of all of the receiver's instance variables.  Limit is the length limit for each inst var."
+	self class allInstVarNames withIndexDo:
+		[:title :index |
+		indent timesRepeat: [aStream tab].
+		aStream nextPutAll: title;
+		 nextPut: $:;
+		 space;
+		 tab;
+		 nextPutAll:
+			((self instVarAt: index) printStringLimitedTo: (sizeLimit -3 -title size max: 1));
+		 cr]
+)
+
+longPrintString = (
+	"Answer a String whose characters are a description of the receiver."
+	| str |
+	str := String streamContents: [:aStream | self longPrintOn: aStream].
+	"Objects without inst vars should return something"
+	^ str isEmpty ifTrue: [self printString, String cr] ifFalse: [str]
+)
+
+longPrintStringLimitedTo: aLimitValue = (
+	"Answer a String whose characters are a description of the receiver."
+	| str |
+	str := String streamContents: [:aStream | self longPrintOn: aStream limitedTo: aLimitValue indent: 0].
+	"Objects without inst vars should return something"
+	^ str isEmpty ifTrue: [self printString, String cr] ifFalse: [str]
+)
+
 newFrom: aSimilarObject = (
 	"Create an object that has similar contents to aSimilarObject.
 	If the classes have any instance varaibles with the same names, copy them across.
@@ -701,10 +744,12 @@ printString = (
 )
 
 printStringLimitedTo: limit = (
+	"Answer a String whose characters are a description of the receiver.
+	If you want to print without a character limit, use fullPrintString."
 	| limitedString |
-	limitedString := self printString.
+	limitedString := String streamContents: [:s | self printOn: s] limitedTo: limit.
 	limitedString size < limit ifTrue: [^ limitedString].
-	^ (limitedString copyFrom: 1 to: limit) , '...etc...'
+	^ limitedString , '...etc...'
 )
 
 putOn:aStream = (

@@ -1,0 +1,56 @@
+LimitedWriteStream = WriteStream (
+
+| limit limitBlock |
+
+next: anInteger putAll: aCollection startingAt: startIndex = (
+	"Store the next anInteger elements from the given collection."
+	| newEnd |
+	anInteger > 0 ifFalse: [ ^aCollection ].
+	newEnd := position + anInteger.
+	newEnd > limit ifTrue: [
+		super next: (limit - position max: 0) putAll: aCollection startingAt: startIndex.
+		limitBlock value.
+		^ aCollection].
+	^ super next: anInteger putAll: aCollection startingAt: startIndex
+)
+
+nextPut: anObject = (
+	"Ensure that the limit is not exceeded"
+	position >= limit
+		ifTrue:
+			[ limitBlock value.
+			^anObject ].
+    ^super nextPut: anObject
+)
+
+nextPutAll: aCollection = (
+	| newEnd |
+	collection class == aCollection class ifFalse:
+		[^ super nextPutAll: aCollection ].
+	newEnd := position + aCollection size.
+	newEnd > limit ifTrue: [
+		super nextPutAll: (aCollection copyFrom: 1 to: (limit - position max: 0)).
+		limitBlock value.
+		^aCollection
+	].
+	newEnd > writeLimit ifTrue: [
+		self growTo: newEnd
+	].
+	collection replaceFrom: position+1 to: newEnd  with: aCollection startingAt: 1.
+	position := newEnd.
+	^aCollection
+)
+
+pastEndPut: anObject = (
+	collection size >= limit ifTrue: [limitBlock value].  "Exceptional return"
+	^ super pastEndPut: anObject
+)
+
+setLimit: sizeLimit limitBlock: aBlock = (
+	"Limit the numer of elements this stream will write..."
+	limit := sizeLimit.
+	"Execute this (typically ^ contents) when that limit is exceded"
+	limitBlock := aBlock
+)
+
+)

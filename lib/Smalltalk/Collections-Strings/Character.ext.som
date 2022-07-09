@@ -1,0 +1,15 @@
+Character = Character (
+
+carriageReturn = (
+	^self value: 13
+)
+
+lineFeed = (
+	^self value: 10
+)
+
+newLine = (
+	^self value: 10
+)
+
+)

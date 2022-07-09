@@ -1,0 +1,8 @@
+Object = Object (
+
+doesNotUnderstand: aSymbol arguments: anArray = (
+	"This is the Som form."
+	self doesNotUnderstand: (Message selector: aSymbol arguments: anArray)
+)
+
+)

@@ -193,12 +193,30 @@ allByteCharacters = (
 	^ (0 to: 255) collect: [:v | Character value: v] as: String
 )
 
+arrowDown = (
+	^ self value: 31
+)
+
+arrowLeft = (
+	^ self value: 28
+)
+
+arrowRight = (
+	^ self value: 29
+)
+
+arrowUp = (
+	^ self value: 30
+)
+
 backspace = (
+	"Answer the Character representing a backspace."
 	^self value: 8
 )
 
-carriageReturn = (
-	^self value: 13
+characterForColumnBreak = (
+	"Use a newPage to split columns in character scanners"
+	^self newPage
 )
 
 codePoint: anInteger = (
@@ -217,6 +235,7 @@ constantNameFor: aCharacter = (
 )
 
 cr = (
+	"Answer the Character representing a carriage return."
 	^self value: 13
 )
 
@@ -232,31 +251,57 @@ digitValue: x = (
 	^self value: (n < 10 ifTrue: [n + 48] ifFalse: [n + 55])
 )
 
+end = (
+	^ self value: 4
+)
+
+enter = (
+	"Answer the Character representing enter."
+	^self value: 3
+)
+
 esc = (
 	^self value: 160
 )
 
 escape = (
-	^self value: 160
+	"Answer the ASCII ESC character"
+	^self value: 27
+)
+
+euro = (
+	"The Euro currency sign, that E with two dashes. The code point is a official unicode ISO/IEC-10646-1"
+	^self value: 8364 "16r20AC"
+)
+
+home = (
+	^ self value: 1
+)
+
+insert = (
+	^ self value: 5
 )
 
 lf = (
+	"Answer the Character representing a linefeed."
 	^self value: 10
 )
 
-lineFeed = (
+linefeed = (
 	^self value: 10
+)
+
+nbsp = (
+	"Non-breakable space"
+	^self value: 160
 )
 
 new = (
 	self error: 'cannot create new characters'
 )
 
-newLine = (
-	^self value: 10
-)
-
 newPage = (
+	"Answer the Character representing a form feed."
 	^self value: 12
 )
 
@@ -266,6 +311,19 @@ nl = (
 
 null = (
 	^ self value: 0
+)
+
+pageDown = (
+	^ self value: 12
+)
+
+pageUp = (
+	^ self value: 11
+)
+
+return = (
+	"Answer the Character representing a carriage return."
+	^self value: 13
 )
 
 separators = (
@@ -279,10 +337,16 @@ separators = (
 )
 
 space = (
+	"Answer the Character representing a space."
 	^self value: 32
 )
 
+startOfHeader = (
+	^ self value: 1
+)
+
 tab = (
+	"Answer the Character representing a tab."
 	^self value: 9
 )
 

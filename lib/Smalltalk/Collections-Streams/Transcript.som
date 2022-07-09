@@ -10,15 +10,15 @@ clear = (
 )
 
 cr = (
-	self newLine
+	Smalltalk printCharacter: Character cr
 )
 
 endEntry = (
-	self newLine
+	self nl
 )
 
-newLine = (
-	Smalltalk printCharacter: Character newLine
+nl = (
+	Smalltalk printCharacter: Character nl
 )
 
 nextPut: aCharacter = (

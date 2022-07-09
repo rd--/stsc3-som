@@ -323,7 +323,7 @@ objectPrint :: MonadIO m => Object -> m Object
 objectPrint o =
   let recursionDepth = 5 :: Int
       f k = if k == 0 then return . objectToConciseString else objectExamine (return "...") (f (k - 1))
-  in liftIO (f recursionDepth o >>= putStrLn) >> return nilObject
+  in liftIO (f recursionDepth o >>= putStrLnAllowingCr) >> return nilObject
 
 objectListPrint :: MonadIO m => [Object] -> m Object
 objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToConciseString o))) >> return nilObject
