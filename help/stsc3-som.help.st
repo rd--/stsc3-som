@@ -1,43 +1,43 @@
 "Som"
-TestHarness new run: #('TestHarness.som'). "=> 201, 1074"
-TestHarness new run: #('TestHarness.som' 'ArrayTest').
-TestHarness new run: #('TestHarness.som' 'BlockTest').
-TestHarness new run: #('TestHarness.som' 'ClassLoadingTest').
-TestHarness new run: #('TestHarness.som' 'ClassStructureTest').
-TestHarness new run: #('TestHarness.som' 'ClosureTest').
-TestHarness new run: #('TestHarness.som' 'CoercionTest').
-TestHarness new run: #('TestHarness.som' 'CompilerReturnTest').
-TestHarness new run: #('TestHarness.som' 'DoesNotUnderstandTest').
-TestHarness new run: #('TestHarness.som' 'DoubleTest').
-TestHarness new run: #('TestHarness.som' 'EmptyTest').
-TestHarness new run: #('TestHarness.som' 'GlobalTest').
-TestHarness new run: #('TestHarness.som' 'HashTest').
-TestHarness new run: #('TestHarness.som' 'IntegerTest').
-TestHarness new run: #('TestHarness.som' 'PreliminaryTest').
-TestHarness new run: #('TestHarness.som' 'ReflectionTest').
-TestHarness new run: #('TestHarness.som' 'SelfBlockTest').
-TestHarness new run: #('TestHarness.som' 'SetTest').
-TestHarness new run: #('TestHarness.som' 'SpecialSelectorsTest').
-TestHarness new run: #('TestHarness.som' 'StringTest').
-TestHarness new run: #('TestHarness.som' 'SuperTest').
-TestHarness new run: #('TestHarness.som' 'SymbolTest').
-TestHarness new run: #('TestHarness.som' 'SystemTest').
-TestHarness new run: #('TestHarness.som' 'VectorTest').
+TestHarness new run: #('TestHarness.som'). "=> 200, 1066"
+TestHarness new run: #('TestHarness.som' 'ArrayTest'). "32"
+TestHarness new run: #('TestHarness.som' 'BlockTest'). "5"
+TestHarness new run: #('TestHarness.som' 'ClassLoadingTest'). "1"
+TestHarness new run: #('TestHarness.som' 'ClassStructureTest'). "6, 1"
+TestHarness new run: #('TestHarness.som' 'ClosureTest'). "1"
+TestHarness new run: #('TestHarness.som' 'CoercionTest'). "1"
+TestHarness new run: #('TestHarness.som' 'CompilerReturnTest'). "6"
+TestHarness new run: #('TestHarness.som' 'DoesNotUnderstandTest'). "3"
+TestHarness new run: #('TestHarness.som' 'DoubleTest'). "27"
+TestHarness new run: #('TestHarness.som' 'EmptyTest'). "0"
+TestHarness new run: #('TestHarness.som' 'GlobalTest'). "3"
+TestHarness new run: #('TestHarness.som' 'HashTest'). "1"
+TestHarness new run: #('TestHarness.som' 'IntegerTest'). "25, 2"
+TestHarness new run: #('TestHarness.som' 'PreliminaryTest'). "1"
+TestHarness new run: #('TestHarness.som' 'ReflectionTest'). "7"
+TestHarness new run: #('TestHarness.som' 'SelfBlockTest'). "1"
+TestHarness new run: #('TestHarness.som' 'SetTest'). "9"
+TestHarness new run: #('TestHarness.som' 'SpecialSelectorsTest'). "1"
+TestHarness new run: #('TestHarness.som' 'StringTest'). "17"
+TestHarness new run: #('TestHarness.som' 'SuperTest'). "19"
+TestHarness new run: #('TestHarness.som' 'SymbolTest'). "3"
+TestHarness new run: #('TestHarness.som' 'SystemTest'). "2"
+TestHarness new run: #('TestHarness.som' 'VectorTest'). "22"
 
 "Micro Benchmarks"
-Harness new run: #('Harness' 'Bounce').
-Harness new run: #('Harness' 'List').
-Harness new run: #('Harness' 'Permute').
-Harness new run: #('Harness' 'Queens').
-Harness new run: #('Harness' 'Sieve').
-Harness new run: #('Harness' 'Storage').
-Harness new run: #('Harness' 'Towers').
+Harness new run: #('Harness' 'Bounce'). "675124us"
+Harness new run: #('Harness' 'List'). "806928us"
+Harness new run: #('Harness' 'Permute'). "663486us"
+Harness new run: #('Harness' 'Queens'). "735874us"
+Harness new run: #('Harness' 'Sieve'). "884538us"
+Harness new run: #('Harness' 'Storage'). "527350us"
+Harness new run: #('Harness' 'Towers'). "958909us"
 
 "Benchmarks"
 Harness new run: #('Harness' 'CD' '1' '2'). "? Method cos not found in class Integer"
 Harness new run: #('Harness' 'DeltaBlue' '1' '15').
 Harness new run: #('Harness' 'Havlak' '1' '1')
-Harness new run: #('Harness' 'Json'). "=> 32446672us"
+Harness new run: #('Harness' 'Json'). "=> 11850231us"
 Harness new run: #('Harness' 'Mandelbrot' '1' '1') "=> 2865us"
 Harness new run: #('Harness' 'NBody' '1' '1') "=> 15594us"
 Harness new run: #('Harness' 'NBody' '1' '250000')
@@ -47,7 +47,7 @@ Harness new run: #('Harness' 'Richards').
 (system load: #UnknownClass) = nil "=> true"
 (1 perform: #class inSuperclass: Object) = Integer "=> true"
 (1 perform: #class) = Integer "=> true"
-(perform: #+ withArguments: #(2) inSuperclass: Object)
+(1 perform: #+ withArguments: #(2) inSuperclass: Object) "=> error"
 (1 perform: #+ withArguments: #(2)) = 3 "=> true"
 0 class = Integer "=> true"
 0 class class = Integer class "=> true"
@@ -58,5 +58,5 @@ Metaclass class class = Metaclass "=> true"
 system loadFile: '/etc/passwd'
 
 "Emacs"
-(setq stsc3-interpreter (list "stsc3-som" "som" "repl"))
+(setq stsc3-interpreter (list "stsc3-som" "-cp" "/home/rohan/opt/src/SOM-st/SOM/Smalltalk/:/home/rohan/opt/src/SOM-st/SOM/TestSuite/:/home/rohan/opt/src/smarr/are-we-fast-yet/benchmarks/SOM/" "som" "repl"))
 (setq stsc3-interpreter (list "gst"))
