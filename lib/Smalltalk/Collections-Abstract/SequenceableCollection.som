@@ -1221,6 +1221,12 @@ lastIndexOfNoneOf: aCollection startingAt: lastIndex ifAbsent: exceptionBlock = 
 		^exceptionBlock value
 )
 
+mappedBy: aSequenceableCollection = (
+	"Answer a new instance of MappedCollection whose contents is the
+	receiver and whose map is the argument, aSequencableCollection."
+	^(MappedCollection collection: self map: aSequenceableCollection) contents
+)
+
 middle = (
 	"Answer the middle element of the receiver."
 	^ self at: self size // 2 + 1

@@ -8,7 +8,7 @@ Author:             Rohan Drape
 Maintainer:         rd@rohandrape.net
 Stability:          Experimental
 Homepage:           http://rohandrape.net/t/stsc3-som
-Tested-With:        GHC == 8.8.4
+Tested-With:        GHC == 9.2.4
 Build-Type:         Simple
 
 library
