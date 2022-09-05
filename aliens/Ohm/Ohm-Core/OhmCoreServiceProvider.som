@@ -1,0 +1,14 @@
+OhmCoreServiceProvider = ServiceProvider (
+----------------------------
+
+initialize = (
+	ServiceRegistry current buildProvider: self new
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

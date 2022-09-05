@@ -1,0 +1,574 @@
+OhmParsingExpressionFixtures = Object (
+----------------------------
+
+fixturesFor: parsingExpresionName = (
+
+	^ Json readFrom: (ReadStream on: (self perform: parsingExpresionName)).
+
+	
+)
+
+leftRecursionFailedPreviously = (
+
+	^ '{ "grammar" : "M {
+			ruleOne = Exp
+			Exp = U \"cascade\" -- cascade
+			| B -- keyword
+			B = U \"bm\"?
+			U = UR UM --message
+				| O -- base
+			UR = U | O
+			O = \"o\"
+			UM = \"um\" }",
+		"matchContents" : [
+							   { "input" : "o um", "expect" : true },
+							   { "input" : "o um bm", "expect" : true },
+							   { "input" : "o bm", "expect" : true },
+							   { "input" : "o cascade", "expect" : true },
+							   { "input" : "o um cascade", "expect" : true } ] }'
+        
+)
+
+leftRecursionIndirect = (
+
+	^ '{ "grammar" : "M { number = foo | digit
+					           foo = bar
+					           bar = baz
+					           baz = qux
+					           qux = quux
+					           quux = numberRec
+					           numberRec = number digit }",
+		"matchContents" : [
+							   { "input" : "", "expect" : false },
+							   { "input" : "a", "expect" : false },
+							   { "input" : "1", "expect" : true },
+							   { "input" : "123", "expect" : true },
+							   { "input" : "7276218173", "expect" : true } ] }'
+        
+)
+
+leftRecursionNested = (
+
+	^ '{ "grammar" : "M {
+				            addExpr = addExprRec | mulExpr
+				            addExprRec = addExpr \"+\" mulExpr
+				            mulExpr = mulExprRec | priExpr
+				            mulExprRec = mulExpr \"*\" priExpr
+				            priExpr = /[0-9]/
+				            sss = &addExpr addExpr }",
+		"matchContents" : [    { "input" : "1", "expect" : true },
+							   { "input" : "2+3", "expect" : true },
+							   { "input" : "4+", "expect" : false },
+							   { "input" : "5*6", "expect" : true },
+							   { "input" : "7*8+9+0", "expect" : true } ] }'
+        
+)
+
+leftRecursionNestedIndirect = (
+
+	^ '{ "grammar" : "G {
+						addExpr = a | c
+						a = b
+						b = addExprRec
+						addExprRec = addExpr \"+\" mulExpr
+						c = d
+						d = mulExpr
+						mulExpr = e | g
+						e = f
+						f = mulExprRec
+						g = h
+						h = priExpr
+						mulExprRec = mulExpr \"*\" priExpr
+						priExpr = /[0-9]/ }",
+		"matchContents" : [    { "input" : "1", "expect" : true },
+							   { "input" : "2+3", "expect" : true },
+							   { "input" : "4+", "expect" : false },
+							   { "input" : "5*6", "expect" : true },
+							   { "input" : "7*8+9+0", "expect" : true } ] }'
+        
+)
+
+leftRecursionNonInvolved = (
+
+	^ '{ "grammar" : "M {add = addRec | pri
+				            addRec = add \"+\" pri
+				            pri = priX | priY
+				            priX = \"x\"
+				            priY = \"y\" }",
+		"matchContents" : [ { "input" : "x+y+x", "expect" : true } ] }'
+        
+)
+
+leftRecursionSideNested = (
+
+	^ '{ "grammar" : "M {
+			ruleOne = addExpr
+	            addExpr = normalAddExpr | wrappedAddExpr
+			wrappedAddExpr = \">>\" addExpr \">>\"
+			normalAddExpr  = addExprRec \"+\" primaExpr
+			addExprRec = addExpr | primaExpr
+			primaExpr = primaExprRec | priExpr
+			primaExprRec = primaExpr \"-\"
+	            priExpr = /[0-9]/ }",
+		"matchContents" : [
+							   { "input" : "2+3", "expect" : true },
+							   { "input" : ">>2+3>>+4", "expect" : true },
+							   { "input" : ">>2--+3>>+4---", "expect" : true },
+							   { "input" : "4+", "expect" : false },
+							   { "input" : "5+6", "expect" : true },
+							   { "input" : "5-+6--", "expect" : true },
+							   { "input" : "7+8+9+0", "expect" : true } ] }'
+        
+)
+
+leftRecursionSimple = (
+
+	^ '{ "grammar" : "M { number = numberRec | digit
+                                      numberRec = number digit }",
+		"matchContents" : [    { "input" : "", "expect" : false },
+							   { "input" : "a", "expect" : false },
+							   { "input" : "1", "expect" : true },
+							   { "input" : "123", "expect" : true },
+							   { "input" : "7276218173", "expect" : true } ] }'
+        
+)
+
+leftRecursionTricky = (
+
+	^ '{ "grammar" : "G {
+				            tricky = &foo bar
+				            foo = fooRec | digit
+				            fooRec = bar digit
+				            bar = barRec | digit
+				            barRec = foo digit }",
+		"matchContents" : [ { "input" : "1234", "expect" : true } ] }'
+        
+)
+
+ohmPExprAlt = (
+
+	^ '{ "grammar": "G { ruleOne = \"a\" | \"b\"}",
+	      "expressionMatch" : [ { "input" : "", "expect" : false },
+		                                 { "input" : "a", "expect" : true},
+							   { "input" : "b", "expect" : true},
+							   { "input" : "ab", "expect" : true, "streamAtEnd" : false} ],
+		"matchInterval" : [ 	   { "input" : "a", "expectInterval" : [[1,1]] },
+							   { "input" : "b", "expectInterval" : [[1,1]] },
+							   { "input" : "ab", "expectInterval" : [[1,1]] } ],
+		"matchTree" : [ 		   { "input" : "a", "expectedTree" : {"ruleName" : "ruleOne", "children": [{"ruleName" : "_terminal", "children": ["a"]}]} },
+							   { "input" : "b", "expectedTree" : {"ruleName" : "ruleOne", "children": [{"ruleName" : "_terminal", "children": ["b"]}]} } ] }'
+)
+
+ohmPExprAltSeq = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = \"a\" \"b\" \"c\" | \"1\" \"2\" \"3\"}",
+	     "matchContents" : [ { "input" : "ab", "expect" : false, "streamAtEnd" : false },
+							   { "input" : "12", "expect" : false, "streamAtEnd" : false },
+							   { "input" : "", "expect" : false },
+							   { "input" : "abc", "expect" : true },
+							   { "input" : "123", "expect" : true } ]
+		}'
+        
+)
+
+ohmPExprAltSeqSyntactic = (
+
+	^ '{
+		"grammar" : "G {
+						RuleOne = \"a\" \"b\" \"c\" | \"1\" \"2\" \"3\"}",
+	     "matchContents" : [
+			 				   { "input" : " ab", "expect" : false, "streamAtEnd" : false },
+							   { "input" : " 12", "expect" : false, "streamAtEnd" : false },
+							   { "input" : " ", "expect" : false, "streamAtEnd" : false },
+							   { "input" : " abc", "expect" : true },
+							   { "input" : " 123", "expect" : true } ]
+		}'
+        
+)
+
+ohmPExprAnything = (
+
+	 ^ '{ "grammar" : "M { }",
+        	"match" : [				{ "input" : 5,    "rule" : "_", "expect" : true},
+                  	  				{ "input" : null, "rule" : "_", "expect" : true} ],
+        	"matchContents" : [		{ "input" : "5",  "rule" : "_", "expect" : true},
+                						{ "input" : "", "rule" :   "_", "expect" : false} ],
+        	"matchListStream" : [	{"input" : ["123"],    "rule" : "_", "expect" : true },
+ 								{"input" : ["123", 4], "rule" : "_", "expect" : false},
+								{"input" : [],         "rule" : "_", "expect" : false} ],
+		"matchInterval" : [		{"input" : "123",    "rule" : "_", "expectInterval" : [[1,1]] },
+								{"input" : ["123", 4], "rule" : "_", "expectInterval" : [[1,1]] } ],
+		"matchTree" : [			{"input" : "1", 		"expectedTree" : {"ruleName" : "ruleOne", "children" :  [ {"ruleName" : "_terminal", "children" : [ "1" ]}  ] } },
+								{"input" : ["123"], 	"expectedTree" : {"ruleName" : "ruleOne", "children" :  [ {"ruleName" : "_terminal", "children" : [ "123" ] } ] }  } ]}'
+
+	
+)
+
+ohmPExprApply = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = firstRule
+						firstRule = \"firstRule\" }",
+		"matchContents" : [ { "input" : "", "expect" : false },
+							   { "input" : "firstRule", "expect" : true },
+							   { "input" : "firstRule secondRule", "expect" : true, "streamAtEnd" : false } ],
+		"parameterizedExpressionMatch" :	[
+							   {"input": "", "expect": false},
+							   {"input": "firstRule", "expect": false},
+							   {"input": "firstRulefirstRule", "expect": true},
+							   {"input": "firstRule secondRule", "expect": false , "streamAtEnd" : false}],
+		"matchInterval" : 	 [ { "input" : "firstRule", "expectInterval" : [[1,9]] },
+							   { "input" : "firstRule secondRule", "expectInterval" : [[1,9]] } ] }'
+        
+)
+
+ohmPExprCaseInsensitive = (
+
+	^ '{ "expressionMatch" : [ { "input" : "", "expect" : false },
+							   { "input" : "abc", "expect" : true },
+							   { "input" : "ABC", "expect" : true },
+							   { "input" : "Abcc", "expect" : true, "streamAtEnd" : false } ],
+		"matchInterval" : 	 [ { "input" : "abc", "expectInterval" : [[1,3]] },
+							   { "input" : "abcc", "expectInterval" : [[1,3]] } ] }'
+        
+)
+
+ohmPExprEnd = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = \"foo\" end}",
+		"matchContents" : [ { "input" : "bar", "expect" : false, "streamAtEnd" : false},
+							   { "input" : "foo", "expect" : true, "streamAtEnd" : true },
+							   { "input" : "foo1", "expect" : false, "streamAtEnd" : false } ],
+		 "syntacticExpressionMatch" : [
+			  				   { "input" : " foo ", "expect" : true },
+							   { "input" : " bar", "expect" : false, "streamAtEnd" : false} ],
+		"matchInterval" : [ 	   { "input" : "foo", "expectInterval" : [[4,4]] } ],
+		"matchTree" : 	[
+				{ "input" : "foo", "expectedTree" : {
+					"ruleName" : "ruleOne",
+					"children" : [
+						{"ruleName" : "_terminal", "children" : null} , {"ruleName" : "end", "children": [] } ] } } ]  }'
+        
+)
+
+ohmPExprFail = (
+
+	^ '{ "expressionMatch" : [ { "input" : "", "expect" : false },
+							   { "input" : "bar", "expect" : false, "streamAtEnd" : false} ] }'
+        
+)
+
+ohmPExprLookahead = (
+
+	^ '{ "grammar" : "G {
+						ruleOne = &\"hello\" \"hello\" }",
+		"expressionMatch" : [ { "input" : "", "expect" : false },
+							   { "input" : "hello world", "expect" : true, "streamAtEnd" : false },
+							   { "input" : "yello world", "expect" : false, "streamAtEnd" : false },
+							   { "input" : "yello", "expect" : false, "streamAtEnd" : false },
+							   { "input" : "hello", "expect" : true, "streamAtEnd" : false } ],
+		"matchTree" : [ 		   { "input" : "hello", "expectedTree" : { "ruleName" : "ruleOne", "children" : [{"ruleName": "_terminal", "children":["hello"]}, {"ruleName": "_terminal", "children":["hello"]}] }} ] }'
+        
+)
+
+ohmPExprNot = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = ~\"hello\" \"bar\" }",
+		"expressionMatch" : [ { "input" : "", "expect" : true },
+							   { "input" : "hello world", "expect" : false, "streamAtEnd" : false },
+							   { "input" : "yello world", "expect" : true, "streamAtEnd" : false },
+							   { "input" : "yello", "expect" : true, "streamAtEnd" : false },
+							   { "input" : "hello", "expect" : false, "streamAtEnd" : false } ],
+		"matchInterval" : [ 	   { "input" : "", "expectInterval" : null },
+							   { "input" : "yello world", "expectInterval" : null },
+							   { "input" : "hello world", "expectInterval" : null },
+							   { "input" : "yello", "expectInterval" : null } ],
+		"matchTree" : [ 	   	   { "input" : "bar", "expectedTree" : {"ruleName" : "ruleOne", "children" : [{"ruleName" : "_terminal", "children" : ["bar"]}] } }] }'
+        
+)
+
+ohmPExprOpt = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = \"dr\"? }",
+		"expressionMatch" : [ { "input" : "", "expect" : true },
+							   { "input" : "dr", "expect" : true },
+							   { "input" : "d", "expect" : true, "streamAtEnd" : false } ],
+		"matchInterval" : [ 	   { "input" : "", "expectInterval" : [[0,0]] },
+							   { "input" : "dr", "expectInterval" : [[1,2]] },
+							   { "input" : "d", "expectInterval" : [[0,0]] } ],
+		"matchTree" : [ 	   { "input" : "",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [{"ruleName" : "_terminal", "children" : [null] }] } },
+							   { "input" : "dr",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [{"ruleName" : "_terminal", "children" : ["dr"] }] } } ]
+		}'.
+        
+)
+
+ohmPExprOptComplex = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = (\"dr\" \"ied\")? }",
+		"matchTree" : [
+			   { "input" : "",
+				"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+					{"ruleName" : "_terminal", "children" : [null]},
+					{"ruleName" : "_terminal", "children" : [null] }] } },
+			   { "input" : "dr",
+				"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+					{"ruleName" : "_terminal", "children" : [null] },
+					{"ruleName" : "_terminal", "children" : [null] }] } } ]  }'.
+        
+)
+
+ohmPExprPlus = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = (\"a\" \"b\")+ }",
+		"matchContents" : [ { "input" : "", "expect" : false },
+		                                 { "input" : "ab", "expect" : true },
+		                                 { "input" : "ba", "expect" : false, "streamAtEnd" : false},
+		                                 { "input" : "abab", "expect" : true},
+		                                 { "input" : "aaa", "expect" : false, "streamAtEnd" : false},
+		                                 { "input" : "b", "expect" : false, "streamAtEnd" : false},
+							   { "input" : "ab", "expect" : true} ],
+		"matchInterval" : [	   { "input" : "", "expectInterval" : [] },
+		                                 { "input" : "a", "expectInterval" : [] },
+		                                 { "input" : "ba", "expectInterval" : [] },
+		                                 { "input" : "ab", "expectInterval" : [[1,2],[1,2]]},
+		                                 { "input" : "abab", "expectInterval" : [[1,4],[1,4]]},
+		                                 { "input" : "ababab", "expectInterval" : [[1,6],[1,6]] } ],
+		"matchTree" : [	   	   { "input" : "ab",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null } ] } ,
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null } ] } ]
+								}
+							   },
+		                                 { "input" : "abab",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null } ] } ,
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null } ] } ]
+								}
+							   },
+		                                 { "input" : "ababab",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null } ] } ,
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null },
+																		{ "ruleName" : "_terminal", "children" : null } ] } ]
+								}
+							   }
+						]  }'
+        
+)
+
+ohmPExprPlusSyntactic = (
+
+	^ '{
+		"grammar" : "G {
+						RuleOne = (\"a\" \"b\")+ }",
+		"matchContents" : [
+			 				   { "input" : " ", "expect" : false, "streamAtEnd" : false },
+		                                 { "input" : " ab", "expect" : true },
+		                                 { "input" : " ba", "expect" : false, "streamAtEnd" : false},
+		                                 { "input" : " abab", "expect" : true},
+		                                 { "input" : " aaa", "expect" : false, "streamAtEnd" : false},
+		                                 { "input" : " b", "expect" : false, "streamAtEnd" : false},
+							   { "input" : " abc", "expect" : true, "streamAtEnd" : false} ]
+		}'
+        
+)
+
+ohmPExprRange = (
+
+	^ '{
+           "grammar" : "M { foo = \"0\"..\"9\" }",
+		"expressionMatch" :
+		[	{ "input" : "0", "expect" : true },
+			{ "input" : "92", "expect" : true, "streamAtEnd" : false},
+			{ "input" : "x2", "expect" : false, "streamAtEnd" : false } ],
+		"matchInterval" :
+		[ 	{"input" : "01", "expectInterval" : [[1,1]] },
+			{"input" : "909", "expectInterval" : [[1,1]] } ] }'
+        
+)
+
+ohmPExprRegex = (
+
+	^ '{
+		"grammar" : "M { ruleOne = /[0-9]/ }",
+		"matchContents" : [ { "input" : "[0-9]", "expect" : false, "streamAtEnd" : false },
+		                                 { "input" : "4", "expect" : true},
+							   { "input" : "a", "expect" : false},
+							   { "input" : "4b", "expect" : true, "streamAtEnd" : false},
+      						   { "input" : "43", "expect" : true, "streamAtEnd" : false} ],
+		"matchInterval" : [      { "input" : "4", "expectInterval" : [[1,1]] },
+							   { "input" : "4b", "expectInterval" : [[1,1]]},
+      						   { "input" : "43", "expectInterval" : [[1,1]]} ],
+		"matchTree" : [      	   { "input" : "4",
+								"expectedTree" : { "ruleName" : "ruleOne", "children" :  [ { "ruleName" : "_terminal", "children" : ["4"] } ] } }  ]
+		}'
+        
+)
+
+ohmPExprSeq = (
+
+	^ '{
+		"grammar" : "G { ruleOne = \"a\" \"bc\" \"z\" }",
+		"expressionMatch" : [ { "input" : "", "expect" : false },
+		                                 { "input" : "a", "expect" : false },
+				                     { "input" : "aa", "expect" : false },
+		                                 { "input" : "ab", "expect" : false },
+				                     { "input" : "abb", "expect" : false },
+		                                 { "input" : "abc", "expect" : false },
+							   { "input" : "abcz", "expect" : true} ],
+		"syntacticExpressionMatch" : [
+			 				   { "input" : " ", "expect" : false },
+		                                 { "input" : " a", "expect" : false },
+				                     { "input" : " aa", "expect" : false },
+		                                 { "input" : " ab", "expect" : false },
+				                     { "input" : " abb", "expect" : false },
+		                                 { "input" : " abc", "expect" : false },
+							   { "input" : " abcz", "expect" : true} ],
+		"matchInterval" : [ 	   { "input" : "abcz", "expectInterval" : [[1,1],[2,3],[4,4]]},
+							   { "input" : "abcz1", "expectInterval" : [[1,1],[2,3],[4,4]]},
+							   { "input" : "abcz ", "expectInterval" : [[1,1],[2,3],[4,4]]} ],
+		"matchTree" : [ 	   	   { "input" : "abcz",
+								"expectedTree" : {"ruleName" : "ruleOne",
+													"children" : [ {"ruleName" : "_terminal", "children":["a"]} ,
+																 {"ruleName" : "_terminal", "children":["bc"]},
+																 {"ruleName" : "_terminal", "children":["z"]} ] } } ] }'
+        
+)
+
+ohmPExprStar = (
+
+	^ '{
+		"grammar" : "G {
+						ruleOne = (\"a\" \"b\")* }",
+		"matchContents" : [ { "input" : "", "expect" : true },
+		                                 { "input" : "ab", "expect" : true },
+		                                 { "input" : "ba", "expect" : true, "streamAtEnd" : false},
+		                                 { "input" : "abab", "expect" : true},
+		                                 { "input" : "aaa", "expect" : true, "streamAtEnd" : false},
+		                                 { "input" : "b", "expect" : true, "streamAtEnd" : false},
+		 					   { "input" : "ab", "expect" : true} ],
+		"matchInterval" : [	   { "input" : "", "expectInterval" : [[0,0],[0,0]] },
+		                                 { "input" : "a", "expectInterval" : [[0,0],[0,0]] },
+		                                 { "input" : "ba", "expectInterval" : [[0,0],[0,0]] },
+		                                 { "input" : "ab", "expectInterval" : [[1,2],[1,2]]},
+		                                 { "input" : "abab", "expectInterval" : [[1,4],[1,4]]},
+		                                 { "input" : "ababab", "expectInterval" : [[1,6],[1,6]] } ],
+		"matchTree" : [	   	   { "input" : "ab",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null } ] } ,
+									{"ruleName" : "_list", "children" : [ { "ruleName" : "_terminal", "children" : null } ] } ]
+								}
+							   },
+							   { "input" : "",
+								"expectedTree" : {"ruleName" : "ruleOne", "children" : [
+									{"ruleName" : "_list", "children" : null } ,
+									{"ruleName" : "_list", "children" : null } ]
+								}
+							   }] }'
+        
+)
+
+ohmPExprStarSyntactic = (
+
+	^ '{
+		"grammar" : "G {
+						RuleOne = \"a\"* }",
+		"matchContents" : [
+							   { "input" : " ", "expect" : true, "streamAtEnd" : false},
+		                                 { "input" : " a", "expect" : true },
+		                                 { "input" : " ba", "expect" : true, "streamAtEnd" : false},
+		                                 { "input" : " aa", "expect" : true},
+		                                 { "input" : " aaa", "expect" : true},
+		                                 { "input" : " b", "expect" : true, "streamAtEnd" : false},
+		 					   { "input" : " ab", "expect" : true, "streamAtEnd" : false } ] }'
+        
+)
+
+ohmPExprString = (
+
+	^ '{
+           "grammar" : "M { ruleOne = \"foo\" }",
+		"expressionMatch" :
+		[	{ "input" : "foo", "expect" : true },
+			{ "input" : "foo1", "expect" : true, "streamAtEnd" : false},
+			{ "input" : "bar", "expect" : false, "streamAtEnd" : false } ],
+           "match" :
+		[	{ "input" : "foo",   "rule" : "foo", "expect" : true},
+			{ "input" : "foo1", "rule" : "foo", "expect" : true},
+  			{ "input" : "bar",   "rule" : "foo", "expect" : false},
+			{ "input" : null,     "rule" : "foo", "expect" : false} ],
+           "matchContents" :
+		[ 	{"input" : "foo",  "rule" : "foo", "expect" : true},
+			{"input" : "foo1", "rule" : "foo", "expect" : false},
+			{"input" : "bar",  "rule" : "foo", "expect" : false} ],
+           "matchListStream" :
+		[	{"input" : ["foo"],        "rule" : "foo", "expect" : true },
+    			{"input" : ["foo1"],       "rule" : "foo", "expect" : false},
+			{"input" : ["foo", "1"],   "rule" : "foo", "expect" : false},
+			{"input" : ["foo", "foo"], "rule" : "foo", "expect" : false},
+			{"input" : [""],           "rule" : "foo", "expect" : false},
+			{"input" : [],             "rule" : "foo", "expect" : false} ],
+		"matchInterval" :
+		[ 	{"input" : "foo", "expectInterval" : [[1,3]] },
+			{"input" : "foo1", "expectInterval" : [[1,3]] } ],
+		"matchTree" :
+		[ 	{"input" : "foo", "expectedTree" : {"ruleName":"ruleOne", "children":[{"ruleName" : "_terminal", "children" : ["foo"]}]} } ] }'
+        
+)
+
+syntacticSubexpressions = (
+
+	^ '{ "syntacticExpressionMatch" : [
+							   { "input" : "abcd", "expect" : true },
+							   { "input" : "ab cd", "expect" : true },
+							   { "input" : "ab  cd", "expect" : true },
+							   { "input" : " abcd", "expect" : true },
+							   { "input" : " abcd ", "expect" : true, "streamAtEnd" : false } ] }'
+        
+)
+
+syntacticSubexpressionsNot = (
+
+	^ '{ "intervalContent" : [
+							   { "input" : "a c", "expectInterval" : [[1,1]] } ] }'
+        
+)
+
+syntacticSubexpressionsPlus = (
+
+	^ '{ "syntacticExpressionMatch" : [
+							   { "input" : "abab", "expect" : true },
+							   { "input" : "ab ab", "expect" : true },
+							   { "input" : "ab  ab ab", "expect" : true },
+							   { "input" : " ab", "expect" : true },
+							   { "input" : " ab ab ", "expect" : true, "streamAtEnd" : false } ] }'
+        
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

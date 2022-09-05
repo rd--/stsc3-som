@@ -1,0 +1,118 @@
+OhmPositionInfo = Object (
+| memoizedResults activeRules leftRecursionStack |
+
+activeRules = (
+
+	^ activeRules
+)
+
+activeRules: anObject = (
+
+	activeRules := anObject
+)
+
+leftRecursionStack = (
+
+	^ leftRecursionStack
+)
+
+leftRecursionStack: anObject = (
+
+	leftRecursionStack := anObject
+)
+
+memoizedResults = (
+
+	^ memoizedResults
+)
+
+memoizedResults: anObject = (
+
+	memoizedResults := anObject
+)
+
+currentLeftRecursion = (
+
+	^ self leftRecursionStack top
+)
+
+determineRulesInvolvedInLeftRecursion: ruleName = (
+
+	| result |
+	result := OrderedCollection new.
+	self activeRules do: [ :rule |
+		rule = ruleName
+			ifTrue: [ ^result]
+			ifFalse: [result add: rule.]].
+	^ result
+)
+
+endLeftRecursion = (
+
+	^ self leftRecursionStack pop
+)
+
+enter: ruleName = (
+
+	self activeRules addFirst: ruleName 
+)
+
+isCurrentLeftRecursion: ruleName = (
+
+	^ self leftRecursionStack isEmpty not and: [
+		self leftRecursionStack top ruleName = ruleName]
+)
+
+isInvolvedRule: ruleName = (
+
+	^ self leftRecursionStack isEmpty not 
+		and: [self leftRecursionStack top isInvolvedRule: ruleName]
+)
+
+leave: ruleName = (
+
+	self activeRules removeFirst
+)
+
+startLeftRecursion: ruleName = (
+
+	| involvedRules |
+	
+	involvedRules := self determineRulesInvolvedInLeftRecursion: ruleName.
+	self leftRecursionStack push: (OhmLeftRecursion newForRule: ruleName withInvolvedRules: involvedRules).
+)
+
+forRule: ruleName memoizeResult: result = (
+
+	self memoizedResults at: ruleName put: result
+)
+
+memoizedResultFor: ruleName = (
+
+	^ self memoizedResultFor: ruleName ifAbsent: []
+)
+
+memoizedResultFor: ruleName ifAbsent: aBlock = (
+
+	| memo |
+	memo := self memoizedResults
+		at: ruleName
+		ifAbsent: [^ aBlock value].
+
+	"We do not allow a memoized result which was created by a left recursion (otherwise involvedRules is empty)
+       and of which any of the then involved rules is active right now. Because this means that there is another
+	 dive going on which did not start from the head which produced this memoized result."
+	^ (memo involvedRules anySatisfy: [:rule | self activeRules includes: rule])
+		ifTrue: [#ohmFail]
+		ifFalse: [memo]
+)
+
+initialize = (
+
+	self memoizedResults: IdentityDictionary new.
+	self activeRules: OrderedCollection new.
+	self leftRecursionStack: Stack new.
+)
+
+
+)

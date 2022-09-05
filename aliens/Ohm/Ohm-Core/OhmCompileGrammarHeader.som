@@ -1,0 +1,98 @@
+OhmCompileGrammarHeader = OhmSemanticAction (
+| grammarToBuild namespace |
+
+GrammarHeader: aNode with: grammarIdentifier with: superGrammar = (
+
+	self grammarToBuild: OhmGrammar new.
+
+	"Cause side effects on the grammar to build"
+	self 
+		value: grammarIdentifier;
+		value: superGrammar.
+		
+	^ self grammarToBuild 
+)
+
+GrammarName: aNode with: name = (
+
+	^ self value: name
+)
+
+GrammarNameQualified: aNode with: packageName with: x with: grammarName = (
+
+	self grammarToBuild namespace: (OhmNamespace named: packageName interval contents).
+	self grammarToBuild grammarName: grammarName interval contents.
+)
+
+GrammarNameUnqualified: aNode with: grammarName = (
+
+
+	self grammarToBuild 
+		grammarName: grammarName interval contents;
+		namespace: self namespace.  
+)
+
+SuperGrammar: aNode with: superGrammarName = (
+
+	^ self value: superGrammarName
+)
+
+SuperGrammarQualified: aNode with: x with: namespaceNameNode with: xx with: grammarNameNode = (
+
+
+	| grammarName |
+	grammarName := grammarNameNode interval contents.
+		
+	self grammarToBuild superGrammar: (OhmGrammar grammarNamed: grammarName)
+)
+
+SuperGrammarUnqualified: aNode with: x with: grammarNameNode = (
+
+	| grammarName |
+	grammarName := grammarNameNode interval contents.
+		
+	self grammarToBuild superGrammar: (OhmGrammar grammarNamed: grammarName)
+)
+
+grammarToBuild = (
+
+	^ grammarToBuild
+)
+
+grammarToBuild: anObject = (
+
+	grammarToBuild := anObject
+)
+
+initialize = (
+
+	self namespace: OhmNamespace defaultNamespace.
+)
+
+namespace = (
+
+	^ namespace
+)
+
+namespace: anObject = (
+
+	namespace := anObject
+)
+
+
+----------------------------
+
+newIn: namespace = (
+
+	^ self new
+		namespace: namespace;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

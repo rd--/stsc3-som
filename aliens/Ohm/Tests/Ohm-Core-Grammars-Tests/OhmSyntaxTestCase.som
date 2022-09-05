@@ -1,0 +1,120 @@
+OhmSyntaxTestCase = TestCase (
+| grammar startRule |
+
+parseAndStoreResult: aString ifSuccessful: storeOnSuccess = (
+
+	| result |
+	[result :=  grammar match: aString startingFrom: startRule]
+		on: OhmMatchFailure
+		do: [:failure | result := failure].
+
+	self class storeSyntaxTestResult: result for: testSelector.
+	^ result
+)
+
+shouldParse: aString = (
+
+	| result |
+	result := self parseAndStoreResult: aString ifSuccessful: false.
+
+	result succeeded ifFalse: [self signalFailure: ('Parse of: {1} failed' format: {aString})]
+)
+
+shouldParse: aString to: aStructure = (
+
+	| result |
+	result := grammar match: aString startingFrom: startRule.
+	self shouldnt: result = false.
+	self should: ((grammar semanticAction: OhmCheckStructure new) check: result for: aStructure).
+)
+
+shouldParseAll: collectionOfStrings = (
+
+	collectionOfStrings do: [:input |
+		self shouldParse: input]
+	
+)
+
+shouldntParse: aString = (
+
+	| result |
+	result := self parseAndStoreResult: aString ifSuccessful: true.
+
+	self should: result failed
+)
+
+shouldntParseAny: aCollectionOfStrings = (
+
+	aCollectionOfStrings do: [:input |
+		self shouldntParse: input]
+)
+
+
+----------------------------
+| ParsingResults ShouldStoreTestParseResults |
+
+ParsingResults = (
+
+	^ ParsingResults
+		ifNil: [ParsingResults := Dictionary new]
+)
+
+ParsingResultsForCase: aTestCase = (
+
+	^ self ParsingResults
+		at: aTestCase
+		ifAbsentPut: [Dictionary new]
+)
+
+ResetParsingResults = (
+
+	ParsingResults := Dictionary new.
+)
+
+storeSyntaxTestResult: aResult for: testSelector = (
+
+	| caseResults |
+	self shouldStoreTestParseResults ifTrue: [
+		caseResults := self ParsingResultsForCase: self.
+		(caseResults at: testSelector ifAbsentPut: [OrderedCollection new])
+			add: aResult]
+)
+
+buildSuiteFromMethods: methods = (
+
+	(self ParsingResultsForCase: self) removeAll.
+ 	^ super buildSuiteFromMethods: methods
+)
+
+cleanUp = (
+
+	super cleanUp.
+	self ResetParsingResults.
+)
+
+shouldStoreTestParseResults = (
+
+"	<preference: 'Store test results'
+		category: 'Ohm'
+		description: 'When activated, all the parsing results of OhmSyntaxTestCase runs are stored. This is useful for some tools, e.g. for the Gramada test runner tools. It also can consume quite some space.'
+		type: #Boolean>"
+	^ ShouldStoreTestParseResults ifNil: [false]
+)
+
+shouldStoreTestParseResults: aBoolean = (
+
+	ShouldStoreTestParseResults := aBoolean.
+)
+
+shutDown: quitting = (
+
+	quitting ifTrue: [self ResetParsingResults]
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

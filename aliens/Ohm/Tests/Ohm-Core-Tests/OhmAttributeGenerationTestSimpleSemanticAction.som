@@ -1,0 +1,48 @@
+OhmAttributeGenerationTestSimpleSemanticAction = OhmAttributes (
+| counter |
+
+bar: aNode with: e = (
+
+	| c |
+	c := self counter.
+	self counter: c + 1.
+
+	^ c
+)
+
+baz: aNode with: e = (
+
+	| c |
+	c := self counter.
+	self counter: c + 1.
+
+	^ c
+)
+
+foo: aNode bar: barExpr baz: bazExpr = (
+
+	| barResult bazResult |
+	bazResult := self value: bazExpr.
+	barResult := self value: barExpr.
+
+	^ { barResult . bazResult }
+)
+
+counter = (
+
+	^ counter
+)
+
+counter: anObject = (
+
+	counter := anObject
+)
+
+initialize = (
+
+	super initialize.
+	self counter: 0.
+)
+
+
+)

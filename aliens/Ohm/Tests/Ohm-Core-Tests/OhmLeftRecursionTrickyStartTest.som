@@ -1,0 +1,19 @@
+OhmLeftRecursionTrickyStartTest = OhmGrammarParsingTest (
+fixtureGrammar = (
+
+	^ OhmGrammar new: 'G {
+            expr = expr "+" "foo"  -- plus
+				| expr "-" "bar" -- minus
+				| "foobar"
+            }'
+	
+)
+
+testLeftRecursionCanBeDealtWith = (
+
+	self fixtureGrammar match: 'foobar + foo' startingFrom: #expr.
+	
+)
+
+
+)

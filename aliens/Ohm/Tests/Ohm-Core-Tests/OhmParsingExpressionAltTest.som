@@ -1,0 +1,44 @@
+OhmParsingExpressionAltTest = OhmParsingExpressionTest (
+testAltArity = (
+
+	self assert: 0 equals: (OhmPExprAlt newOn: {}) arity.
+	self assert: 1 equals: (OhmPExprAlt newOn: {OhmPExprAnything new . OhmPExprString newOn: 'a'}) arity.
+	self assert: 2 equals: (OhmPExprAlt newOn: {
+							OhmPExprSeq newOn: {OhmPExprAnything new . OhmPExprString newOn: 'a'} .
+							OhmPExprSeq newOn: {OhmPExprAnything new . OhmPExprString newOn: 'a'}}) arity.
+)
+
+testAltMatchesItsTerms = (
+
+	| altExpression |
+	altExpression := OhmPExprAlt newOn: { OhmPExprString newOn: 'a' . OhmPExprString newOn: 'b' }.
+	self
+		assertParsingExpression: altExpression
+		compliesWithItsFixture: #expressionMatch.
+)
+
+testAltProducesIntervals = (
+
+	| altExpression |
+	altExpression := OhmPExprAlt newOn: { OhmPExprString newOn: 'a' . OhmPExprString newOn: 'b' }.
+	self
+		assertParsingExpression: altExpression
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testAltProducesNodes = (
+
+	| altExpression |
+	altExpression := OhmPExprAlt newOn: { OhmPExprString newOn: 'a' . OhmPExprString newOn: 'b' }.
+	self
+		assertParsingExpression: altExpression
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+testCreateAnAlt = (
+
+	OhmPExprAlt newOn: {}.
+)
+
+
+)

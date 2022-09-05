@@ -1,0 +1,78 @@
+OhmBibtexGrammarTest = OhmSyntaxTestCase (
+setUp = (
+
+	grammar := OhmBibtex .
+)
+
+testAComment = (
+
+	startRule := #Comment.
+	self
+		shouldParseAll:	{'a comment' . '-> another comment' . 'several comments
+in several lines' };
+		shouldntParseAny: {'@preamble' . '@article' }.
+)
+
+testBalanced = (
+
+	startRule := #piece.
+	self
+		shouldParseAll: #('{a{b}c}' '"x{y}z"')
+)
+
+testBasic = (
+
+	startRule := #BibtexDB.
+	self
+		shouldParse: '@misc{x, title="title", author={author}}
+@misc{y, title=123,}'
+)
+
+testCommandOrEntry = (
+
+	startRule := #CommandOrEntry.
+	self
+		shouldParseAll:	{'@article { }' . '@preamble { }' . '@string{}' . '@comment' . '@ article {}'};
+		shouldntParseAny: {'arctile' . 'preamble' . 'string' . 'comment' }.
+)
+
+testCommentCommand = (
+
+	startRule := #BibtexDB.
+
+	self shouldParse: '@comment{abc@misc{x}'
+)
+
+testFunnyKeys = (
+
+	startRule := #BibtexDB.
+
+	self shouldParseAll: #('@misc{}' '@misc{,}'  '@misc{\n}' '@misc{@"#%\''()=, title="a"}' '@misc{,title="a"}' '@misc(k)ey, title="a")'
+'@misc{k{ey, title="a"}')
+)
+
+testIdentifier = (
+
+	startRule := #identifier.
+	self
+		shouldParseAll:	{'article' . 'Article' . 'Ari-cle' . 'arti+cle' . 'article*'};
+		shouldntParseAny: {'0arctile' . '#article' . '=article' . '%article' . 'art#icle' . 'arti%cle' . 'art icle' . 'ar"ticle' . 'art,icle' . 'arti''cle' . 'art{icl}e' }.
+)
+
+testSimpleString = (
+
+	startRule := #BibtexDB.
+
+	self shouldParse: '@string{foo = {a}}'. 
+)
+
+testString = (
+
+	startRule := #BibtexDB.
+
+	self shouldParse: '@string{foo = {a}}
+@misc{x, title = foo # "b" # foo # 2}'
+)
+
+
+)

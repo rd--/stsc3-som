@@ -1,0 +1,40 @@
+OhmParsingExpressionRegexTest = OhmParsingExpressionTest (
+testCreateARegex = (
+
+	OhmPExprRegex newOn: '[0-9]'.
+)
+
+testRegexArity = (
+
+	self assert: 1 equals: (OhmPExprRegex newOn: '[0-9]') arity.
+)
+
+testRegexMatchesItsRegex = (
+
+	| regexExpression |
+	regexExpression := OhmPExprRegex newOn: '[0-9]'.
+	self
+		assertParsingExpression: regexExpression
+		compliesWithItsFixture: #matchContents.
+)
+
+testRegexProducesIntervals = (
+
+	| regexExpression |
+	regexExpression := OhmPExprRegex newOn: '[0-9]'.
+	self
+		assertParsingExpression: regexExpression
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testRegexProducesTerminalNode = (
+
+	| regexExpression |
+	regexExpression := OhmPExprRegex newOn: '[0-9]'.
+	self
+		assertParsingExpression: regexExpression
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+
+)

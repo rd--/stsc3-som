@@ -1,0 +1,35 @@
+OhmRemovedRuleEvent = RemovedEvent (
+grammarRemovedFrom = (
+
+	^ self itemClass
+)
+
+removedRule = (
+
+	^ self item
+)
+
+
+----------------------------
+
+removedRule: removedRule from: grammarRemovedFrom = (
+
+	| instance |
+
+	instance := self item: removedRule kind: OhmChangeNotifier ruleKind.
+	instance itemClass: grammarRemovedFrom.
+	^ instance
+)
+
+supportedKinds = (
+
+	^ Array with: OhmChangeNotifier ruleKind
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

@@ -1,0 +1,54 @@
+OhmParsingExpressionOptTest = OhmParsingExpressionTest (
+testCreateAnOpt = (
+
+	OhmPExprOpt newOn: OhmParsingExpression new.
+)
+
+testOptArity = (
+
+	self assert: 1 equals: (OhmPExprOpt newOn: (OhmPExprAnything new)) arity
+)
+
+testOptMatchesIfItPleases = (
+	| optExpression |
+	optExpression := OhmPExprOpt
+				newOn: (OhmPExprString newOn: 'dr').
+	self
+		assertParsingExpression: optExpression
+		asSyntactic: true
+		compliesWithItsFixture: #expressionMatch
+)
+
+testOptProducesEmptyNodes = (
+
+	| optExpression |
+	optExpression := OhmPExprOpt newOn: (OhmPExprSeq newOn: {OhmPExprString newOn: 'dr' . OhmPExprString newOn: 'ied' } ).
+
+	self
+		assertParsingExpression: optExpression
+		compliesWithNodeFixture: #matchTree
+		fromFixtureSet: #ohmPExprOptComplex.
+	
+)
+
+testOptProducesIntervals = (
+
+	| optExpression |
+	optExpression := OhmPExprOpt newOn: (OhmPExprString newOn: 'dr').
+	self
+		assertParsingExpression: optExpression
+		asSyntactic: true
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testOptProducesNodes = (
+
+	| optExpression |
+	optExpression := OhmPExprOpt newOn: (OhmPExprString newOn: 'dr').
+	self
+		assertParsingExpression: optExpression
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+
+)

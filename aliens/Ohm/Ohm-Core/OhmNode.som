@@ -1,0 +1,169 @@
+OhmNode = Object (
+| ruleName grammar interval children parent sourceMap |
+
+calculateSourceMap = (
+
+	^ (self grammar semanticAction: OhmSourceMapping new) createSourceMapFor: self
+)
+
+children = (
+
+	^ children
+)
+
+children: anObject = (
+
+	children := anObject
+)
+
+grammar = (
+
+	^ grammar
+)
+
+grammar: anObject = (
+
+	grammar := anObject
+)
+
+initialize = (
+
+	self 
+		children: OrderedCollection new;
+		ruleName: '';
+		interval: #()
+	
+)
+
+interval = (
+
+	^ interval
+)
+
+interval: anObject = (
+
+	interval := anObject
+)
+
+parent = (
+
+	^ parent
+)
+
+parent: anObject = (
+
+	parent := anObject
+)
+
+printStringLimitedTo: characterLimit = (
+
+	^ self ruleName copyFrom: 1 to: (characterLimit min: self ruleName size)
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+skippedSpacesNodes = (
+	"This is calculated on demand as most semantics don't need it.
+	This is work in progress!"
+	
+	^ (self grammar match: self skippedSpacesString startingFrom: #spaces) cst.
+)
+
+skippedSpacesString = (
+	
+	"This is calculated on demand as most semantics don't need it.
+	This is work in progress!"
+	
+	| spacesInterval ownSourceMapDepth reversedMap enclosingRule reversePosition previousNodeIntervalEnd |
+	ownSourceMapDepth := (self sourceMap at: self interval start) size.
+	reversedMap := self sourceMap reversed.
+	enclosingRule := self enclosingRule.
+	reversePosition := [:originalPosition | (reversedMap size - originalPosition) + 1].
+	
+	previousNodeIntervalEnd := (reversedMap allButFirst: (reversePosition value: self interval start))
+		findFirst: [:nodes | nodes last ~~ enclosingRule].
+	previousNodeIntervalEnd := reversePosition value: previousNodeIntervalEnd.
+	spacesInterval := previousNodeIntervalEnd + 1 to: self interval start - 1.
+	
+	"The following is a hack as we should not access the stream"
+	^ self interval stream contents 
+		copyFrom: spacesInterval start
+		to: spacesInterval stop
+)
+
+sourceMap = (
+	"The sourceMap is only held by the root node"
+	^ self isRootNode 
+		ifTrue: [sourceMap ifNil: [sourceMap := self calculateSourceMap]]
+		ifFalse: [self rootNode sourceMap]
+	
+)
+
+enclosingRule = (
+
+	| aParent |
+	aParent := self parent.
+	[aParent ruleName = OhmParsingExpression listRuleIdentifier] whileTrue: [
+		aParent := aParent parent].
+	^ aParent
+)
+
+rootNode = (
+
+	^ self parent 
+		ifNil: [self]
+		ifNotNil: [self parent rootNode]
+)
+
+isListNode = (
+
+	^ self ruleName = OhmParsingExpression listRuleIdentifier
+)
+
+isRootNode = (
+
+	^ self parent isNil
+)
+
+isTerminalNode = (
+
+	^ self ruleName = OhmParsingExpression terminalRuleIdentifier
+)
+
+
+----------------------------
+
+newNamed: name forGrammar: aGrammar andInput: anInputStream startedAt: start = (
+
+	^ (self new)
+		ruleName: name;
+		grammar: aGrammar;
+		interval: (anInputStream currentIntervalFrom: start);
+		yourself
+)
+
+newNamed: name forGrammar: aGrammar andInput: anInputStream startedAt: start withChildren: children = (
+
+	^ (self new)
+		ruleName: name;
+		grammar: aGrammar;
+		interval: (anInputStream currentIntervalFrom: start);
+		children: children;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

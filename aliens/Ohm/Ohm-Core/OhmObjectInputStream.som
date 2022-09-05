@@ -1,0 +1,20 @@
+OhmObjectInputStream = OhmCollectionInputStream (
+----------------------------
+
+newOn: anObject = (
+
+	^ super newOn: { anObject }
+)
+
+on: anObject = (
+
+	^ super on: { anObject }
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

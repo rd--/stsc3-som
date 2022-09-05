@@ -1,5 +1,7 @@
-This is the Squeak (6.0α) Parser.
+Compiler-Kernel and Compiler-ParseNodes are the Squeak (6.0α) Parser.
 
-It requires Environment &etc. which doesn't exist.
+They require Environment &etc. which doesn't exist.
 
 It would probably be saner to use the St-80 Parser.
+
+Ohm is <https://github.com/hpi-swa/Ohm-S>, it is auto-translated and as yet un-tested.

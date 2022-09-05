@@ -1,0 +1,54 @@
+OhmUndeclaredGrammarError = Error (
+| grammarName namespaceName |
+
+grammarName = (
+
+	^ grammarName
+)
+
+grammarName: anObject = (
+
+	grammarName := anObject
+)
+
+namespaceName = (
+
+	^ namespaceName
+)
+
+namespaceName: anObject = (
+
+	namespaceName := anObject
+)
+
+messageText = (
+
+	^ 'You are referencing the undeclared grammar ' , self grammarName asString , '.'
+)
+
+signalForGrammar: grammarName = (
+
+	self grammarName: grammarName.
+	super signal
+)
+
+
+----------------------------
+
+signalForGrammar: grammarName = (
+
+	self new signalForGrammar: grammarName
+)
+
+signalForGrammar: grammarName inNamespace: namespaceName = (
+
+	self new signalForGrammar: grammarName inNamespace: namespaceName
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

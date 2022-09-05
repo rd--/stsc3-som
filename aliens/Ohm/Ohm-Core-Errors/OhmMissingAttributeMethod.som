@@ -1,0 +1,39 @@
+OhmMissingAttributeMethod = Error (
+| ruleName |
+
+messageText = (
+
+	^ self ruleName
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+signal: ruleName = (
+
+	self ruleName: ruleName.
+	super signal.
+)
+
+
+----------------------------
+
+signal: ruleName = (
+
+	^ self new signal: ruleName
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

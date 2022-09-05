@@ -1,0 +1,33 @@
+OhmAttributeGenerationTestInheritedAttribute = OhmInheritedAttribute (
+abcsAt1: parentNode on: aNode = (
+
+	self set: (self value: parentNode) + 1
+)
+
+abcsAt2: parentNode on: aNode = (
+
+	self set: (self value: parentNode) + 1
+)
+
+abcsAt3: parentNode on: aNode = (
+
+	self set: (self value: parentNode) + 1
+)
+
+abcsAt3ForEach: parentNode on: aNode = (
+
+	self set: (self value: parentNode) + 1
+)
+
+bAt1: parentNode on: aNode = (
+
+	self set: (self value: parentNode) + 1
+)
+
+baseExpression: aNode = (
+
+	self set: 0
+)
+
+
+)

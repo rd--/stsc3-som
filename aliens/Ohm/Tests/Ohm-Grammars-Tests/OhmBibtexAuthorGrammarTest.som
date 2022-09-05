@@ -1,0 +1,29 @@
+OhmBibtexAuthorGrammarTest = OhmSyntaxTestCase (
+setUp = (
+	grammar := OhmBibtexAuthors .
+)
+
+testComplicatedAuthors = (
+
+	startRule := #Authors.
+	self
+		shouldParse: 'Astudillo R., Hern\"{a}n';
+		shouldParse: 'Astudillo R., Hern{\"a}n'.
+)
+
+testFirstnameAuthors = (
+
+	startRule := #Authors.
+	self
+		shouldParseAll: { 'Alan C. Kay and Ted Teddy T. Nelson' }
+)
+
+testPerfectAuthors = (
+
+	startRule := #Authors.
+	self
+		shouldParse: 'Kay, Alan and Nelson, Ted'.
+)
+
+
+)

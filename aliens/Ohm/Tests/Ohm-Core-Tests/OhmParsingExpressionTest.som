@@ -1,0 +1,210 @@
+OhmParsingExpressionTest = TestCase (
+assertEvalIntervalResult: bindings matchesExpectationFrom: aFixture = (
+
+	| expectedValue interval |
+	expectedValue := aFixture at: #expectInterval.
+	expectedValue isNil
+		ifTrue: [ self assert: bindings isEmpty
+					description: 'For input: ' , (aFixture at: #input) asString. ]
+		ifFalse: [ self assert: expectedValue size equals: bindings size.
+				bindings doWithIndex: [ :node :index |
+					interval := node interval.
+					self assert: ((expectedValue at: index) at: 1)
+						equals: interval start
+						description: 'For input: ' , (aFixture at: #input) asString.
+					self assert: ((expectedValue at: index) at: 2)
+						equals: interval end
+						description: 'For input: ' , (aFixture at: #input) asString.] ].
+)
+
+assertParsingExpression: pexpr asSyntactic: isSyntactic compliesWithIntervalFixture: fixtureName fromFixtureSet: fixtureSetName = (
+
+	| input bindings |
+	((OhmParsingExpressionFixtures fixturesFor: fixtureSetName)
+		at: fixtureName) do: [ :aFixture |
+			input := OhmInputStream on: (aFixture at: #input).
+
+			bindings := OrderedCollection new.
+			self evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: OhmGrammar new andBindings: bindings.
+
+			self
+				assertEvalIntervalResult: bindings
+				matchesExpectationFrom: aFixture. ]
+)
+
+assertParsingExpression: pexpr asSyntactic: syntactic compliesWithItsIntervalFixture: fixtureKey = (
+
+	^ self assertParsingExpression: pexpr
+			asSyntactic: syntactic
+			compliesWithIntervalFixture: fixtureKey
+			fromFixtureSet: (pexpr class expressionName)
+)
+
+assertParsingExpression: pexpr compliesWithIntervalFixture: fixtureName fromFixtureSet: fixtureSetName = (
+
+	self
+		assertParsingExpression: pexpr
+		asSyntactic: false
+		compliesWithIntervalFixture: fixtureName
+		fromFixtureSet: fixtureSetName
+)
+
+assertParsingExpression: pexpr compliesWithItsIntervalFixture: fixtureKey = (
+
+	^ self assertParsingExpression: pexpr
+			compliesWithIntervalFixture: fixtureKey
+			fromFixtureSet: (pexpr class expressionName)
+)
+
+evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: aGrammar andBindings: bindings = (
+
+	| state |
+
+	state := OhmParsingState new.
+	state
+		grammar:
+			(OhmGrammar newWithName: 'FirstGrammar' 								ruleDictionary: Dictionary new);
+		isSyntactic: isSyntactic;
+		shouldRecordFailures: false;
+		pushBindings: bindings;
+		pushInput: input.
+
+	^ pexpr eval: state
+)
+
+assertEvalResult: evalResult matchesExpectationFrom: aFixture = (
+
+	| expectedValue |
+	expectedValue := aFixture at: #expect.
+	self
+		assert: expectedValue
+		equals: evalResult
+		description: 'For input: ' , (aFixture at: #input) asString.
+)
+
+assertInput: input matchesExpectationFrom: aFixture = (
+
+	| caseDescription streamShouldBeAtEnd |
+	caseDescription :=  'For input: ' , input asString.
+
+	streamShouldBeAtEnd := aFixture at: #streamAtEnd ifAbsent: [true].
+
+	streamShouldBeAtEnd
+		ifTrue: [self
+					assert: input atEnd
+					description: caseDescription]
+		ifFalse: [self
+					assert: input atEnd not
+					description: caseDescription]
+	
+)
+
+assertParsingExpression: pexpr asSyntactic: isSyntactic compliesWithFixture: fixtureName fromFixtureSet: fixtureSetName = (
+
+	| evalResult input |
+	((OhmParsingExpressionFixtures fixturesFor: fixtureSetName)
+		at: fixtureName) do: [ :aFixture |
+			input := OhmInputStream on: (aFixture at: #input).
+			evalResult := self evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: OhmGrammar new.
+
+			self assertEvalResult: evalResult matchesExpectationFrom: aFixture.
+			self assertInput: input matchesExpectationFrom: aFixture. ]
+)
+
+assertParsingExpression: pexpr asSyntactic: isSyntactic compliesWithItsFixture: fixtureKey = (
+
+	^ self
+		assertParsingExpression: pexpr
+		asSyntactic: isSyntactic
+		compliesWithFixture: fixtureKey
+		fromFixtureSet: pexpr class expressionName
+)
+
+assertParsingExpression: pexpr compliesWithFixture: fixtureName fromFixtureSet: fixtureSetName = (
+
+	self
+		assertParsingExpression: pexpr
+		asSyntactic: false
+		compliesWithFixture: fixtureName
+		fromFixtureSet: fixtureSetName
+)
+
+assertParsingExpression: pexpr compliesWithItsFixture: fixtureKey = (
+
+	^ self
+		assertParsingExpression: pexpr
+		compliesWithFixture: fixtureKey
+		fromFixtureSet: (pexpr class expressionName)
+)
+
+assertNodeTreeOf: result equals: expectedTree = (
+
+	result class = OhmNode
+		ifTrue: [self assert: expectedTree ruleName equals: result ruleName.
+				expectedTree children ifNotNil: [
+					self assert: expectedTree children size equals: result children size.
+					result children withIndexDo: [ :child :index |
+						self assertNodeTreeOf: child equals: (expectedTree children at: index). ] ] ]
+		ifFalse: [result isCharacter
+					ifTrue: [ self assert: expectedTree asString equals: result asString ]
+					ifFalse: [ self assert: expectedTree equals: result]]
+)
+
+assertParsingExpression: pexpr compliesWithItsNodeFixture: fixtureName = (
+
+	^ self assertParsingExpression: pexpr compliesWithNodeFixture: fixtureName fromFixtureSet: pexpr class expressionName 
+)
+
+assertParsingExpression: pexpr compliesWithNodeFixture: fixtureName fromFixtureSet: fixtureSetName = (
+
+	| grammar result |
+	grammar := OhmGrammar newWithName: 'testGrammar' ruleDictionary: (Dictionary newFrom: { #ruleOne => pexpr }).
+	((OhmParsingExpressionFixtures fixturesFor: fixtureSetName)
+		at: fixtureName) do: [ :aFixture |
+			result := (grammar match: (aFixture at: #input) startingFrom: #ruleOne) cst.
+			self assertNodeTreeOf: result equals: (aFixture at: #expectedTree).].
+
+	
+)
+
+evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: aGrammar = (
+
+	| state |
+
+	state := OhmParsingState new.
+	state
+		grammar: aGrammar;
+		isSyntactic: isSyntactic;
+		shouldRecordFailures: false;
+		pushBindings: OrderedCollection new;
+		pushInput: input.
+
+	^ pexpr eval: state
+)
+
+evalPExpr: pexpr on: input usingGrammar: aGrammar = (
+
+	^ self evalPExpr: pexpr on: input asSyntactic: false usingGrammar: aGrammar
+)
+
+testParsingExpressionsHaveTheirParentsSet = (
+
+	| testExpr temp |
+	testExpr := OhmParsingExpression new.
+
+	{ OhmPExprLookahead . OhmPExprNot . OhmPExprOpt }
+		do: [:Pexpr | | r | r := Pexpr newOn: testExpr.
+				self assert: r equals: testExpr parentExpression ].
+
+	{ OhmPExprAlt . OhmPExprSeq }
+		do: [:Pexpr | | r | r := Pexpr newOn: { testExpr . testExpr }.
+				self assert: r equals: testExpr parentExpression ].
+
+	temp := OhmPExprMany newStarOn: testExpr.
+	self assert: temp equals: testExpr parentExpression.
+	temp := OhmPExprMany newPlusOn: testExpr.
+	self assert: temp equals: testExpr parentExpression.
+)
+
+
+)

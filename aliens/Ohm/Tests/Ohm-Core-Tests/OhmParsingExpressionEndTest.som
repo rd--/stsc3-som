@@ -1,0 +1,52 @@
+OhmParsingExpressionEndTest = OhmParsingExpressionTest (
+assertEvalIntervalResult: bindings matchesExpectationFrom: aFixture = (
+
+	| newBindings |
+	newBindings := { bindings second }.
+	super
+		assertEvalIntervalResult: newBindings matchesExpectationFrom: aFixture.
+)
+
+testEndChecksForStreamAtEnd = (
+
+	| endExpression |
+	endExpression := OhmPExprSeq newOn: {OhmPExprString newOn: 'foo' . OhmPExprApply newOn: #end}.
+	self
+		assertParsingExpression: endExpression
+		compliesWithFixture: #matchContents
+		fromFixtureSet: #ohmPExprEnd.
+)
+
+testEndProducesIntervals = (
+
+	| endExpression |
+	endExpression := OhmPExprSeq newOn: {OhmPExprString newOn: 'foo' . OhmPExprApply newOn: #end}.
+	self
+		assertParsingExpression: endExpression
+		compliesWithIntervalFixture: #matchInterval
+		fromFixtureSet: #ohmPExprEnd.
+)
+
+testEndProducesNodes = (
+
+	| endExpression |
+	endExpression := OhmPExprSeq newOn: {OhmPExprString newOn: 'foo' . OhmPExprApply newOn: #end}.
+	self
+		assertParsingExpression: endExpression
+		compliesWithNodeFixture: #matchTree
+		fromFixtureSet: #ohmPExprEnd.
+)
+
+testSyntacticEndChecksForStreamAtEndEvenAfterSpace = (
+
+	| endExpression |
+	endExpression := OhmPExprSeq newOn: {OhmPExprString newOn: 'foo' . OhmPExprApply newOn: #end}.
+	self
+		assertParsingExpression: endExpression
+		asSyntactic: true
+		compliesWithFixture: #syntacticExpressionMatch
+		fromFixtureSet: #ohmPExprEnd.
+)
+
+
+)

@@ -1,0 +1,83 @@
+OhmSHRules = OhmSemanticAction (
+| predefinedNamespace |
+
+RuleDefine: aNode identifier: anId with: formals optionalDescription: description operator: anOperator body: ruleBody = (
+
+	| ranges |
+	ranges := (self value: ruleBody) asOrderedCollection.
+	ranges  
+		addAll: { self rangeFrom: anId type: #patternUnary.
+				 self rangeFrom: anOperator type: #binary. };
+		addAll: (self value: description).
+	^ ranges
+)
+
+RuleOverride: aNode identifier: anId formals: formals optionalDescription: description operator: anOperator body: ruleBody = (
+
+	| ranges |
+	ranges := (self value: ruleBody) asOrderedCollection.
+	ranges  
+		addAll: {self rangeFrom: anId type: #patternUnary.
+				 self rangeFrom: anOperator type: #binary. };
+		addAll: (self value: description).
+	^ ranges
+)
+
+caseName: aNode caseKeyword: caseKeyword with: spaces actualName: name with: moreSpaces with: wrapUp = (
+	
+	^ { self rangeFrom: aNode type: #tempVar }
+)
+
+defaultExpression: aNode = (
+
+	^ (aNode children collect: [:child | self value: child]) gather: [:r | r]
+)
+
+listExpression: aNode = (
+
+	^ aNode children gather: [:child | self value: child]
+)
+
+name: aNode firstPart: firstPart rest: restPart = (
+
+	^ { self rangeFrom: aNode type: #keyword }
+)
+
+rangeFrom: aNode type: type = (
+
+	^ SHRange start: aNode interval start end: aNode interval end type: type
+)
+
+ruleDescr: aNode commentKeyword: keyword commentText: text lineEnding: character = (
+
+	^ { self rangeFrom: keyword type: #comment . 
+		self rangeFrom: text type: #comment }
+)
+
+string: aNode with: quotes with: cs with: endQuotes = (
+
+	^ { self rangeFrom: aNode type: #string }
+)
+
+terminalExpression: aNode = (
+
+	^ {}
+)
+
+
+----------------------------
+
+newOnNamespace: optionalNamespace = (
+
+	^ self new
+		predefinedNamespace: optionalNamespace;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

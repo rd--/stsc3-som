@@ -1,0 +1,23 @@
+OhmAttributeGenerationTestDuplicateAttribute = OhmAttributes (
+| log |
+
+bar: node with: fooexpr with: barstr = (
+
+	^ {#bar . self value: fooexpr . barstr interval contents }
+)
+
+foo: node expr: str = (
+
+	^ { #foo . node interval contents }
+)
+
+foo: node with: str = (
+
+	^ { #foo . node interval contents }
+)
+
+number: aNode withDigit: digit = (
+)
+
+
+)

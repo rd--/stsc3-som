@@ -1,0 +1,146 @@
+OhmParsingState = Object (
+| grammar inputs shouldRecordFailures isSyntactic bindingsStack rightmostFailure cachedSpacesRule idOfParseProcess |
+
+addNodeNamed: name startedAt: start withChildren: children = (
+
+	self bindings add: (OhmNode newNamed: name forGrammar: self grammar andInput: self inputStream startedAt: start withChildren: children).
+)
+
+bindings = (
+
+	^ self bindingsStack last
+)
+
+bindingsStack = (
+
+	^ bindingsStack
+)
+
+bindingsStack: stack = (
+
+	bindingsStack := stack
+)
+
+cachedSpacesRule = (
+	"This is only an optimization to improve the performance of skipping spaces
+	by avoiding repeated lookups of the space rule."
+	
+	^ cachedSpacesRule ifNil: [cachedSpacesRule := self grammar ruleNamed: #space]
+)
+
+grammar = (
+
+	^ grammar
+)
+
+grammar: anObject = (
+
+	grammar := anObject
+)
+
+idOfParseProcess = (
+	
+	^ idOfParseProcess ifNil: [idOfParseProcess := Object new] 
+)
+
+idOfParseProcess: aParsingState = (
+
+	idOfParseProcess := aParsingState
+)
+
+inputStream = (
+
+	^ self inputs last
+)
+
+inputs = (
+
+	^ inputs
+)
+
+inputs: orderedCollection = (
+
+	inputs := orderedCollection
+)
+
+isSyntactic = (
+
+	^ isSyntactic
+)
+
+isSyntactic: anObject = (
+
+	isSyntactic := anObject
+)
+
+rightmostFailure = (
+
+	^ rightmostFailure
+)
+
+rightmostFailure: anObject = (
+
+	rightmostFailure := anObject
+)
+
+shouldRecordFailures = (
+
+	^ shouldRecordFailures
+)
+
+shouldRecordFailures: anObject = (
+
+	shouldRecordFailures := anObject
+)
+
+initialize = (
+
+	self 
+		inputs: OrderedCollection new;
+		bindingsStack: OrderedCollection new;
+		rightmostFailure: (OhmFailureDescriptor new);
+		isSyntactic: false;
+		shouldRecordFailures: false.
+)
+
+popBindings = (
+
+	self bindingsStack removeLast 
+)
+
+popInput = (
+
+	self inputs removeLast
+)
+
+pushBindings: bindings = (
+
+	self bindingsStack add: bindings  
+)
+
+pushInput: newInput = (
+
+	self inputs add: newInput
+)
+
+recordFailureOf: pexpr at: position = (
+
+	position < self rightmostFailure position
+		ifTrue: [ ^ self ].
+
+	position > self rightmostFailure position
+		ifTrue: [ self rightmostFailure 
+					position: position;
+					expressions: OrderedCollection new ].
+
+	self rightmostFailure expressions add: pexpr.
+)
+
+recordFailures: failureDescriptor = (
+
+	failureDescriptor expressions do: [ :pexpr |
+		self recordFailureOf: pexpr at: failureDescriptor position ]
+)
+
+
+)

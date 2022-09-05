@@ -1,0 +1,48 @@
+OhmPExprPrimObject = OhmPExprPrim (
+| primitiveObject |
+
+asExpected: rulesDict = (
+
+	^ self primitiveObject printString
+)
+
+primitiveObject = (
+
+	^ primitiveObject
+)
+
+primitiveObject: anObject = (
+
+	primitiveObject := anObject
+)
+
+matchInput: input = (
+
+	(input next == self primitiveObject)
+		ifFalse: [ ^#ohmFail ].
+
+	^ self primitiveObject
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: self primitiveObject
+)
+
+
+----------------------------
+
+newOn: numberOrSymbol = (
+
+	^ (self new)
+		primitiveObject: numberOrSymbol;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

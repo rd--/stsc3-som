@@ -1,0 +1,111 @@
+OhmPExprSeq = OhmParsingExpression (
+| terms |
+
+arity = (
+
+	^ (terms collect: [ :term | term arity])
+		ifEmpty: [ 0] 
+		ifNotEmptyDo: [ :arities | arities sum ]
+)
+
+asActionBindingName = (
+
+	^ 'sequence'
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	self terms do: [ :t | t assertChoicesHaveUniformArity: ruleName ]
+)
+
+doEval: state = (
+	
+	| start children tmpChildren |
+	start := state inputStream getState.	
+	children := OrderedCollection new.
+
+	self terms do: [ :term | | result |
+		tmpChildren := OrderedCollection new.
+		state pushBindings: tmpChildren.
+		result := term eval: state.
+		state popBindings.
+		result
+			ifFalse: [ ^ false ]
+			ifTrue:  [ children addAll: tmpChildren ]].
+
+	state bindings addAll: children.
+
+	^ true
+)
+
+innerNodesAt: parsingState = (
+	
+	^ self terms
+)
+
+nodesResultingInCST = (
+
+	^ self terms select: [:t | t arity > 0]
+)
+
+terms = (
+
+	^ terms
+)
+
+terms: anObject = (
+
+	terms := anObject
+)
+
+totalNumberOfExpressions = (
+
+	^ super totalNumberOfExpressions + (self terms collect: [:e | e totalNumberOfExpressions]) sum
+)
+
+weightedComplexity = (
+
+
+	^ 3 + (self terms collect: [:e | e weightedComplexity]) sum
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: 
+		(self terms collect: [:t | t replaceParametersWithArguments: arguments])
+)
+
+toRecipe = (
+
+	^ 'b seq: {' , 
+		((self terms collect: #toRecipe) joinSeparatedBy: ' . '), 
+		'}'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprSeq
+)
+
+newOn: terms = (
+
+	| newExpr |
+	terms size = 1
+		ifTrue: [ ^ terms first ]
+		ifFalse: [newExpr := (self new)
+					terms: terms;
+					yourself.
+				terms do: [:t | t parentExpression: newExpr.].
+				^ newExpr]
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

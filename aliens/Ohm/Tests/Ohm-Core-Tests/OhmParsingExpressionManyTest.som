@@ -1,0 +1,95 @@
+OhmParsingExpressionManyTest = OhmParsingExpressionTest (
+testCreateAMany = (
+
+	OhmPExprMany newOn: nil minimalMatches: 0.
+	OhmPExprMany newOn: nil minimalMatches: 1.
+
+	OhmPExprMany newStarOn: OhmParsingExpression new.
+	OhmPExprMany newPlusOn: OhmParsingExpression new.	
+)
+
+testManyArity = (
+
+	| testExpression |
+	testExpression := (OhmPExprSeq newOn: { OhmPExprString newOn: 'a' . OhmPExprString newOn: 'b' }).
+	self assert: 2 equals: (OhmPExprMany newOn: testExpression minimalMatches: 0) arity.
+	self assert: 2 equals: (OhmPExprMany newOn: testExpression minimalMatches: 1) arity.
+
+	self assert: 2 equals: (OhmPExprMany newStarOn: testExpression) arity.
+	self assert: 2 equals: (OhmPExprMany newPlusOn: testExpression) arity.
+)
+
+testManyPlusCreatesIntervals = (
+
+	| plusExpression |
+	plusExpression := OhmPExprMany newPlusOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: plusExpression
+		compliesWithIntervalFixture: #matchInterval
+		fromFixtureSet: #ohmPExprPlus.
+)
+
+testManyPlusCreatesNodes = (
+
+	| plusExpression |
+	plusExpression := OhmPExprMany newPlusOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: plusExpression
+		compliesWithNodeFixture: #matchTree
+		fromFixtureSet: #ohmPExprPlus.
+)
+
+testManyPlusMatchesZeroOrMore = (
+
+	| plusExpression |
+	plusExpression := OhmPExprMany newPlusOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: plusExpression
+		compliesWithFixture: #matchContents
+		fromFixtureSet: #ohmPExprPlus.
+)
+
+testManyStarCreatesIntervals = (
+
+	| starExpression |
+	starExpression := OhmPExprMany newStarOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: starExpression
+		compliesWithIntervalFixture: #matchInterval
+		fromFixtureSet: #ohmPExprStar.
+)
+
+testManyStarMatchesZeroOrMore = (
+
+	| starExpression |
+	starExpression := OhmPExprMany newStarOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: starExpression
+		compliesWithFixture: #matchContents
+		fromFixtureSet: #ohmPExprStar.
+)
+
+testSyntacticManyPlusMatchesZeroOrMore = (
+
+	| plusExpression |
+	plusExpression := OhmPExprMany newPlusOn: (OhmPExprSeq newOn: { (OhmPExprString newOn: 'a') . (OhmPExprString newOn: 'b') }).
+	self
+		assertParsingExpression: plusExpression
+		asSyntactic: true
+		compliesWithFixture: #matchContents
+		fromFixtureSet: #ohmPExprPlusSyntactic.
+)
+
+testSyntacticManyStarMatchesZeroOrMore = (
+
+	| starExpression |
+	starExpression := OhmPExprMany newStarOn: (OhmPExprString newOn: 'a').
+	self
+		assertParsingExpression: starExpression
+		asSyntactic: true
+		compliesWithFixture: #matchContents
+		fromFixtureSet: #ohmPExprStarSyntactic.
+)
+
+
+)

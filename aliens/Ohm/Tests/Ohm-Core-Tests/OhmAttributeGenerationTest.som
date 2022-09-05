@@ -1,0 +1,193 @@
+OhmAttributeGenerationTest = TestCase (
+| fixtureGrammar fixtureRuleFoo fixtureRuleBar |
+
+fixtureGrammar = (
+
+	^ fixtureGrammar
+)
+
+fixtureGrammar: anObject = (
+
+	fixtureGrammar := anObject
+)
+
+fixtureRuleBar = (
+
+	^ fixtureRuleBar
+)
+
+fixtureRuleBar: anObject = (
+
+	fixtureRuleBar := anObject
+)
+
+fixtureRuleFoo = (
+
+	^ fixtureRuleFoo
+)
+
+fixtureRuleFoo: anObject = (
+
+	fixtureRuleFoo := anObject
+)
+
+setUp = (
+
+	| ruleDictionary |
+	"G {
+		foo = ""foo""
+		bar = foo ""bar""
+	}"
+	self fixtureRuleFoo: (OhmPExprString newOn: 'foo').
+	self fixtureRuleBar: (OhmPExprSeq newOn: { OhmPExprApply newOn: #foo . OhmPExprString newOn: 'bar' } ).
+
+	ruleDictionary := Dictionary new.
+	ruleDictionary
+		at: #foo
+		put: self fixtureRuleFoo.
+	ruleDictionary
+		at: #bar
+		put: self fixtureRuleBar.
+
+	self fixtureGrammar: (OhmGrammar
+							newWithName: 'TestGrammar'
+							ruleDictionary: ruleDictionary)
+)
+
+tearDown = (
+
+	self fixtureRuleFoo: nil.
+	self fixtureRuleBar: nil.
+	self fixtureGrammar: nil.
+)
+
+testBindingsAreEvaluatedLazily = (
+
+	| g action result |
+	g := OhmGrammar new: 'G {
+          foo = bar baz
+          bar = "a"
+          baz = "b" }'.
+
+	action := g semanticAction: OhmAttributeGenerationTestSimpleSemanticAction new.
+
+	result := action value: (g match: 'ab' startingFrom: 'foo').
+	self assert: (result first) equals: 1.
+	self assert: (result second) equals: 0.
+)
+
+testBindingsAreEvaluatedLazilyAlsoWithSynthesizedAttributes = (
+
+	| g action result |
+	g := OhmGrammar new: 'G {
+          foo = bar baz
+          bar = "a"
+          baz = "b" }'.
+
+	action := g synthesizedAttribute: OhmAttributeGenerationTestSimpleSynthesizedAttribute new.
+
+	result := action value: (g match: 'ab' startingFrom: 'foo').
+	self assert: result first equals: 1.
+	self assert: result second equals: 0.
+)
+
+testBindingsAreEvaluatedLazilyAlsoWithSynthesizedAttributesAndCached = (
+
+	| g action result |
+	g := OhmGrammar new: 'G {
+          foo = bar baz
+          bar = "a"
+          baz = "b" }'.
+
+	action := g synthesizedAttribute: OhmAttributeGenerationTestSimpleSynthesizedAttribute new.
+
+	result := action value: (g match: 'ab' startingFrom: 'foo').
+	self assert: (result first) equals: 1.
+	self assert: (result second) equals: 0.
+	self assert: (result third) equals: 1.
+)
+
+testDuplicateActionsAreNotAllowed = (
+
+	| g |
+	g := OhmGrammar new: 'G {
+          foo = bar baz
+          bar = "a"
+          baz = "b" }'.
+
+	self should: [g assertNoDuplicateActions: OhmAttributeGenerationTestDuplicateAttribute]
+		raise: OhmDuplicateActionDeclarationError.
+)
+
+testInheritedAttributesWorkTheOtherWayRound = (
+
+	| depth g cst collector result |
+	g := OhmGrammar new: '
+		G { abcs = "a" b "c"*
+			b = "b" }'.
+
+	depth := g inheritedAttribute: OhmAttributeGenerationTestInheritedAttribute new.
+	collector := g synthesizedAttribute: (OhmAttributeGenerationTestCollectorAttribute newOn: depth).
+
+	cst := g match: 'abccc' startingFrom: 'abcs'.
+	result := collector value: cst.
+
+	result := Dictionary new addAll: result; yourself.
+
+	self assert: 1 equals: (result at: #b).
+	self assert: 0 equals: (result at: #abcs).
+)
+
+testSemanticActionCanBeCreated = (
+
+	self fixtureGrammar semanticAction: OhmAttributeGenerationTestAttribute new.
+)
+
+testSemanticActionsHaveToHaveMatchingArities = (
+
+	| testBlock |
+	testBlock := [ self fixtureGrammar semanticAction: OhmAttributeGenerationTestAttribute new ].
+
+	self wrongSetUp.
+
+	self should: testBlock
+		raise: OhmAttributeAritiesMissmatchError.
+
+	self setUp.
+
+	self shouldnt: testBlock
+		raise: OhmAttributeAritiesMissmatchError.
+)
+
+testSemanticActionsTraverseTheTree = (
+
+	| result testActions |
+	testActions := self fixtureGrammar semanticAction: OhmAttributeGenerationTestAttribute new.
+	result := self fixtureGrammar match: 'foobar' startingFrom: #bar.
+	result := testActions value: result.
+
+	self assert: result first equals: #bar.
+	self assert: result second first equals: #foo.
+)
+
+wrongSetUp = (
+
+	| ruleDictionary |
+	self fixtureRuleFoo: (OhmPExprString newOn: 'foo').
+	self fixtureRuleBar: (OhmPExprSeq newOn: { OhmPExprString newOn: 'bar' } ).
+
+	ruleDictionary := Dictionary new.
+	ruleDictionary
+		at: #foo
+		put: self fixtureRuleFoo.
+	ruleDictionary
+		at: #bar
+		put: self fixtureRuleBar.
+
+	self fixtureGrammar: (OhmGrammar
+							newWithName: 'TestGrammar'
+							ruleDictionary: ruleDictionary)
+)
+
+
+)

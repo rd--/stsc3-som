@@ -1,0 +1,63 @@
+OhmInconsistentArityError = Error (
+| ruleName expected actual |
+
+actual = (
+
+	^ actual
+)
+
+actual: anObject = (
+
+	actual := anObject
+)
+
+expected = (
+
+	^ expected
+)
+
+expected: anObject = (
+
+	expected := anObject
+)
+
+messageText = (
+
+	^ 'Expected arity ' , self expected asString , ' for rule ' , self ruleName , ' but was ' , self actual asString , '.' 
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+signalForRule: ruleName expectedArity: expected actualArity: actual = (
+
+	self
+		ruleName: ruleName;
+		expected: expected;
+		actual: actual.
+
+	super signal.
+)
+
+
+----------------------------
+
+signalForRule: ruleName expectedArity: expected actualArity: actual = (
+
+	self new signalForRule: ruleName expectedArity: expected actualArity: actual
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

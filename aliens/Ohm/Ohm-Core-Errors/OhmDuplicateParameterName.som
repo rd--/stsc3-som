@@ -1,0 +1,46 @@
+OhmDuplicateParameterName = Error (
+| rule grammar |
+
+grammar = (
+	
+	^ grammar
+)
+
+grammar: anObject = (
+	
+	grammar := anObject.
+)
+
+rule = (
+	
+	^ rule
+)
+
+rule: anObject = (
+	
+	rule := anObject.
+)
+
+messageText = (
+
+	^ 'The rule ' , self rule ruleName , ' has duplicate parameter names.'
+)
+
+
+----------------------------
+
+signalForRule: aRule inGrammar: aGrammar = (
+
+	^ self new
+		rule: aRule;
+		grammar: aGrammar;
+		signal
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

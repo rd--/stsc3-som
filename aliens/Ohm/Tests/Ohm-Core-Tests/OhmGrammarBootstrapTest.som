@@ -1,0 +1,234 @@
+OhmGrammarBootstrapTest = TestCase (
+ohmGrammarDefinition = (
+
+	^ OhmGrammarOfOhm ohmGrammarDefinition
+)
+
+ohmSimpleGrammarDefinition = (
+
+	^'Ohm {
+
+  Grammars
+    = Grammar*
+
+  Grammar
+    = ident SuperGrammar? "{" Rule* "}"
+
+  SuperGrammar
+    = "<:" ident "." ident  -- qualified
+    | "<:" ident            -- unqualified
+
+  Rule
+    = ident ruleDescr? "="  Alt  -- define
+    | ident            ":=" Alt  -- override
+    | ident            "+=" Alt  -- extend
+
+  Alt
+    = Term "|" Alt  -- rec
+    | Term
+
+  Term
+    = Seq caseName -- inline
+    | Seq
+
+  Seq
+    = Iter*
+
+  Iter
+    = Pred "*"  -- star
+    | Pred "+"  -- plus
+    | Pred "?"  -- opt
+    | Pred
+
+  Pred
+    = "~" Base  -- not
+    | "&" Base  -- lookahead
+    | Base
+
+  Base
+    = ident ~(ruleDescr? "=" | ":=" | "+=")  -- application
+    | (keyword | string | regExp | number)   -- prim
+    | "(" Alt ")"                            -- paren
+    | "[" Alt "]"                            -- listy
+    | "{" "..."? "}"                         -- obj
+    | "{" Props ("," "...")? "}"             -- objWithProps
+
+  Props
+    = Prop "," Props  -- rec
+    | Prop            -- base
+
+  Prop
+    = (name | string) ":" Base
+
+  ruleDescr  -- rule description for use in error messages
+    = "--" ruleDescrText "\n"
+
+  ruleDescrText
+    = (~"\n" any)*
+
+  caseName
+    = "--" (~"\n" space)* name (~"\n" space)* ("\n" | &"}")
+
+  name  -- name
+    = nameFirst nameRest*
+
+  nameFirst
+    = "_"
+    | letter
+
+  nameRest
+    = "_"
+    | alnum
+
+  ident  -- identifier
+    = ~keyword name
+
+  keyword
+    = "undefined" ~nameRest  -- undefined
+    | "null" ~nameRest       -- null
+    | "true" ~nameRest       -- true
+    | "false" ~nameRest      -- false
+
+  string  -- string literal
+    = "\"" sChar* "\""
+
+  sChar
+    = "\\x" hexDigit hexDigit                    -- hexEscape
+    | "\\u" hexDigit hexDigit hexDigit hexDigit  -- unicodeEscape
+    | "\\" any                                     -- escape
+    | ~"\"" ~"\n" any
+
+  regExp  -- regular expression
+    = "/" reCharClass "/"
+
+  reCharClass
+    = "\\p{" /[A-Za-z]/+ "}"    -- unicode
+    | "[" ("\\]" | ~"]" any)* "]" -- ordinary
+
+  number  -- number
+    = "-"? digit+
+
+  space
+   = /[\s]/
+    |	"//" (~"\n" any)* "\n"  -- singleLine
+    | "/*" (~"*/" any)* "*/"  -- multiLine
+
+}'
+)
+
+testBoostrapGrammarCanParseApostrophe = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = """ "foo" """ }' startingFrom: 'Grammars').
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { string  ( string literal )
+    										= "" sChar* "" }' startingFrom: 'Grammars').
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { sChar
+								    = "\"" }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseBracketRuleInGrammarConstruct = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = ("foo" | "bar") }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseInlineRuleInGrammarConstruct = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = "foo" -- inlineFoo
+											| "bar" }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseRegexConstruct = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = /[A-Z]/ }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseRuleInGrammarConstruct = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: ' G { foo = "foo" -- inlineRule
+											| "bar"
+
+									 Fish = "f" "ish"
+									 Bird ( A kind of animal )
+									    = ~ Fish
+									 Mushroom = Animal?
+									 Spirit = any
+									 Mammal = (~Fish | ~Bird)
+									 name = (letter+ | digit+)
+									 birdDigit = "0".."x"
+
+									 Animals = &Fish | &Bird  }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseSimpleGrammarConstruct = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = "foo" }' startingFrom: 'Grammars').
+)
+
+testBoostrapGrammarCanParseWhitespaceAfterGrammar = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: 'G { foo = ("foo" | "bar") } ' startingFrom: 'Grammars').
+)
+
+testBootstrapTheGrammar = (
+
+	| grammar result |
+	result := (OhmGrammarOfOhm bootstrapOhmGrammar) match: OhmGrammarOfOhm ohmGrammarDefinition startingFrom: 'Grammar'.
+	grammar := (OhmGrammarOfOhm bootstrapOhmGrammar semanticAction: OhmCompileGrammar new) value: result.
+
+	self assert: (grammar
+				doesMatch: 'G { foo = "foo" }' startingFrom: 'Grammar').
+
+	self assert: (grammar doesMatch: 'G { foo = ("foo" | "bar") }' startingFrom: 'Grammar').
+	self assert: (grammar doesMatch: 'G { foo = ("foo" | "bar")
+										     bar = "hallo" }' startingFrom: 'Grammar').
+	self assert: (grammar
+				doesMatch: 'G { foo = /[A-Z]/ }' startingFrom: 'Grammar').
+
+	self assert: (grammar
+					doesMatch: 'G { foo = "foo" -- inlineFoo
+											| "bar" }' startingFrom: 'Grammar').
+
+	self assert: (grammar doesMatch: self ohmGrammarDefinition startingFrom: 'Grammar').
+)
+
+testBootstrappedGrammarContainsSourceCode = (
+
+	| grammar result |
+	result := (OhmGrammarOfOhm bootstrapOhmGrammar) match: OhmGrammarOfOhm ohmGrammarDefinition startingFrom: 'Grammar'.
+	grammar := (OhmGrammarOfOhm bootstrapOhmGrammar semanticAction: OhmCompileGrammar new) value: result.
+
+	self assert: (grammar rules at: #number) textualRepresentation equals: 'number
+    = "-"? digit+' .
+)
+
+testDefinitionIsCorrect = (
+
+	self assert: ((OhmGrammarOfOhm bootstrapOhmGrammar)
+					doesMatch: self ohmGrammarDefinition startingFrom: 'Grammars').
+)
+
+testFromAnAliveOhmToABoostrapOhm = (
+
+	| cookedGrammar cst bakedGrammar |
+	cookedGrammar := (Compiler evaluate: OhmGrammarOfOhm toRecipe) value .
+
+	cst := cookedGrammar
+		match: OhmGrammarOfOhm ohmGrammarDefinition startingFrom: #Grammar.
+	self shouldnt: cst = false.
+
+	bakedGrammar := (cookedGrammar semanticAction: OhmCompileGrammar new)
+		value: cst.
+)
+
+
+)

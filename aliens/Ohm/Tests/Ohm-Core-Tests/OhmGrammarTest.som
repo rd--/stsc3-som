@@ -1,0 +1,153 @@
+OhmGrammarTest = TestCase (
+| fixtureGrammar fixtureRuleFoo |
+
+fixtureGrammar = (
+
+	^ fixtureGrammar
+)
+
+fixtureGrammar: anObject = (
+
+	fixtureGrammar := anObject
+)
+
+fixtureRuleFoo = (
+
+	^ fixtureRuleFoo
+)
+
+fixtureRuleFoo: anObject = (
+
+	fixtureRuleFoo := anObject
+)
+
+setUp = (
+
+	| ruleDictionary |
+	self fixtureRuleFoo: (OhmPExprString newOn: 'foo').
+
+	ruleDictionary := Dictionary new.
+	ruleDictionary
+		at: #foo
+		put: self fixtureRuleFoo.
+
+	self fixtureGrammar: (OhmGrammar
+							newWithName: 'TestGrammar'
+							ruleDictionary: ruleDictionary)
+)
+
+tearDown = (
+
+	self fixtureRuleFoo: nil.
+	self fixtureGrammar: nil.
+)
+
+testCreateAGrammar = (
+
+	| grammar |
+	grammar := OhmGrammar
+					newWithName: 'TestGrammar'
+					ruleDictionary: Dictionary new.
+)
+
+testDoesMatch = (
+
+	self assert: (self fixtureGrammar doesMatch: 'foo' startingFrom: 'foo').
+	self deny: (self fixtureGrammar doesMatch: 'foobar' startingFrom: 'foo').
+)
+
+testFailedMatchReturnsAFailedMatchResult = (
+	| r |
+	r := self fixtureGrammar match: 'bar' startingFrom: #foo.
+	self
+		assert: r failed;
+		assert: r succeeded not.
+)
+
+testFailureInformationOnFailedMatch = (
+
+	"Error messages are fine when displayed in monospace. --pre"
+
+	| g matching |
+
+	g := OhmGrammar new: 'G { start = "a" "b" "c" "d" }'.
+
+	matching := g match: 'ab' startingFrom: 'start'.
+
+	self assert: matching failure message equals:
+'Line 1, column 3: ab
+                     ^
+Expected ''c'''.
+	self assert: matching failure position equals: 2.
+
+
+	matching := g match: 'abcde' startingFrom: 'start'.
+
+	self assert: matching failure message equals:
+'Line 1, column 5: abcde
+                       ^
+Expected end of input'.
+	self assert: matching failure position equals: 4.
+)
+
+testGetRule = (
+
+	self assert: self fixtureRuleFoo equals: (self fixtureGrammar ruleNamed: #foo).
+)
+
+testMatchContentsReturnsANodeInTheMatchResult = (
+
+	| result |
+	result := (self fixtureGrammar match: 'foo' startingFrom: #foo) cst.
+	self assert: 1 equals: result interval start.
+	self assert: 3 equals: result interval end.
+)
+
+testNewGrammarCreationAPIbrokenGrammar = (
+
+	self should: [OhmGrammar new: 'G {
+					broken = "  }']
+		raise: OhmMatchFailure
+)
+
+testNewMatchingAPI = (
+
+	self fixtureGrammar match: 'foo' startingFrom: #foo.
+)
+
+testSkipNotTooManySpaces = (
+
+	| state testInput |
+
+	testInput := OhmInputStream on: ' a '.
+	state := OhmParsingState new.
+	state pushInput: testInput.
+	state grammar: self fixtureGrammar.
+	self fixtureGrammar skipSpaces: state.
+	self assert: 1 equals: testInput getState.
+
+	
+)
+
+testSkipSpaces = (
+	| testInput state |
+
+	{' ' . '  ' . '',Character cr . Character tab asString } do: [ :fixtureString |
+		testInput := OhmInputStream on: fixtureString.
+		state := OhmParsingState new.
+		state pushInput: testInput.
+		state grammar: self fixtureGrammar.
+		self fixtureGrammar skipSpaces: state.
+		self assert: testInput atEnd]
+)
+
+testSuccessfulMatchReturnsAMatchResult = (
+	| r |
+	r := self fixtureGrammar match: 'foo' startingFrom: #foo.
+	self
+		assert: r succeeded;
+		assert: r failed not.
+)
+
+
+)

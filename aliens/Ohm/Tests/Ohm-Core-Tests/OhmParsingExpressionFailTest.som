@@ -1,0 +1,22 @@
+OhmParsingExpressionFailTest = OhmParsingExpressionTest (
+testCreateAFail = (
+
+	OhmPExprFail new.
+)
+
+testFailArity = (
+
+	self assert: 1 equals: (OhmPExprFail new) arity.
+)
+
+testFailFails = (
+
+	| failExpression |
+	failExpression := OhmPExprFail new.
+	self
+		assertParsingExpression: failExpression
+		compliesWithItsFixture: #expressionMatch.
+)
+
+
+)

@@ -1,0 +1,103 @@
+OhmPExprOpt = OhmParsingExpression (
+| term |
+
+arity = (
+
+	^ self term arity
+)
+
+asActionBindingName = (
+
+	^ 'optional' , self term asActionBindingName capitalized 
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	self term assertChoicesHaveUniformArity: ruleName
+)
+
+debugNodeString = (
+
+	^ 'Optional: ' , Character cr , self term debugNodeString 
+)
+
+doEval: state = (
+
+	"TODO: syntactic handling"
+	"TODO: syntactic tests"
+
+	| originalInputState result input |
+	input := state inputStream.
+	originalInputState := input getState.
+	
+	result := self term eval: state.
+
+	result ifFalse: [
+		input setState: originalInputState.
+		1 to: self arity do: [:n | 
+			state 
+				addNodeNamed: self class terminalRuleIdentifier
+				startedAt: originalInputState 
+				withChildren: {nil}]].
+
+	^ true
+	
+)
+
+innerNodesAt: parsingState = (
+
+	^ { self term } 
+)
+
+nodesResultingInCST = (
+
+	^ { self term }
+)
+
+term = (
+
+	^ term
+)
+
+term: anObject = (
+
+	term := anObject
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: (self term replaceParametersWithArguments: arguments)
+)
+
+toRecipe = (
+
+	^ 'b opt: (' , 
+		self term toRecipe, 
+		')'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprOpt
+)
+
+newOn: term = (
+
+	| newExpr |
+	newExpr := (self new)
+		term: term;
+		yourself.
+	term parentExpression: newExpr.
+	^ newExpr
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

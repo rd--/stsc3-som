@@ -1,0 +1,68 @@
+OhmPExprParam = OhmParsingExpression (
+| parameterName parameterIndex |
+
+doEval: aState = (
+	"OhmPExprParam are placeholders which should be replaced by the actual rules
+	on the first call of the parameterized rule."
+
+	self error: 'A Param parsing expression should never be executed.'
+)
+
+parameterIndex = (
+	
+	^ parameterIndex
+)
+
+parameterIndex: anObject = (
+	
+	parameterIndex := anObject.
+)
+
+parameterName = (
+	
+	^ parameterName
+)
+
+parameterName: anObject = (
+	
+	parameterName := anObject.
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ arguments at: self parameterIndex
+)
+
+toRecipe = (
+	
+	^ 'b param: ' , self parameterIndex asString , ' named: ' , self parameterName asSymbol printString
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprParam
+)
+
+newOn: parameterIndex = (
+
+	^ self newOn: parameterIndex named: 'tempParam'
+)
+
+newOn: parameterIndex named: parameterName = (
+
+	^ self new
+		parameterIndex: parameterIndex;
+		parameterName: parameterName;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

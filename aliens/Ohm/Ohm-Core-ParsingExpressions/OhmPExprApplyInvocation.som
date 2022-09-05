@@ -1,0 +1,286 @@
+OhmPExprApplyInvocation = OhmPExprApply (
+| input grammar bindings shouldRecordFailures originalPosition positionInfo beforeFailureDescriptor duringFailureDescriptor state |
+
+beforeFailureDescriptor = (
+
+	^ beforeFailureDescriptor
+)
+
+beforeFailureDescriptor: anObject = (
+
+	beforeFailureDescriptor := anObject
+)
+
+bindings = (
+
+	^ bindings
+)
+
+bindings: anObject = (
+
+	bindings := anObject
+)
+
+duringFailureDescriptor = (
+
+	^ duringFailureDescriptor
+)
+
+duringFailureDescriptor: anObject = (
+
+	duringFailureDescriptor := anObject
+)
+
+grammar = (
+
+	^ grammar
+)
+
+grammar: anObject = (
+
+	grammar := anObject
+)
+
+input = (
+
+	^ input
+)
+
+input: anObject = (
+
+	input := anObject
+)
+
+originalPosition = (
+
+	^ originalPosition
+)
+
+originalPosition: anObject = (
+
+	originalPosition := anObject
+)
+
+positionInfo = (
+
+	^ positionInfo
+)
+
+positionInfo: anObject = (
+
+	positionInfo := anObject
+)
+
+ruleBody = (
+
+	^ cachedRuleBody
+)
+
+ruleBody: aRuleBody = (
+
+	cachedRuleBody := aRuleBody
+)
+
+shouldRecordFailures = (
+
+	^ shouldRecordFailures
+)
+
+shouldRecordFailures: anObject = (
+
+	shouldRecordFailures := anObject
+)
+
+state = (
+
+	^ state
+)
+
+state: anObject = (
+
+	state := anObject
+)
+
+evaluateBody = (
+	
+	| tmpBindings result origPos newState |
+	tmpBindings := OrderedCollection new.
+	((self isSyntactic: self ruleName) or: [state isSyntactic])
+		ifTrue: [self grammar skipSpaces: state].
+	origPos := self input getState.
+	self beforeFailureDescriptor: self state rightmostFailure.
+	self duringFailureDescriptor: OhmFailureDescriptor new.
+
+	newState := OhmParsingState new
+				pushInput: self input;
+				grammar: grammar;
+				isSyntactic: (self isSyntactic: self ruleName);
+				pushBindings: tmpBindings;
+				shouldRecordFailures: self shouldRecordFailures;
+				rightmostFailure: self duringFailureDescriptor;
+				idOfParseProcess: self state idOfParseProcess.
+	result := self ruleBody eval: newState.
+
+	^ result 
+		ifTrue: [OhmNode 
+					newNamed: self ruleName 
+					forGrammar: self grammar 
+					andInput: self input 
+					startedAt: origPos 
+					withChildren: tmpBindings]
+		ifFalse: [ #ohmFail ]
+		
+)
+
+evaluation = (
+
+	| result |
+	self positionInfo enter: self ruleName.
+	result := self evaluateBody.
+	result == #ohmFail 
+		ifFalse: [
+			(self positionInfo isCurrentLeftRecursion: self ruleName)
+				ifTrue: [ "We arrived at the top and can now grow a seed."
+						result := self handleLeftRecursion: result ]
+				ifFalse: [ (self positionInfo isInvolvedRule: self ruleName)
+							ifFalse: [ "Do not memoize if we are part of a left recursion."
+									self memoizeResult: result ] ] ]
+		ifTrue: [
+			(self positionInfo isCurrentLeftRecursion: self ruleName)
+				ifTrue: [self positionInfo endLeftRecursion]].
+
+	self positionInfo leave: self ruleName.
+	self state rightmostFailure: self beforeFailureDescriptor.
+	self state recordFailures: self duringFailureDescriptor.
+
+	^ result == #ohmFail
+		ifTrue: [false]
+		ifFalse: [ 
+			bindings add: result.
+			true]
+)
+
+result = (
+
+	| memo |
+	
+	self originalPosition: self input getState.
+	self positionInfo: self input currentPositionInfo.
+
+	memo := self tryToUseMemoizedResult.
+	memo == #ohmFail ifFalse: [^ memo hasMatched].
+	
+	^ (self positionInfo activeRules includes: self ruleName)
+		ifTrue: [self handleEncounterOfSelf]
+		ifFalse: [self evaluation]
+)
+
+growTheSeed: seed = (
+
+	| memo newMemo |
+
+	"Set state so when reaching the rule again we have can use the current result"
+	self memoizeResult: seed.
+	
+	"Reset the input state and get the memo so we can start again"
+	self input setState: self originalPosition.
+	newMemo := self input getMemoizedResultFor: self ruleName.
+	[ 	memo := newMemo.
+		self memoizeResult: self evaluateBody. "TODO here we need different handling"
+	 	self input setState: self originalPosition.
+	  	newMemo := self input getMemoizedResultFor: self ruleName. ] 
+			doWhileTrue: [newMemo ~~ #ohmFail and: [newMemo position > memo position]].
+
+	self input setState: memo position.
+	^ memo node
+
+		
+)
+
+handleEncounterOfSelf = (
+
+	^  (self positionInfo isCurrentLeftRecursion: self ruleName)
+			ifTrue: [ | memo |	
+				memo := self positionInfo memoizedResultFor: self ruleName.
+				memo hasMatched]
+			ifFalse: [ 
+				self positionInfo startLeftRecursion: self ruleName.
+				self memoizeLeftRecursion.
+				false]
+)
+
+handleLeftRecursion: seed = (
+
+	| result |
+	result := self growTheSeed: seed.
+	self memoizeLeftRecursionResult: result.
+	self positionInfo endLeftRecursion.
+	^ result
+)
+
+memoizeLeftRecursion = (
+		
+	self input
+		memoizeLeftRecursionFor: self ruleName
+		at: self originalPosition.
+)
+
+memoizeLeftRecursionResult: result = (
+	
+	self input 
+		memoizeLeftRecursionResult: result
+		hasMatched: true
+		at: self originalPosition 
+		for: self ruleName
+		withFailures: self duringFailureDescriptor.
+)
+
+memoizeResult: result = (
+		
+	self memoizeResult: result hasMatched: true
+)
+
+memoizeResult: result hasMatched: hasMatched = (
+		
+	self input 
+		memoizeResult: result 
+		hasMatched: hasMatched
+		at: self originalPosition 
+		for: self ruleName
+		withFailures: self duringFailureDescriptor
+)
+
+tryToUseMemoizedResult = (
+
+	| memo |
+	memo := self input getMemoizedResultFor: self ruleName.
+	(memo ~~ #ohmFail and: [memo isLeftRecursion not])
+		ifTrue: [ self input setState: memo position.
+				memo node ifNotNil: [ :node | self bindings add: node ].
+				^ memo].
+	^ memo
+)
+
+
+----------------------------
+
+newFor: ruleName with: ruleBody on: state = (
+
+	^ self new
+		ruleName: ruleName;
+		input: state inputStream;
+		grammar: state grammar;
+		bindings: state bindings;
+		ruleBody: ruleBody;
+		shouldRecordFailures: state shouldRecordFailures;
+		state: state;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

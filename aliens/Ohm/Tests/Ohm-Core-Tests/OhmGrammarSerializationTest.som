@@ -1,0 +1,53 @@
+OhmGrammarSerializationTest = TestCase (
+testComplexSerialization = (
+
+	| g description |
+
+	g := OhmCompiler compileGrammarDefinition: 'G {
+		foo = "f"
+		Bar = foo | foobaz
+		foobaz =
+			"foo" "baz" --one
+			| "foobaz" --two
+	}'.
+
+	description := 'G <: BuiltInRules {
+Bar = foo | foobaz
+
+foo = "f"
+
+foobaz =
+			"foo" "baz" --one
+			| "foobaz" --two}'.
+	self assert: description equals: g grammarDefinitionString.
+)
+
+testSerializerToRecipe = (
+
+	| g g2 recipe |
+
+	g := OhmCompiler compileGrammarDefinition: 'G {
+		foo = "f"
+	}'.
+
+	recipe := g toRecipe.
+	g2 := (Compiler evaluate: recipe) value.
+	self should: g2 ruleDeclarations size = 1.
+	self shouldnt: (g2 match: 'f') = false.
+)
+
+testSimpleSerialization = (
+
+	| g description |
+
+	g := OhmCompiler compileGrammarDefinition: 'G {
+		foo = "f"
+	}'.
+
+	description := 'G <: BuiltInRules {
+foo = "f"}'.
+	self assert: description equals: g grammarDefinitionString.
+)
+
+
+)

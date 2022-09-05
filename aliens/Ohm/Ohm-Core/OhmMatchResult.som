@@ -1,0 +1,77 @@
+OhmMatchResult = Object (
+| state |
+
+cst = (
+	^ self state bindings first
+)
+
+state = (
+
+	^ state
+)
+
+state: anObject = (
+
+	state := anObject
+)
+
+failed = (
+
+	^ false
+)
+
+succeeded = (
+
+	^ self failed not
+)
+
+isOhmMatchResult = (
+
+	^ true
+)
+
+
+----------------------------
+
+new: aParsingState = (
+
+	| r |
+	r := self new.
+	r state: aParsingState.
+	^ r
+)
+
+newFor: aParsingState = (
+	| setParents |
+	^ (aParsingState bindingsStack isEmpty or: [aParsingState bindings isEmpty])
+		ifTrue: [ OhmFailedMatchResult new: aParsingState ]
+		ifFalse: [ 
+			setParents := aParsingState grammar semanticAction: OhmSetParentAttribute new.
+			setParents value: aParsingState bindings first.
+			OhmMatchResult new: aParsingState ]
+)
+
+newFor: aParsingState withResult: result startingFrom: startRuleName = (
+	| setParents |
+	^ result
+		ifFalse: [ 
+			| failure |
+			failure := OhmMatchFailure new
+				state: aParsingState;
+				startRuleName: startRuleName.
+			(OhmFailedMatchResult new: aParsingState)
+				failure: failure;
+				yourself  ]
+		ifTrue: [ 
+			setParents := aParsingState grammar semanticAction: OhmSetParentAttribute new.
+			setParents value: aParsingState bindings first.
+			OhmMatchResult new: aParsingState ]
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

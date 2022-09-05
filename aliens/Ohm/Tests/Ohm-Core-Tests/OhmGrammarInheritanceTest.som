@@ -1,0 +1,213 @@
+OhmGrammarInheritanceTest = TestCase (
+makeAndInstallGrammar: grammarDefinition in: packageName = (
+
+	SystemChangeNotifier uniqueInstance doSilently: [
+		packageName
+			ifNotNil: [ ^ OhmGrammar
+							makeAndInstallGrammar: grammarDefinition
+							in: packageName ]
+			ifNil: [ ^ self makeGrammar: grammarDefinition ]].
+)
+
+makeGrammar: grammarDefinition = (
+
+	^ OhmGrammar new: grammarDefinition
+)
+
+setUp = (
+
+	PackageInfo named: 'inheritanceTestNameSpace1'.
+	PackageInfo named: 'inheritanceTestNameSpace2'.
+)
+
+tearDown = (
+
+	SystemOrganizer default removeSystemCategory: 'inheritanceTestNameSpace1'.
+	SystemOrganizer default removeSystemCategory: 'inheritanceTestNameSpace2'.
+)
+
+testBindingsInconsistentAritiesInAlt = (
+
+	self
+		testOnGrammar: 'G { foo = "a" "c" | "b" }' in: 'inheritanceTestNameSpace1'
+		throws: OhmInconsistentArityError
+		andShould: [ :e | self assert: e ruleName equals: 'foo'.
+						self assert: e expected equals: 2.
+						self assert: e actual equals: 1.].
+
+
+	self
+		testOnGrammar: 'G { foo = ("a" "c" | "b") "d" }' in: 'inheritanceTestNameSpace1'
+		throws: OhmInconsistentArityError
+		andShould: [ :e | self assert: e ruleName equals: 'foo'.
+						self assert: e expected equals: 2.
+						self assert: e actual equals: 1.].
+
+	"self
+		testOnGrammar: 'G { foo = ~(""a"" ""c"" | ""b"") }' in: ''
+		throws: OhmInconsistentArityError
+		andShould: [ :e | self assert: e ruleName equals: 'foo'.
+						self assert: e expected equals: 2.
+						self assert: e actual equals: 1.]"
+)
+
+testDefineCannotOverride = (
+
+	self
+		testOnGrammar: 'G1 { foo = "foo" }
+						G2 <: G1 { foo = "bar" }'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmDuplicateRuleDeclarationError
+		andShould: [ :e | self assert: e ruleName equals: 'foo'.
+				 self assert: e grammarName equals: 'G1'].
+)
+
+testExtend = (
+
+	self makeAndInstallGrammar: 'G1 { foo = "aaa" "bbb" }' in: 'inheritanceTestNameSpace1'.
+	self makeAndInstallGrammar: 'G2 <: inheritanceTestNameSpace1.G1 { foo += "111" "222" }' in: 'inheritanceTestNameSpace2'.
+
+	self
+		testOnGrammar: 'G3 <: G1 { bar += "bar" }'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmUndeclaredRuleError
+		andShould: [:e | self assert: e ruleName equals: 'bar'.
+						self assert: e grammarName equals: 'G1'. ].
+
+	
+)
+
+testExtendArities = (
+
+	self makeAndInstallGrammar: 'M1 { foo = "foo" }' in: 'inheritanceTestNameSpace1'.
+
+	self testOnGrammar:  'M2 <: M1 { foo += bar baz }'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmRefinementMustBeCompatibleError
+		andShould: [ :e | self assert: e why equals: 'extending'.
+						 self assert: e ruleName equals: 'foo' ].
+
+	OhmGrammar makeAndInstallGrammar: 'M3 { foo = digit digit }' in: 'inheritanceTestNameSpace1'.
+	self testOnGrammar:  'M4 <: M3 { foo += digit }'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmRefinementMustBeCompatibleError
+		andShould: [ :e | self assert: e why equals: 'extending'.
+						 self assert: e ruleName equals: 'foo' ].
+)
+
+testExtendParameterArities = (
+
+	self makeAndInstallGrammar: 'M1 { foo<A> = "foo" }' in: 'inheritanceTestNameSpace1'.
+
+	self testOnGrammar:  'M2 <: M1 { foo<A> += bar }'
+		in: 'inheritanceTestNameSpace1'
+		throwsNot: OhmIncompatibleNumberOfParameters.
+
+	self testOnGrammar: 'M3 <: M1 { foo<A,B> += bar}'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmIncompatibleNumberOfParameters
+		andShould: [:e | ]
+)
+
+testExtendRecognition = (
+
+	| g1 g2 |
+	g1 := self makeAndInstallGrammar: 'G1 { foo = "aaa" "bbb" }' in: 'inheritanceTestNameSpace1'.
+   g2 := self makeAndInstallGrammar: 'G2 <: inheritanceTestNameSpace1.G1 { foo += "111" "222" }' in: 'inheritanceTestNameSpace2'.
+
+	self assert: (g1 match: 'aaabbb' startingFrom: 'foo') succeeded.
+	self should: (g1 match: '111222' startingFrom: 'foo') failed.
+
+	self should: (g2 match: 'aaabbb' startingFrom: 'foo') succeeded.
+	self should: (g2 match: '111222' startingFrom: 'foo') succeeded.
+)
+
+testOnGrammar: grammarDescription in: packageName throws: errorType andShould: blockWithAssertions = (
+
+	SystemChangeNotifier uniqueInstance doSilently: [ | signal |
+		signal := false.
+		[ OhmGrammar makeAndInstallGrammars: grammarDescription in: packageName ]
+			on: errorType
+			do: [:e | signal := true. blockWithAssertions value: e ].
+		self assert: signal equals: true description: 'Exception was not signaled' ].
+
+)
+
+testOnGrammar: grammarDescription in: packageName throwsNot: errorType = (
+
+	SystemChangeNotifier uniqueInstance doSilently: [
+	self
+		shouldnt: [ OhmGrammar makeAndInstallGrammars: grammarDescription in: packageName ]
+		raise: errorType]
+)
+
+testOverride = (
+
+	self makeAndInstallGrammar: 'G1 { number = digit }' in: 'inheritanceTestNameSpace1'.
+	self makeAndInstallGrammar: 'G2 <: G1 { digit := /[a-z]/ }' in: 'inheritanceTestNameSpace1'.
+
+	self testOnGrammar:  'G3 <: G1 { foo := "foo" }'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmUndeclaredRuleError
+		andShould: [ :e | self assert: e grammarName equals: 'G1'.
+						 self assert: e ruleName equals: 'foo' ].
+)
+
+testOverrideArities = (
+
+	self makeAndInstallGrammar: 'M1 { foo = "foo" }' in: 'inheritanceTestNameSpace1'.
+
+	self testOnGrammar:  'M2 <: M1 { foo := bar baz }'
+		in: 'inheritanceTestNameSpace1'
+		throwsNot: OhmRefinementMustBeCompatibleError.
+
+	OhmGrammar makeAndInstallGrammar: 'M3 { foo = digit digit }' in: 'inheritanceTestNameSpace1'.
+	self testOnGrammar:  'M4 <: M3 { foo := digit }'
+		in: 'inheritanceTestNameSpace1'
+		throwsNot: OhmRefinementMustBeCompatibleError.
+)
+
+testOverrideParameterArities = (
+
+	self makeAndInstallGrammar: 'M1 { foo<A> = "foo" }' in: 'inheritanceTestNameSpace1'.
+
+	self testOnGrammar:  'M2 <: M1 { foo<A> := bar baz }'
+		in: 'inheritanceTestNameSpace1'
+		throwsNot: OhmIncompatibleNumberOfParameters.
+
+	self testOnGrammar: 'M3 <: M1 { foo<A,B> := bar baz}'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmIncompatibleNumberOfParameters
+		andShould: [:e | ]
+)
+
+testOverrideRecognition = (
+
+	| g1 g2 |
+	g1 := self makeAndInstallGrammar: 'G1 { number = digit* }' in: 'inheritanceTestNameSpace1'.
+	g2 := self makeAndInstallGrammar: 'G2 <: G1 { digit := /[a-z]/ }' in: 'inheritanceTestNameSpace1'.
+
+	self should: (g1 match: '1234' startingFrom: #number) succeeded.
+	self should: (g1 match: 'hello' startingFrom: #number) failed.
+	self should: (g1 match: 'h3llo' startingFrom: #number) failed.
+
+	self should: (g2 match: '1234' startingFrom: #number) failed.
+	self should: (g2 match: 'hello' startingFrom: #number) succeeded.
+	self should: (g2 match: 'h3llo' startingFrom: #number) failed.
+)
+
+testUndefinedSuperGrammar = (
+
+	self testOnGrammar:  'G1 <: G2 {}'
+		in: 'inheritanceTestNameSpace1'
+		throws: OhmUndeclaredGrammarError
+		andShould: [ :e | self assert: 'G2' equals: e grammarName  ].
+
+	self testOnGrammar:  'G1 <: G2 {}'
+		in: nil
+		throws: OhmUndeclaredGrammarError
+		andShould: [ :e | self assert: 'G2' equals: e grammarName ].
+)
+
+
+)

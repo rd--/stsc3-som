@@ -1,0 +1,60 @@
+OhmPExprCaseInsensitive = OhmPExprPrim (
+| term |
+
+matchInput: anInput = (
+
+	| matchResult |
+
+	matchResult := anInput matchCaseInsensitiveString: self matchString.
+	matchResult == #ohmFail
+		ifFalse: [ ^ self matchString ].
+	^ #ohmFail
+)
+
+matchString = (
+	
+	^ self term matchString
+)
+
+term = (
+	
+	^ term
+)
+
+term: aPexpr = (
+	
+	term := aPexpr
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: (self term replaceParametersWithArguments: arguments)
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprCaseInsensitive
+)
+
+newOn: term = (
+	
+	^ (self new)
+		term: term;
+		yourself	
+)
+
+newWithParam = (
+	
+	^ self newOn: (OhmPExprParam newOn: 1 named: 'str')
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

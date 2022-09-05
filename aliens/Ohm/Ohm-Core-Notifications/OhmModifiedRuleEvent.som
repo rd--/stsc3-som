@@ -1,0 +1,40 @@
+OhmModifiedRuleEvent = ModifiedEvent (
+grammarModifiedIn = (
+
+	^ self class
+)
+
+newRule = (
+
+	^ self item
+)
+
+oldRule = (
+
+	^ self oldItem
+)
+
+
+----------------------------
+
+oldRule: oldRule modifiedTo: newRule in: grammar = (
+
+	| instance |
+	instance := self item: newRule kind: OhmChangeNotifier ruleKind.
+	instance itemClass: grammar.
+	instance oldItem: oldRule.
+	^ instance
+)
+
+supportedKinds = (
+
+	^ Array with: OhmChangeNotifier ruleKind
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

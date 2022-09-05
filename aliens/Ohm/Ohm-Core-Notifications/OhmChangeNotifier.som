@@ -1,0 +1,176 @@
+OhmChangeNotifier = Object (
+| eventSource silenceLevel |
+
+allQueryEvents = (
+
+	^ { OhmAddedRuleEvent  .
+		OhmModifiedRuleEvent .
+		OhmModifiedGrammarEvent .
+		OhmRemovedRuleEvent }
+			gather: [:e | e itemChangeCombinations]
+)
+
+ohmEventsForChange: changeKind = (
+	| selectorBlock |
+	selectorBlock := AbstractEvent eventSelectorBlock.
+	^self allItemKinds 
+		collect: [:itemKind | selectorBlock value: itemKind value: changeKind]
+)
+
+ohmEventsForItem: itemKind = (
+	| selectorBlock |
+	selectorBlock := AbstractEvent eventSelectorBlock.
+	^AbstractEvent allChangeKinds 
+		collect: [:changeKind | selectorBlock value: itemKind value: changeKind]
+)
+
+ohmEventsForItem: itemKind change: changeKind = (
+	^AbstractEvent eventSelectorBlock value: itemKind value: changeKind
+)
+
+trigger: event = (
+
+	self isBroadcasting ifTrue: [event trigger: eventSource]
+)
+
+doSilently: aBlock = (
+	"Perform the block, and ensure that no system notification are broadcasted while doing so."
+
+	| result |
+	silenceLevel := silenceLevel + 1.
+	result := aBlock ensure: [silenceLevel > 0 ifTrue: [silenceLevel := silenceLevel - 1]].
+	^ result.
+)
+
+noMoreNotificationsFor: anObject = (
+	"Stop sending system notifications to an object."
+
+	eventSource removeActionsWithReceiver: anObject
+)
+
+notify: anObject ofAllOhmChangesUsing: oneArgumentSelector = (
+	"Notifies an object of any query changes."
+
+	self 
+		notify: anObject
+		ofEvents: self allQueryEvents
+		using: oneArgumentSelector
+)
+
+notify: anObject ofEvents: eventsCollection using: oneArgumentSelector = (
+	"Notifies an object of any events in the eventsCollection. Send it back a message #oneArgumentSelector, with as argument the particular event instance."
+
+	eventsCollection do: [:eachEvent |
+		eventSource when: eachEvent send: oneArgumentSelector to: anObject]
+)
+
+notify: anObject ofOhmChangesOfChange: changeKind using: oneArgumentSelector = (
+	"Notifies an object of query changes of the specified changeKind (#added, #removed, ...). Evaluate 'AbstractEvent allChangeKinds' to get the complete list."
+
+	self 
+		notify: anObject
+		ofEvents: (self  ohmEventsForChange: changeKind)
+		using: oneArgumentSelector
+)
+
+notify: anObject ofOhmChangesOfItem: itemKind change: changeKind using: oneArgumentSelector = (
+	"Notifies an object of query changes of the specified itemKind (#class, #category, ...) and changeKind (#added, #removed, ...). This is the finest granularity possible.
+	Evaluate 'AbstractEvent allChangeKinds' to get the complete list of change kinds, and 'AbstractEvent allItemKinds to get all the possible item kinds supported."
+
+	self 
+		notify: anObject
+		ofEvents: (Bag with: (self ohmEventsForItem: itemKind change: changeKind))
+		using: oneArgumentSelector
+)
+
+notify: anObject ofOhmChangesOfItem: itemKind using: oneArgumentSelector = (
+	"Notifies an object of query changes of the specified itemKind (#class, #method, #protocol, ...). Evaluate 'AbstractEvent allItemKinds' to get the complete list."
+
+	self 
+		notify: anObject
+		ofEvents: (self ohmEventsForItem: itemKind)
+		using: oneArgumentSelector
+)
+
+releaseAll = (
+	"Release all the dependents so that nobody receives notifications anymore."
+
+	"Done for cleaning up the system."
+	"self uniqueInstance releaseAll"
+
+	eventSource releaseActionMap
+)
+
+grammar: oldGrammar modifiedTo: newGrammar = (
+
+	self trigger: (OhmModifiedGrammarEvent oldGrammar: oldGrammar modifiedTo: newGrammar)
+)
+
+rule: rule addedTo: grammar = (
+
+	self trigger: (OhmAddedRuleEvent addedRule: rule grammarAddedTo: grammar)
+)
+
+rule: oldRule modifiedTo: newRule in: grammar = (
+
+	self trigger: (OhmModifiedRuleEvent oldRule: oldRule modifiedTo: newRule in: grammar)
+)
+
+rule: rule removedFrom: grammar = (
+
+	self trigger:
+		(OhmRemovedRuleEvent 
+			removedRule: rule from: grammar)
+)
+
+initialize = (
+
+	super initialize.
+	eventSource := SystemEventManager new.
+	silenceLevel := 0.
+)
+
+isBroadcasting = (
+
+	^ silenceLevel = 0
+)
+
+setBroadcasting = (
+	silenceLevel := 0.
+)
+
+
+----------------------------
+| UniqueInstance |
+
+grammarKind = (
+
+	^ #grammarChange
+)
+
+resetUniqueInstance = (
+	"self resetUniqueInstance"
+
+	UniqueInstance ifNotNil: [:u |
+		UniqueInstance releaseAll.
+		UniqueInstance := nil].
+)
+
+ruleKind = (
+
+	^ #ruleChange
+)
+
+uniqueInstance = (
+
+	UniqueInstance ifNil: [UniqueInstance := self basicNew initialize].
+	^UniqueInstance
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

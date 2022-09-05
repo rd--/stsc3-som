@@ -1,0 +1,155 @@
+OhmInheritedAttribute = OhmAttributes (
+| memoization childStack |
+
+applyBaseOn: aNode = (
+	
+	(self class allSelectors includes: #baseExpression:)
+		ifFalse: [ Error signal: 'The base expression of an iherited attribute has not been defined.'].
+
+	^ self baseExpression: aNode
+)
+
+applyListAttributeOn: aNode = (
+
+	| actionName grandparent messages |
+	grandparent := aNode parent parent. "TODO: is this legal? --pre"
+
+	actionName := 
+		grandparent ruleName , 
+		'At' , 
+		(grandparent children indexOf: aNode parent ifAbsent: [ Error signal: 'Broken concrete syntax tree' ]) ,
+		'ForEach:on:'.
+	actionName := actionName asSymbol.
+
+	messages := self class allSelectorsBelow: OhmAttributes.	
+	(messages includes: actionName)
+		ifTrue: [ ^ self dispatch: actionName for: aNode ]
+		ifFalse: [ (messages includes: #listExpression:on:at:)
+					ifTrue: [ ^ self dispatch: #listExpression:on:at: for: aNode withChildren: true ].
+				 (messages includes: #defaultExpression:on:)
+					ifTrue: [ ^ self dispatch: #defaultExpression:on: for: aNode withChildren: true].
+				 OhmMissingAttributeMethod signal: actionName. ] "TODO: better error message, as the default actions are also missing at this point --pre"
+)
+
+applyStandardOn: aNode = (
+
+	| actionName parent messages |
+	parent := aNode parent.
+
+	actionName := 
+		(parent ruleName , 
+		'At' , 
+		(parent children indexOf: aNode ifAbsent: [ Error signal: 'Broken concrete syntax tree' ]),
+		':on:') asSymbol.
+	
+
+	messages := self class allSelectors.
+
+	(messages includes: actionName)
+		ifTrue: [ ^ self dispatch: actionName for: aNode ].
+
+	(messages includes: #defaultExpression:on:at:)
+		ifTrue: [ ^ self dispatch: #defaultExpression:on:at: for: aNode withChildren: true ].
+
+	 OhmMissingAttributeMethod signal: actionName. "TODO: better error message, as the default actions are also missing at this point --pre"
+)
+
+dispatch: messageName for: aNode = (
+
+	^ self dispatch: messageName for: aNode withChildren: false
+)
+
+dispatch: messageName for: aNode withChildren: childrenIncluded = (
+
+	^ childrenIncluded
+		ifTrue: [ self perform: messageName 
+					withArguments: { aNode parent . aNode . aNode parent children indexOf: aNode ifAbsent: [ Error signal: 'Broken concrete syntax tree' ] }. ]
+		ifFalse:  [ self perform: messageName 
+					withArguments: { aNode parent . aNode }. ]
+
+	
+)
+
+evaluateOn: aNode = (
+
+	| result |
+
+	self pushChild: aNode.
+
+	aNode parent
+		ifNil: [ result := self applyBaseOn: aNode ]
+		ifNotNil: [ aNode parent ruleName = OhmParsingExpression listRuleIdentifier 
+					ifTrue: 	[ result := self applyListAttributeOn: aNode ]
+					ifFalse: 	[ result := self applyStandardOn: aNode ]].
+
+	self popChild.
+
+	^ result
+)
+
+specialAttributes = (
+
+	^ { OhmParsingExpression listRuleIdentifier . #defaultExpression:on: }
+)
+
+value: aNode = (
+
+	(self memoization includesKey: aNode)
+		ifFalse: [ self evaluateOn: aNode.
+				"TODO: check whether attribute was set" ].
+
+	^ self memoization at: aNode
+)
+
+childStack = (
+
+	^ childStack
+)
+
+childStack: anObject = (
+
+	childStack := anObject
+)
+
+initialize = (
+	
+	super initialize.
+	self childStack: OrderedCollection new.
+	self memoization: IdentityDictionary new.
+)
+
+memoization = (
+
+	^ memoization
+)
+
+memoization: anObject = (
+
+	memoization := anObject
+)
+
+popChild = (
+
+	self childStack removeLast
+)
+
+pushChild: aChild = (
+
+	self childStack add: aChild
+)
+
+topChild = (
+
+	^ self childStack last
+)
+
+set: value = (
+
+	(self memoization includesKey: self topChild)
+		ifTrue: [ Error signal: 'Attribute can only be written once' ].
+
+	self memoization at: self topChild put: value.
+)
+
+
+)

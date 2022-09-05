@@ -1,0 +1,120 @@
+OhmGrammarSmalltalkProxy = Object (
+----------------------------
+
+OhmInstance = (
+
+	"Super lazy loading of grammar from serialization in case the class comes from version control --pre"
+
+	^ OhmInstance 
+		ifNil: [ 
+			isLoading ifNil: [isLoading := false].
+			isLoading 
+					ifFalse: [
+						isLoading := true.
+					 	[OhmInstance := 
+							OhmCompiler compileGrammarDefinition: self serializedGrammar
+											inNamespace: self category.
+						OhmInstance smalltalkPlaceholder: self] 
+							ensure: [isLoading := false].
+					 	OhmInstance]
+					ifTrue: [ nil ]].
+)
+
+OhmInstance: anOhmGrammar = (
+
+	OhmInstance := anOhmGrammar
+)
+
+grammarName = (
+
+	^ self OhmInstance grammarName
+)
+
+ownAndInheritedRules = (
+
+	^ self OhmInstance ownAndInheritedRules
+)
+
+ruleNamed: ruleName = (
+
+	^ self OhmInstance ruleNamed: ruleName
+)
+
+rules = (
+
+	^ self OhmInstance rules
+)
+
+initialize = (
+
+	(self == OhmGrammarSmalltalkProxy) ifTrue: [
+		OhmBaseGrammar recompile.
+		OhmBuiltInRules recompile.
+		OhmGrammarOfOhm recompile.
+		
+		(self allSubclasses copyWithout: {OhmBaseGrammar . OhmBuiltInRules . OhmGrammarOfOhm})
+			do: [:grammar | grammar recompile]]
+)
+
+match: string startingFrom: startRuleName = (
+	
+	^ self OhmInstance match: string startingFrom: startRuleName
+)
+
+metaShoutParserClass = (
+	
+	^ OhmSHRuleParser
+)
+
+shoutParserClass = (
+	
+	^ OhmSHRuleParser
+)
+
+noteCompilationOf: aSelector meta: isMeta = (
+
+	((aSelector = #'serializedGrammar') and: [self ~~ OhmGrammarSmalltalkProxy])
+		ifTrue: [	self theNonMetaClass recompile].
+)
+
+recompile = (
+	"This is only for reseting and should not be used in ordinary compilation, as this method also resets the loading state."
+
+	"<flag: #todo> -- Add notification for new grammar. And think about whether this is the right place for it --pre"
+	| oldInstance |
+	oldInstance := self OhmInstance.
+	self OhmInstance: nil.
+	isLoading := false.
+	self OhmInstance.
+	oldInstance ifNotNil: [OhmChangeNotifier uniqueInstance
+		grammar: oldInstance modifiedTo: self OhmInstance].
+	^ self OhmInstance 
+)
+
+semanticAction: actions = (
+
+	^ self OhmInstance semanticAction: actions     
+)
+
+synthesizedAttribute: actions = (
+
+	^ self OhmInstance synthesizedAttribute: actions     
+)
+
+serializedGrammar = (
+
+	^ ''
+)
+
+toRecipe = (
+
+	^ OhmInstance toRecipe
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

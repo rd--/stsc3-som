@@ -1,0 +1,31 @@
+OhmFailureDescriptor = Object (
+| position expressions |
+
+expressions = (
+
+	^ expressions
+)
+
+expressions: anObject = (
+
+	expressions := anObject
+)
+
+position = (
+
+	^ position
+)
+
+position: anObject = (
+
+	position := anObject
+)
+
+initialize = (
+
+	self position: 0.
+	self expressions: OrderedCollection new.
+)
+
+
+)

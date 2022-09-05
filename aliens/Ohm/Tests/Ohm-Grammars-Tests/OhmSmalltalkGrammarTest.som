@@ -1,0 +1,486 @@
+OhmSmalltalkGrammarTest = OhmSyntaxTestCase (
+assert: result MatchedWithContent: stringContent andRuleName: ruleName = (
+
+	self assert: result ~= false.
+	self
+		assert: result interval contents
+		equals: stringContent.
+	self
+		assert: result ruleName
+		equals: ruleName.
+)
+
+assertStringsDoNotMatch: inputStrings on: ruleName = (
+
+	inputStrings do: [:input | |r|
+		r := OhmSmalltalk match: input startingFrom: ruleName.
+		self assert: r failed]
+)
+
+assertStringsMatch: inputStrings on: ruleName = (
+
+	inputStrings do: [:input | |r|
+		r := OhmSmalltalk match: input startingFrom: ruleName.
+		self assert: r MatchedWithContent: input andRuleName: ruleName]
+)
+
+setUp = (
+
+	grammar := OhmSmalltalk.
+)
+
+testGrammarExists = (
+
+	self assert: OhmSmalltalk grammarName equals: 'OhmSmalltalk'
+)
+
+testGrammarParsesAssignmentOperations = (
+
+	startRule := #AssignmentOperation.
+
+	self
+		shouldParseAll: { 'a :=' . 'abc :=' . 'a231 :=' . 'abc    :=' . 'abc', Character cr,':=' };
+		shouldntParseAny: { 'self  :=' . 'nil :=' . 'super :=' . ':='}.
+)
+
+testGrammarParsesBinaryMessageChains = (
+
+	startRule := #BinaryMessageChain.
+
+	self
+		shouldParseAll: {'+ b' . '+= b' . '+= b foo' . '?? b foo + b' . '+ b fo fa -= x foo'};
+		shouldntParseAny: {'a + b' . ''. 'b foo + a:' . '' . 'msg1: foo'}.
+)
+
+testGrammarParsesBinaryMessageSelectors = (
+
+	startRule := #binaryMessageSelector.
+	self
+		shouldParseAll: { '+' . '-' . '=' . '?' . '&' . '%' . '*' . '\\' . '<' . '>'  . '|' . '!' . '~' . ',' . '?!' . '@?' . '*!' . '==>' . '@@@@' . '====='};
+		shouldntParseAny: { '*a' . '' . 'aa' . 'a*' . 'a:' . ':a' . '+ +'}.
+)
+
+testGrammarParsesBinaryMethodHeaders = (
+
+	startRule := #BinaryMethodHeader.
+	self
+		shouldParseAll:	{'+ anArgument' . '+- b' . '// Argument2' . '+a' };
+		shouldntParseAny: {'+' . ''. 'message:' }.
+)
+
+testGrammarParsesBindableIdentifier = (
+
+	startRule := #bindableIdentifier.
+	self
+		shouldParseAll: { 'a' . 'a2' . 'aslkj123' . 'superArgument' . 'nilOrValue'};
+		shouldntParseAny: { 'self ' . 'self ' . 'super ' . 'nil	' . 'false '}.
+)
+
+testGrammarParsesBlockLiterals = (
+
+	startRule := #BlockLiteral.
+	self
+		shouldParseAll: { '[]' . '[:a | ]' . '[:a :b :c| ]' . '[:Ak2 :blks|]' . '[: a : b : c| ]' . '[:a ]'};
+		shouldntParseAny: { '[|]' . '[:a || ]' . '[:2a | ]' }.
+)
+
+testGrammarParsesByteArrayLiterals = (
+
+	startRule := #ArrayLiteral.
+	self
+		shouldParseAll: { '#[]' . '#[1]' . '#[1 2]' . '#[200 250]' };
+		shouldntParseAny: { '#[a]' . '#[2 . 3]' . '#[' }.
+)
+
+testGrammarParsesCascadedMessageSends = (
+
+	startRule := #Expression.
+
+	self
+		shouldParseAll: {'self negated firstMessage; anotherMessage: 2 negated; yourself'}
+)
+
+testGrammarParsesCascadedMessages = (
+
+	startRule := #CascadedMessage.
+
+	self
+		shouldParseAll: {';a' . ';a: foo' . '; foo: bar + c'};
+		shouldntParseAny: {'msg1' . ''. '; msg;' }.
+)
+
+testGrammarParsesCharacterLiterals = (
+
+	{	{'$a' . 	#characterLiteral } .
+		{'$2' . 	#characterLiteral } .
+		{'$_' . 	#characterLiteral } .
+		{'$''' .	#characterLiteral } .
+		{'$ ' .	#characterLiteral } .
+		{'$$' .	#characterLiteral } .
+		{'$', Character cr
+			.	#characterLiteral } }
+		do: [ :t | |r input|
+			input := t first.
+			r := OhmSmalltalk match: input startingFrom: t second.
+			self assert: r cst MatchedWithContent: input andRuleName: t second.]
+)
+
+testGrammarParsesComplicatedNumbers = (
+
+	startRule := #integerLiteral.
+	{	{'1' . 			#integerLiteral } .
+	 	{'1000' . 		#integerLiteral } .
+		{'-1000' .		#integerLiteral }.
+		{'2r11' .			#integerLiteral }.
+		{'2r101' .		#integerLiteral }.
+		{'2r-11' .		#integerLiteral }.
+		{'-2r101' .		#integerLiteral } }
+		do: [:conf | self shouldParse: conf first to: { conf second . conf first} ].
+
+	{	{'3e2' .			#floatingPointLiteral }.
+		{'2r0.1e-2'.		#floatingPointLiteral } }
+		do: [ :t | |r|
+			r := OhmSmalltalk match: t first startingFrom: t second.
+			self assert: r cst MatchedWithContent: t first andRuleName: t second.]
+)
+
+testGrammarParsesConstantReferenceAsLiteral = (
+
+	startRule := #Literal.
+	self
+		shouldParse: 'true' to: #(Literal (constantReference 'true'));
+		shouldParse: 'false' to: #(Literal (constantReference 'false'));
+		shouldParse: 'nil' to: #(Literal (constantReference 'nil'))
+)
+
+testGrammarParsesConstantReferences = (
+
+	startRule := #constantReference.
+	self
+		shouldParse: 'true' to: #(constantReference 'true');
+		shouldParse: 'false' to: #(constantReference 'false');
+		shouldParse: 'nil' to: #(constantReference 'nil')
+)
+
+testGrammarParsesConstantReferencesInExpressions = (
+
+	startRule := #Expression.
+	self shouldParse: 'nil+3' to: #(
+			Expression
+				(Operand (Literal 'nil'))
+				(MessageChain '+3')
+				(_list))
+)
+
+testGrammarParsesConstantReferencesNotVariables = (
+
+	startRule := #Operand.
+	self
+		shouldParse: 'false' to: #(Operand (Literal (constantReference 'false')));
+		shouldParse: 'nil' to: #(Operand (Literal (constantReference 'nil')));
+		shouldParse: 'true' to: #(Operand (Literal (constantReference 'true')))
+)
+
+testGrammarParsesExecutableCode = (
+
+	startRule := #ExecutableCode.
+
+	self
+		shouldParseAll: {'|a b| a := 1. b := 2. a + b'. 'self assert: [:a | a msg: arg1]'};
+		shouldntParseAny: {'| a' . 'a := 1 b := 2'}.
+)
+
+testGrammarParsesExpression = (
+
+	startRule := #Expression.
+
+	self shouldParseAll:
+		{'a msg1: foo' . 'b foo msg2: foo' . 'a + b msg1: foo msg2: bar' .
+              'a msg1: a1 + foo bar msg2: a2 msg3: a3' . 'a' .
+		  'a foo: bar; bar: foo + a msg' . 'oper' . '123'. 'string' printString};
+		shouldntParseAny:
+		{'msg1:' . ''. '+ b' . 'a foo;' . 'a msg: arg;'}.
+)
+
+testGrammarParsesFinalStatements = (
+
+	startRule := #FinalStatement.
+
+	self shouldParseAll:
+		{'^ a + b' . '^ 123' . '^ a foo: b + c negated' . '^ a := b' .
+		  '^ a := b + c' . '^ a := 123' . '^ a := a foo: b bar: c + d' };
+		shouldntParseAny:  {'^' . ''}
+)
+
+testGrammarParsesFloatingPoints = (
+
+	startRule := #floatingPointLiteral.
+	self shouldntParseAny: {'foo' printString . '' . '.123' . '2.e-2' . '+2.123' . '-4.r1e-2' . '3-6'}.
+)
+
+testGrammarParsesIdentifier = (
+
+	startRule := #identifier.
+	self
+		shouldParseAll: { 'a' . 'a2' . 'aslkj123'};
+		shouldntParseAny: { '2asd' . '#asd'}.
+)
+
+testGrammarParsesKeywordMessages = (
+
+	startRule := #KeywordMessage.
+
+	self
+		shouldParseAll:
+		{'foo: arg1' . 'foo: arg1 bar: arg2' . 'foo: arg1 + arg2 bar: arg3' .
+              'foo: arg1 neg + arg2 neg bar: arg3' . 'foo2: arg2' };
+		shouldntParseAny: {'foo' . 'foo + 2' . 'foo:' . ''}.
+)
+
+testGrammarParsesKeywordMethodHeaders = (
+
+	startRule := #KeywordMethodHeader.
+	self
+		shouldParseAll:
+			{'msg1: foo' . 'msg2: foo' . 'msg1: foo msg2: bar' .
+           		   'msg1: a1 msg2: a2 msg3: a3' . 'superOther: foo othersuper: bar' . 'msg1: superArgument' };
+		shouldntParseAny:
+			{'msg1' . ''. 'msg1:' . 'msg1::' . 'msg1:msg2:' . 'msg1: foo msg2'}.
+)
+
+testGrammarParsesKeywords = (
+
+	startRule := #keyword.
+	self
+		shouldParseAll: { 'a:' . 'a2:' . 'aslkj123:' . 'self:' . 'super:'};
+		shouldntParseAny: { '2asd' . '#asd' . 'a' . 'ab' . 'as:b'}.
+)
+
+testGrammarParsesLiteralArrayInLiteralArray = (
+
+	startRule := #LiteralArrayLiteral.
+	self
+		shouldParseAll: { '#(#(''self foo. + 3'' 11) #(''#('' 3) #(''self 0'' 6) #(''self asdf;;asfd'' 11)) '. '#(a (a b))' }.
+)
+
+testGrammarParsesLocalVariableList = (
+
+	| ruleName |
+	ruleName := #LocalVariableDeclarationList.
+	{ '||' . '|a|' . {' | a | ' . '| a |'} . '| ab bc |' . '|ab bc cd|' }
+		do: [ :inputStringOrArray | |r input expected|
+			(inputStringOrArray isKindOf: Array)
+				ifTrue: [ input := inputStringOrArray first.
+						expected := inputStringOrArray second.]
+				ifFalse: [ input := inputStringOrArray.
+						expected := inputStringOrArray ].
+			r := OhmSmalltalk match: input
+									startingFrom: ruleName.
+			self assert: r cst MatchedWithContent: expected andRuleName: ruleName].
+
+	{ '|' . '|2a|' . '|+a|'}
+		do: [ :input | |r|
+			r := OhmSmalltalk match: input
+									startingFrom: ruleName.
+			self assert: r failed]
+)
+
+testGrammarParsesMethodDeclarations = (
+
+	startRule := #MethodDeclaration.
+	self shouldParseAll: { 'initializeToolbar
+	"foobar"
+	self
+		initializeToolbarObjects.' .
+	'foo
+		^ "a"2"m stretch" + "a"5"mm stretch2"' .
+	'aber: foo
+		| a b |
+		''asdf''"123s"'.
+	'foo: aber
+		";"
+		^ 2 + 1' }
+)
+
+testGrammarParsesObjectArrayLiterals = (
+
+	startRule := #ArrayLiteral.
+	self
+		shouldParseAll: { '{}' . '{a}' . '{a . b}' . '{2 . 3}' . '{2 negated . 3 +4}' .
+			'{''adsf'' , ''as'' . 2}' . '{ 2 . }' . '{ 2 . {}}'.
+			'{ a msg: 2 + 3 negated . b + x }' };
+		shouldntParseAny: { '{' . }.
+)
+
+testGrammarParsesParsingCall = (
+
+	startRule := #ExecutableCode.
+	self shouldParse: 'OhmSmalltalk
+		matchContents: ''foo: arg1''
+		startingFrom: #KeywordMessage
+		failureAsException: true'.
+)
+
+testGrammarParsesScaledDecimalLiteral = (
+	{	{'2s' . 		#scaledDecimalLiteral } .
+	 	{'2s' . 		#scaledDecimalLiteral } .
+		{'-2s' .		#scaledDecimalLiteral } .
+		{'2.2s' .		#scaledDecimalLiteral } .
+		{'2.2s' .	#scaledDecimalLiteral } .
+		{'-2.2s' .		#scaledDecimalLiteral } .
+		{'2s10' .		#scaledDecimalLiteral } .
+		{'2s10' .		#scaledDecimalLiteral } .
+		{'-2s10' .		#scaledDecimalLiteral } .
+		{'2s-10' .		#scaledDecimalLiteral } .
+		{'2s10' .		#scaledDecimalLiteral } .
+		{'2.2s10' .		#scaledDecimalLiteral } .
+		{'-2.2s10' .	#scaledDecimalLiteral }}
+		do: [ :t | |r|
+			r := OhmSmalltalk match: t first startingFrom: t second.
+			self assert: r cst MatchedWithContent: t first andRuleName: t second.]
+	
+)
+
+testGrammarParsesSeveralStatements = (
+
+	startRule := #Statements.
+
+	self
+		shouldParseAll: {'"comment".' . 'a + b. a.'};
+		shouldntParseAny: {'^' . '^ a' . ' a+ b'}.
+)
+
+testGrammarParsesSimpleNumbers = (
+
+	{	{'1' . 		#integerLiteral } .
+	 	{'1000' . 	#integerLiteral } .
+		{'-1000' .	#integerLiteral }.
+		{'-1' .		#integerLiteral }.
+		{'1.0' .		#floatingPointLiteral }.
+		{'1.12412'.	#floatingPointLiteral }.
+		{'-1.0' .		#floatingPointLiteral }.
+		{'-1.12412'.	#floatingPointLiteral } }
+		do: [ :t | |r|
+			r := OhmSmalltalk match: t first startingFrom: t second.
+			self assert: r cst MatchedWithContent: t first andRuleName: t second.].
+
+	{	{'1 2' . 		#integerLiteral } .
+	 	{'1 2 3' . 	#integerLiteral } .
+		{'- 1000' .	#integerLiteral }.
+		{'- 1' .		#integerLiteral }.
+		{'1. 0' .		#floatingPointLiteral }.
+		{'1. 12412'.	#floatingPointLiteral }.
+		{'- 1 .0' .	#floatingPointLiteral } }
+		do: [ :t | |r|
+			r := OhmSmalltalk match: t first startingFrom: t second.
+			self assert: r failed.]
+)
+
+testGrammarParsesStatements = (
+
+	startRule := #Statement.
+
+	self
+		shouldParseAll:
+		{'a + b' . '123' . 'a foo: b + c negated' . 'a := b' .
+		  'a := b + c' . 'a := 123' . 'a := a foo: b bar: c + d'};
+		shouldntParseAny: {'a :=' . ''}.
+)
+
+testGrammarParsesStringLiterals = (
+
+	{	{'asfd' . 	#stringLiteral } .
+		{'' . 			#stringLiteral } .
+		{'''' . 		#stringLiteral } .
+		{'a b c ' .	#stringLiteral } .
+		{'a # 12 ' .	#stringLiteral } }
+		do: [ :t | |r input|
+			input := t first printString.
+			r := OhmSmalltalk match: input
+									startingFrom: t second.
+			self assert: r cst MatchedWithContent: input andRuleName: t second.]
+)
+
+testGrammarParsesSymbolArrayLiterals = (
+
+	| ruleName |
+	ruleName := #LiteralArrayLiteral.
+
+	{	{'#(1.2)' 		. {#floatingPointLiteral =>'1.2' }  } .
+		{'#(a)' 			. {#symbolInArrayLiteral =>  'a' }} .
+		{'#(a b)' 		. {#symbolInArrayLiteral => 'a' . #symbolInArrayLiteral => 'b' } } .
+        	{'#(2a)'  		. {#integerLiteral => '2'. #symbolInArrayLiteral =>'a' }  } .
+		{'#(+1.2)' 		. {#symbolInArrayLiteral => '+' .#floatingPointLiteral =>'1.2' } } .
+		{'#(false)' 		. {#constantReference => 'false'} } .
+		{'#(''asdf'')' 	. {#stringLiteral => '''asdf'''  }  } .
+		{'#($a)' 		. {#characterLiteral => '$a'  }  } .
+		{'#(#a #b)' 		. {#symbolLiteral => '#a' . #symbolLiteral => '#b'} } }
+		do: [ :t | |input r| input := t first.
+			r := (OhmSmalltalk match: input startingFrom: ruleName) cst.
+			self assert: false ~= r.
+			self assert: t second size equals: r children second children size.
+
+			(r children at: 2) children withIndexDo: [:c :index | |gold|
+				gold := t second at: index .
+				self assert: c children first MatchedWithContent: gold value andRuleName: gold key]].
+)
+
+testGrammarParsesSymbolLiterals = (
+
+	startRule := #symbolLiteral.
+	self
+		shouldParseAll: { '#a' . '#asdf897sdf' . '#a456789' . '#a:' . '#A:' . '#a:b:c:d:'
+         . '#a:b:c' . '#a:::::::::::::::::::' . '#
+										a'};
+		shouldntParseAny: { '#1' . '#:2' . '#a=' . '#a:+' }.
+)
+
+testGrammarParsesTheReturnOperator = (
+
+	startRule := #MethodReturnOperator.
+	self
+		shouldParseAll: { '^' . ' ^' . '    ^' };
+		shouldntParseAny: { '^^' . ''}.
+)
+
+testGrammarParsesTheTestItself = (
+
+	startRule := #MethodDeclaration.
+	self shouldParse: thisContext method getSource.
+)
+
+testGrammarParsesUnaryMessageChains = (
+
+	startRule := #UnaryMessageChain.
+	self
+		shouldParseAll: { 'abc' . 'abc a' . ' abc' . 'ab bc cd'};
+		shouldntParseAny: { '' . '+' . '+12' . ' ab:cd:'}.
+)
+
+testGrammarParsesUnaryMessageSendsWithProblematicOperand = (
+
+	startRule := #Expression.
+	self
+		shouldParse: '2negated' to: #(Expression (Operand '2') (MessageChain 'negated') (CascadedMessage (nil)));
+		shouldParse: 'falseNegated' to: #(Expression (Operand 'falseNegated'))
+)
+
+testGrammarParsesUnaryMethodHeaders = (
+
+	startRule := #UnaryMethodHeader.
+	self
+		shouldParseAll: {'message' . 'aMessage' . 'AMessage' . 'Message2'};
+		shouldntParseAny: {'2message' . ''. 'message:' . 'message:message:'}.
+)
+
+testGrammarParsesVariableNameCorrectly = (
+
+	startRule := #Operand.
+	self
+		shouldParse: 'falseVar' to: #(Operand #(Reference #(identifier 'falseVar')));
+		shouldParse: 'trueVar' to: #(Operand #(Reference #(identifier 'trueVar')));
+		shouldntParse: '2var'
+)
+
+
+)

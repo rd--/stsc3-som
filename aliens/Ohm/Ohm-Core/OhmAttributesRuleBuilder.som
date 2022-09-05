@@ -1,0 +1,224 @@
+OhmAttributesRuleBuilder = Object (
+| resultRules ruleDescription textualRepresentation parameterNames |
+
+alt: pexprs = (
+
+	| terms |
+	
+	terms := pexprs collect: [ :p | 
+		p class = OhmPExprAlt
+			ifTrue: [p terms]
+			ifFalse: [p]].
+
+	terms := terms gather: [:e | e isCollection ifFalse: [{ e }] ifTrue: [e]].
+
+	^ OhmPExprAlt newOn: terms
+)
+
+apply: ruleName = (
+
+	^ self apply: ruleName withArguments: #()
+)
+
+apply: ruleName withArguments: arguments = (
+
+	^ (self parameterNames includes: ruleName)
+		ifTrue: [OhmPExprParam 
+					newOn: (self parameterNames indexOf: ruleName) 
+					named: ruleName]
+		ifFalse: [OhmPExprApply newOn: ruleName arguments: arguments]
+)
+
+build = (
+
+	| inlineRules definition |
+	inlineRules := self resultRules select: [:r | r isInlineRule ].
+	definition := self resultRules select: [:r | r isInlineRule not].
+	self assert: definition size = 1.
+	definition first inlineRules: inlineRules.
+	definition first parameters: self parameterNames.
+
+	^ self resultRules 
+)
+
+list: pexpr = (
+
+	^ OhmPExprListy newOn: pexpr
+)
+
+lookahead: pexpr = (
+
+	^ OhmPExprLookahead newOn: pexpr
+)
+
+not: pexpr = (
+
+	^ OhmPExprNot newOn: pexpr
+)
+
+object: pexpr = (
+
+	^ OhmPExprObject newOn: pexpr
+)
+
+opt: pexpr = (
+
+	^ OhmPExprOpt newOn: pexpr 
+)
+
+plus: pexpr = (
+
+	^ OhmPExprMany newPlusOn: pexpr 
+)
+
+prim: primToMatch = (
+
+	primToMatch isString
+		ifTrue: [	((primToMatch startsWith: '/') and: [primToMatch endsWith: '/'])
+					ifTrue: [^ self regex: primToMatch ]
+					ifFalse: [^ self string: primToMatch ] ]
+		ifFalse: [ ^ OhmPExprPrimObject newOn: primToMatch ]
+)
+
+rangeFrom: startCharacter to: endCharacter = (
+	
+	^ OhmPExprRange newFrom: startCharacter to: endCharacter
+)
+
+regex: regexToMatch = (
+
+	^ OhmPExprRegex newOn: regexToMatch
+)
+
+seq: pexprs = (
+
+	| terms |
+	
+	terms := pexprs collect: [ :p | 
+		p class = OhmPExprSeq
+			ifTrue: [p terms]
+			ifFalse: [p]].
+
+	terms := terms gather: [:e | e isCollection ifFalse: [{ e }] ifTrue: [e]].
+
+	^ OhmPExprSeq newOn: terms
+)
+
+setRuleDescription: text = (
+
+	self ruleDescription: text
+)
+
+star: pexpr = (
+
+	^ OhmPExprMany newStarOn: pexpr 
+)
+
+string: stringToMatch = (
+
+	^ OhmPExprString newOn: stringToMatch
+)
+
+define: ruleName body: b = (
+	
+	self resultRules add: (OhmRuleDefine 
+		newNamed: ruleName 
+		body: b
+		textualRepresentation: self textualRepresentation
+		description: (self ruleDescription ifNil: [''])).
+	
+	^ b
+)
+
+extend: ruleName body: b = (
+
+	self resultRules add: (OhmRuleExtend 
+		newNamed: ruleName 
+		body: b
+		textualRepresentation: self textualRepresentation).
+	
+	^ b
+	
+)
+
+inline: ruleName body: b = (
+
+	self resultRules add: (OhmRuleInline 
+			newNamed: ruleName 
+			body: b
+			textualRepresentation: self textualRepresentation).
+
+	^ self apply: ruleName
+)
+
+override: ruleName body: b = (
+
+	self resultRules add: (OhmRuleOverride 
+			newNamed: ruleName 
+			body: b 
+			textualRepresentation: self textualRepresentation).
+	^ b
+)
+
+initialize = (
+
+	self resultRules: OrderedCollection new.
+)
+
+parameterNames = (
+	
+	^ parameterNames
+)
+
+parameterNames: anObject = (
+	
+	parameterNames := anObject.
+)
+
+resultRules = (
+
+	^ resultRules
+)
+
+resultRules: anObject = (
+
+	resultRules := anObject
+)
+
+ruleDescription = (
+ 
+	^ ruleDescription
+)
+
+ruleDescription: anObject = (
+
+	ruleDescription := anObject
+)
+
+textualRepresentation = (
+
+	^ textualRepresentation
+)
+
+textualRepresentation: aString = (
+
+	textualRepresentation := aString
+)
+
+
+----------------------------
+
+newOn: namespace = (
+
+	^ self new
+		namespace: namespace;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

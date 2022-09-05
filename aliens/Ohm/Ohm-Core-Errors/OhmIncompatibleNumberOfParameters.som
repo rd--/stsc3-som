@@ -1,0 +1,46 @@
+OhmIncompatibleNumberOfParameters = Error (
+| rule grammar |
+
+grammar = (
+	
+	^ grammar
+)
+
+grammar: anObject = (
+	
+	grammar := anObject.
+)
+
+rule = (
+	
+	^ rule
+)
+
+rule: anObject = (
+	
+	rule := anObject.
+)
+
+messageText = (
+
+	^ 'The parameter count of rule ' , self rule ruleName , ' does not match the parameter count of the parent rule.'
+)
+
+
+----------------------------
+
+signalForRule: aRule inGrammar: aGrammar = (
+
+	^ self new
+		rule: aRule;
+		grammar: aGrammar;
+		signal
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

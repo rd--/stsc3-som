@@ -1,0 +1,93 @@
+OhmRuleExtend = OhmRule (
+| baseRule |
+
+baseRule = (
+
+	^ baseRule
+)
+
+baseRule: anObject = (
+
+	baseRule := anObject
+)
+
+dispatchedBodyOn: aGrammar = (
+
+	^ OhmPExprAlt newOn: { aGrammar superGrammar ruleNamed: self ruleName . self body }  
+)
+
+installInto: ruleDict = (
+
+	| newBody |
+	newBody := OhmPExprAlt newOn: { self body . self baseRule }.
+	newBody description: self baseRule description.
+
+	ruleDict at: self ruleName put: newBody
+
+	
+)
+
+toRecipe = (
+
+	^ 'b extendRule:' , self ruleName printString , 'with: (' , self body toRecipe , 
+		') withParameters: {'
+		, ((self parameters collect: [:p | p asSymbol printString])
+			joinSeparatedBy: ' . ')
+		,'}.'
+)
+
+checkForSameArityIn: aGrammar = (
+
+	| expectedArity |
+	expectedArity := (aGrammar superGrammar ruleNamed: self ruleName) arity.
+	self body arity ~~ expectedArity ifTrue: [ 
+		OhmRefinementMustBeCompatibleError 
+			signalForRule: self ruleName 
+			expectedArity: expectedArity 
+			reason: 'extending' ]
+)
+
+performChecksFor: aGrammar = (
+	
+	| superRule |
+	superRule := aGrammar superGrammar ruleDeclarationNamed: self ruleName.
+	self checkForSameParametersAs: superRule in: aGrammar.
+	
+	self checkForSameArityIn: aGrammar.
+		
+	super performChecksFor: aGrammar.
+)
+
+
+----------------------------
+
+newNamed: ruleName body: b = (
+
+	| newDeclaration |
+	newDeclaration := self new
+		ruleName: ruleName;
+		body: b.
+
+	^ newDeclaration
+)
+
+newNamed: ruleName body: b superGrammar: superGrammar = (
+
+	| newDeclaration |
+	newDeclaration := self new
+		ruleName: ruleName;
+		body: b;
+		superGrammar: superGrammar.
+
+	newDeclaration baseRule: (superGrammar ruleNamed: ruleName).
+
+	^ newDeclaration
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

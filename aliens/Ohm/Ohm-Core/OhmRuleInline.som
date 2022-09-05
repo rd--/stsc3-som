@@ -1,0 +1,35 @@
+OhmRuleInline = OhmRule (
+| enclosingRule |
+
+dispatchedBodyOn: aGrammar = (
+
+	^ self body  
+)
+
+enclosingRule = (
+
+	^ enclosingRule
+)
+
+enclosingRule: aRule = (
+
+	enclosingRule := aRule
+)
+
+installInto: ruleDict = (
+
+	ruleDict at: self ruleName put: self body
+)
+
+isInlineRule = (
+
+	^ true
+)
+
+toRecipe = (
+
+	^ 'b addInlineRule:' , self ruleName printString , 'as: (' , self body toRecipe , ').'
+)
+
+
+)

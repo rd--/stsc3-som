@@ -1,0 +1,167 @@
+OhmGrammarBuilder = Object (
+| startRule grammar |
+
+addInlineRule: ruleName as: ruleBody = (
+
+	grammar ruleDeclarations at: ruleName asSymbol 
+		put:(OhmRuleInline newNamed: ruleName asSymbol body: ruleBody).
+	self addRule: ruleName asSymbol as: ruleBody
+)
+
+addRule: ruleName as: ruleBody = (
+
+	grammar defaultStartRuleName ifNil: [grammar defaultStartRuleName: ruleName].
+
+	grammar ruleDeclarations at: ruleName asSymbol 
+		put: (OhmRuleDefine newNamed: ruleName asSymbol
+	 			body: ruleBody description: '').
+)
+
+buildGrammar = (
+
+	^ grammar
+)
+
+extendRule: ruleName with: ruleBody = (
+
+	grammar ruleDeclarations at: ruleName asSymbol 
+		put: (OhmRuleExtend 
+				newNamed: ruleName asSymbol
+	 			body: ruleBody).
+)
+
+extendRule: ruleName with: ruleBody withParameters: parameters = (
+
+	grammar ruleDeclarations at: ruleName asSymbol 
+		put: (OhmRuleExtend 
+				newNamed: ruleName asSymbol
+				parameters: parameters
+	 			body: ruleBody).
+)
+
+setGrammarName: grammarName = (
+
+	grammar grammarName: grammarName.
+)
+
+setRuleDescription: description = (
+
+	
+)
+
+setSuperGrammar: aGrammar = (
+
+	grammar superGrammar: aGrammar
+)
+
+addRule: ruleName as: ruleBody withParameters: aCollection = (
+	
+	grammar defaultStartRuleName ifNil: [grammar defaultStartRuleName: ruleName].
+
+	grammar ruleDeclarations at: ruleName asSymbol 
+		put: (OhmRuleDefine 
+				newNamed: ruleName asSymbol
+				withParameters: aCollection
+	 			body: ruleBody 
+				description: '').
+)
+
+apply: pexprName with: aCollection = (
+ 
+	^ OhmPExprApply newOn: pexprName arguments: aCollection
+)
+
+param: aString = (
+	self shouldBeImplemented
+)
+
+param: anInteger named: aString = (
+	
+	^ OhmPExprParam newOn: anInteger named: aString
+)
+
+rangeFrom: aCharacter to: aCharacter2 = (
+	
+	^ OhmPExprRange newFrom: aCharacter to: aCharacter2
+)
+
+alt: pexprs = (
+
+	^ OhmPExprAlt newOn: pexprs
+)
+
+anything = (
+
+	^ OhmPExprAnything new
+)
+
+apply: pexprName = (
+
+	^ OhmPExprApply newOn: pexprName
+)
+
+end: pexpr = (
+
+	^ OhmPExprApply newOn: #end
+)
+
+fail = (
+
+	^ OhmPExprFail new
+)
+
+lookahead: pexpr = (
+
+	^ OhmPExprLookahead newOn: pexpr
+)
+
+not: pexpr = (
+
+	^ OhmPExprNot newOn: pexpr
+)
+
+opt: pexpr = (
+
+	^ OhmPExprOpt newOn: pexpr 
+)
+
+plus: pexpr = (
+
+	^ OhmPExprMany newPlusOn: pexpr 
+)
+
+prim: primToMatch = (
+	primToMatch isString
+		ifTrue: [	((primToMatch beginsWith: '/') and: [primToMatch endsWith: '/'])
+					ifTrue: [^ self regex: primToMatch ]
+					ifFalse: [^ self string: primToMatch ] ]
+		ifFalse: [ ^ OhmPExprPrimObject newOn: primToMatch ]
+)
+
+regex: regexToMatch = (
+
+	^ OhmPExprRegex newOn: regexToMatch
+)
+
+seq: pexprs = (
+
+	^ OhmPExprSeq newOn: pexprs
+)
+
+star: pexpr = (
+
+	^ OhmPExprMany newStarOn: pexpr 
+)
+
+string: stringToMatch = (
+
+	^ OhmPExprString newOn: stringToMatch
+)
+
+initialize = (
+
+	grammar := OhmGrammar new.
+)
+
+
+)

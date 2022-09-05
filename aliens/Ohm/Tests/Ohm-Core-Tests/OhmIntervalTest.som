@@ -1,0 +1,36 @@
+OhmIntervalTest = TestCase (
+| testInterval |
+
+setUp = (
+
+	self testInterval: (OhmInterval newOn: (OhmInputStream on: '123456789') from: 3 to: 6).
+)
+
+tearDown = (
+
+	self testInterval: nil.
+)
+
+testCreateAnInterval = (
+
+	OhmInterval newOn: 'hello world!'.
+	OhmInterval newOn: 'hello world!' from: 1 to: 5.
+)
+
+testGetIntervalContent = (
+
+	self assert: '3456' equals: self testInterval contents.
+)
+
+testInterval = (
+
+	^ testInterval
+)
+
+testInterval: anObject = (
+
+	testInterval := anObject
+)
+
+
+)

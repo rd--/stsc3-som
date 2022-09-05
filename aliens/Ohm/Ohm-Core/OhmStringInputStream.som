@@ -1,0 +1,21 @@
+OhmStringInputStream = OhmInputStream (
+isStringStream = (
+
+	^ true
+)
+
+
+----------------------------
+
+on: stringOrText = (
+
+	^ super on: stringOrText asString
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

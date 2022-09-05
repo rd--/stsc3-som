@@ -1,0 +1,256 @@
+OhmCompilerTest = TestCase (
+| testGrammar |
+
+setUp = (
+
+	testGrammar := OhmGrammar new.
+	testGrammar ruleDeclarations: Dictionary new.
+
+	OhmNamespace named: 'OhmTestingPackage'
+)
+
+tearDown = (
+
+	OhmNamespace removeNamed: 'OhmTestingPackage'.
+	testGrammar := nil
+)
+
+testCompileAndInstallGrammarHeader = (
+
+	| aGrammar resultingSmalltalkProxy |
+	aGrammar := OhmCompiler compileAndInstallGrammarHeader: 'OhmTestingPackage.G1'.
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: OhmBuiltInRules OhmInstance equals: aGrammar superGrammar.
+
+	resultingSmalltalkProxy := (OhmNamespace named: 'OhmTestingPackage') classes first.
+	self assert: resultingSmalltalkProxy
+		equals: aGrammar smalltalkPlaceholder.
+)
+
+testCompileGrammar = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		expr = number "+" number
+		number = digit*
+	}'.
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: OhmBuiltInRules OhmInstance equals: aGrammar superGrammar.
+	self
+		assert: (aGrammar ruleDeclarations at: #expr) body
+		equals: (aGrammar ruleNamed: #expr).
+	self
+		assert: (OhmNamespace named: 'OhmTestingPackage')
+		equals: aGrammar namespace.
+)
+
+testCompileGrammarHeader = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarHeader: 'OhmTestingPackage.G1'.
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: OhmBuiltInRules OhmInstance equals: aGrammar superGrammar.
+	self assert: (OhmNamespace named: 'OhmTestingPackage') equals: aGrammar namespace.
+)
+
+testCompileGrammarHeaderWithExistingSuperclass = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarHeader: 'OhmTestingPackage.G1'.
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: OhmBuiltInRules OhmInstance equals: aGrammar superGrammar.
+	self assert: (OhmNamespace named: 'OhmTestingPackage') equals: aGrammar namespace.
+)
+
+testCompileGrammarHeaderWithExistingSupergrammar = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarHeader: 'OhmTestingPackage.G1 <: Ohm'.
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: OhmGrammarOfOhm OhmInstance equals: aGrammar superGrammar.
+	self assert: (OhmNamespace named: 'OhmTestingPackage') equals: aGrammar namespace.
+)
+
+testCompileGrammarWithApplyWithArgs = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		FirstRule<A> = A A
+		YetAnotherRule<B> = FirstRule<"->" B>
+		AnotherRule = YetAnotherRule<digit>
+	}'.
+
+	self assert: (aGrammar doesMatch: '-> 2 -> 2' startingFrom: #AnotherRule).
+	self assert: (aGrammar doesMatch: '-> 1 -> 1' startingFrom: #AnotherRule).
+
+	self assert: (aGrammar doesMatch: '1' startingFrom: #AnotherRule) not.
+	
+)
+
+testCompileGrammarWithCaseInsensitive = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		stringRule = caseInsensitive<"aString">
+	}'.
+
+	self assert: (aGrammar doesMatch: 'astring' startingFrom: #stringRule).
+	self assert: (aGrammar doesMatch: 'astrInG' startingFrom: #stringRule).
+)
+
+testCompileGrammarWithEscapes = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		backslash = "a\\b"
+		dquote = "a\"b"
+		squote = "a\''b"
+		newline = "a\nb"
+		tab = "a\tb"
+	}'.
+
+	self assert: (aGrammar doesMatch: 'a\b' startingFrom: #backslash).
+	self assert: (aGrammar doesMatch: 'a"b' startingFrom: #dquote).
+	self assert: (aGrammar doesMatch: 'a''b' startingFrom: #squote).
+
+	self assert: (aGrammar doesMatch: 'a
+b' startingFrom: #newline).
+
+	self assert: (aGrammar doesMatch: 'a	b' startingFrom: #tab).
+	
+)
+
+testCompileGrammarWithExistingSuperclass = (
+
+	| aSuperGrammar aGrammar |
+	aSuperGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G0 {
+		base = "foo"
+	}'.
+	OhmCompiler installGrammar: aSuperGrammar.
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 <: OhmTestingPackage.G0 {
+		expr = number "+" number
+		number = digit*
+	}'.
+
+
+	self assert: 'G1' equals: aGrammar grammarName.
+	self assert: (Smalltalk at: #G0) OhmInstance equals: aGrammar superGrammar.
+	self assert: (aGrammar ruleDeclarations at: #expr) body equals: (aGrammar ruleNamed: #expr).
+	self assert: (OhmNamespace named: 'OhmTestingPackage') equals: aGrammar namespace.
+)
+
+testCompileGrammarWithSupergrammarDependency = (
+
+	| aGrammar aSuperGrammar createdGrammar |
+	aSuperGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G2 {
+		ident = character alphanum*
+	}'.
+	OhmCompiler installGrammar: aSuperGrammar.
+	aSuperGrammar smalltalkPlaceholder OhmInstance: nil. "To create the state after monticello checkout"
+
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 <: OhmTestingPackage.G2 {
+		expr = number "+" number
+		number = digit*
+	}'.
+	OhmCompiler installGrammar: aGrammar.
+	aGrammar smalltalkPlaceholder OhmInstance: nil.
+
+	createdGrammar := aGrammar smalltalkPlaceholder OhmInstance.
+
+	self assert: 'G1' equals: createdGrammar grammarName.
+	self assert: aSuperGrammar smalltalkPlaceholder OhmInstance equals: createdGrammar superGrammar.
+	self assert: (createdGrammar ruleDeclarations at: #expr) body equals: (createdGrammar ruleNamed: #expr).
+	self assert: (OhmNamespace named: 'OhmTestingPackage') equals: createdGrammar namespace.
+)
+
+testCompileGrammarWithUnicodeEscapes = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		pi = "\u03C0"
+		ae = "\xE4"
+	}'.
+
+	self assert: (aGrammar doesMatch: (Unicode value: 16r03C0) asString startingFrom: #pi).
+	self assert: (aGrammar doesMatch: 'ä' startingFrom: #ae).
+)
+
+testCompileRulesAndInstall = (
+
+	OhmCompiler compileRule: 'aRule = number "+" aRule' forGrammar: testGrammar.
+	OhmCompiler compileRule: 'anotherRule = "0".."9"' forGrammar: testGrammar.
+
+	self assert: 2 equals: testGrammar ruleDeclarations size.
+	self assert: 2 equals: testGrammar rules size.
+
+	self assert: (testGrammar ruleDeclarations keys includes: 'aRule').
+	self assert: (testGrammar rules keys includes: 'aRule').
+)
+
+testCompileRulesAndInstallDeletesInlineRules = (
+
+	| oldRules |
+
+	OhmCompiler compileRule: '
+aRule =
+	"foo" --fooCase
+	| "bar" --barCase' forGrammar: testGrammar.
+	oldRules := testGrammar rules.
+
+	OhmCompiler compileRule: '
+aRule =
+	"foo" --fooCase2
+	| "bar" --barCase2' forGrammar: testGrammar.
+
+	self assert: 3 equals: testGrammar ruleDeclarations size.
+	self assert: 3 equals: testGrammar rules size.
+
+	self assert: (testGrammar rules keys includes: 'aRule_fooCase') not.
+	self assert: (testGrammar rules keys includes: 'aRule_barCase') not.
+
+	self assert: (testGrammar rules keys includes: 'aRule_barCase2').
+	self assert: (testGrammar rules keys includes: 'aRule_fooCase2').
+)
+
+testCompileRulesAndInstallsInlineRules = (
+
+	OhmCompiler compileRule: '
+aRule =
+	"foo" --fooCase
+	| "bar" --barCase' forGrammar: testGrammar.
+
+	self assert: 3 equals: testGrammar ruleDeclarations size.
+	self assert: 3 equals: testGrammar rules size.
+
+	self assert: (testGrammar ruleDeclarations keys includes: 'aRule').
+)
+
+testCompiledGrammarHasAStartRule = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+		expr = number "+" number
+		number = digit*
+	}'.
+
+	self assert: 'expr' equals: aGrammar defaultStartRuleName.
+	self should: (aGrammar match: '2+2') succeeded.
+	self should: (aGrammar match: '2') failed.
+)
+
+testCompiledGrammarMatchDoesNotWorkOnEmptyGrammar = (
+
+	| aGrammar |
+	aGrammar := OhmCompiler compileGrammarDefinition: 'OhmTestingPackage.G1 {
+	}'.
+
+	self should: [aGrammar match: '2 + 2'] raise: OhmMissingStartRule.
+)
+
+
+)

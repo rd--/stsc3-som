@@ -1,0 +1,48 @@
+OhmMatchResultTest = TestCase (
+| state cst |
+
+failedState = (
+
+	| s |
+	s := OhmParsingState new.
+	^ s
+)
+
+successfulState = (
+
+	| s |
+	s := OhmParsingState new.
+	s grammar: OhmGrammar new.
+	s pushBindings: {
+		OhmNode newNamed: #foo forGrammar: s grammar andInput: (OhmInputStream newOn: 'abc') startedAt: '1' }.
+	^ s
+)
+
+testMatchResultClassExists = (
+
+	OhmMatchResult newFor: self successfulState.
+)
+
+testMatchResultCreatesFailureOnFailedState = (
+
+	| r |
+	r := OhmMatchResult newFor: self failedState.
+	self assert: r failed.
+)
+
+testMatchResultCreatesResultOnSuccessfulState = (
+
+	| r |
+	r := OhmMatchResult newFor: self successfulState.
+	self assert: r succeeded.
+)
+
+testValueOfFailedMatch = (
+	| r |
+	r := OhmFailedMatchResult new: self successfulState.
+	self should: [OhmAttributes new value: r]
+		raise: OhmMissingAttributeMethod.
+)
+
+
+)

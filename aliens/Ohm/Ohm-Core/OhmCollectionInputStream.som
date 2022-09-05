@@ -1,0 +1,8 @@
+OhmCollectionInputStream = OhmInputStream (
+matchString: aString = (
+
+	^ self matchExactly: aString
+)
+
+
+)

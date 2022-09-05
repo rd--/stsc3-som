@@ -1,0 +1,95 @@
+OhmPExprLookahead = OhmParsingExpression (
+| term |
+
+arity = (
+
+	^ self term arity
+)
+
+asActionBindingName = (
+
+	^ 'lookahead'
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	self term assertChoicesHaveUniformArity: ruleName
+)
+
+doEval: state = (
+	
+	| originalInputState result input |
+	input := state inputStream.
+	originalInputState := input getState.
+	
+	result := self term eval: state.
+
+	input setState: originalInputState.
+
+	^ result
+	
+)
+
+innerNodesAt: parsingState = (
+
+	^ { self term } 
+)
+
+nodesResultingInCST = (
+
+	^ { self term }
+)
+
+term = (
+
+	^ term
+)
+
+term: anObject = (
+
+	term := anObject
+)
+
+totalNumberOfExpressions = (
+
+	^ super totalNumberOfExpressions + self term totalNumberOfExpressions
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: (self term replaceParametersWithArguments: arguments)
+	
+)
+
+toRecipe = (
+
+	^ 'b lookahead: (' , 
+		self term toRecipe, 
+		')'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprLookahead
+)
+
+newOn: term = (
+
+	| newExpr |
+	newExpr := (self new)
+		term: term;
+		yourself.
+	term parentExpression: newExpr.
+	^ newExpr
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

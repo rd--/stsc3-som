@@ -1,0 +1,38 @@
+OhmSourceMapping = OhmSemanticAction (
+| sourceMap |
+
+createSourceMapFor: aNode = (
+
+	self sourceMap: ((1 to: aNode interval length) collect: [:i | OrderedCollection new]).
+	
+	[self value: aNode.
+	^ self sourceMap] 
+		ensure: [self sourceMap: nil] 
+)
+
+defaultExpression: aNode = (
+
+	(aNode interval start to: (aNode interval end min: self sourceMap size))
+		do: [:index | (self sourceMap at: index) add: aNode].
+  
+	aNode children do: [:c | self value: c].
+)
+
+terminalExpression: aNode = (
+
+	aNode interval start to: aNode interval end do: [:i |
+		(self sourceMap at: i) add: aNode]
+)
+
+sourceMap = (
+
+	^ sourceMap
+)
+
+sourceMap: anObject = (
+
+	sourceMap := anObject.
+)
+
+
+)

@@ -1,0 +1,41 @@
+OhmParsingExpressionAnythingTest = OhmParsingExpressionTest (
+testAnythingArity = (
+
+	self assert: 1 equals: OhmPExprAnything new arity.
+)
+
+testAnythingMatchesAnything = (
+
+	| anything |
+	anything := OhmPExprAnything new.
+	self
+		assertParsingExpression: anything
+		compliesWithItsFixture: #matchContents.
+)
+
+testAnythingProducesIntervals = (
+
+	| anything |
+	anything := OhmPExprAnything new.
+	self
+		assertParsingExpression: anything
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testAnythingProducesNodes = (
+
+	| anything |
+	anything := OhmPExprAnything new.
+	self
+		assertParsingExpression: anything
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+testCreateAnAnything = (
+
+	| testExpression |
+	testExpression := OhmPExprAnything new.
+)
+
+
+)

@@ -1,0 +1,36 @@
+OhmSourceRewriter = OhmSynthesizedAttribute (
+defaultExpression: aNode = (
+
+	| isSyntacticRule result |
+	isSyntacticRule := self isNameOfSyntacticRule: aNode ruleName.
+	result := (aNode children inject: '' into: [:string :child |
+		string , (isSyntacticRule 
+			ifTrue: [' ']
+			ifFalse: ['']) , (self value: child)]).
+	^ isSyntacticRule ifTrue: [result withBlanksTrimmed] ifFalse: [result]
+)
+
+listExpression: aNode = (
+
+	| separator syntacticNode |
+	syntacticNode := self isNameOfSyntacticRule: aNode parent ruleName.
+	
+	separator := syntacticNode ifTrue: [String space] ifFalse: [String empty].
+
+	^ (aNode children collect: [:child | self value: child])
+		joinSeparatedBy: separator
+)
+
+terminalExpression: aNode = (
+
+	^ aNode interval contents
+)
+
+isNameOfSyntacticRule: aRuleName = (
+
+	^ aRuleName size > 0
+		and: [aRuleName asString first isUppercase].
+)
+
+
+)

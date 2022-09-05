@@ -1,0 +1,163 @@
+OhmCompiler = Object (
+----------------------------
+
+compileAndInstallGrammarHeader: textualRepresentation = (
+
+	| grammar |
+	grammar := self compileGrammarHeader: textualRepresentation.
+	self initializeSmalltalkClassFor: grammar.  
+	^ grammar
+)
+
+compileGrammarDefinition: textualRepresentation = (
+
+	^ self 
+		compileGrammarDefinition: textualRepresentation 
+		inNamespace: OhmNamespace defaultNamespace packageName
+	
+)
+
+compileGrammarDefinition: textualRepresentation inNamespace: namespaceName = (
+
+	| cst |
+
+	cst := OhmGrammarOfOhm 
+				match: textualRepresentation 
+				startingFrom: 'Grammar'.
+		
+	cst failed ifTrue: [OhmMatchFailure signalFor: cst state startedFrom: 'Grammar']. 
+	
+	^ (OhmGrammarOfOhm semanticAction: 
+		(OhmCompileGrammar newIn: (OhmNamespace named: namespaceName))) 
+			value: cst
+	
+)
+
+compileGrammarDefinitions: textualRepresentation = (
+
+	^ self compileGrammarDefinitions: textualRepresentation in: OhmNamespace defaultNamespace namespaceName
+)
+
+compileGrammarDefinitions: textualRepresentation andInstallIn: namespaceName = (
+
+	| csts |
+	csts := OhmGrammarOfOhm 
+				match: textualRepresentation 
+				startingFrom: 'Grammars'.
+  
+	^ (OhmGrammarOfOhm semanticAction: 
+		(OhmCompileAndInstallGrammar newIn: (OhmNamespace named: namespaceName))) value: csts
+)
+
+compileGrammarDefinitions: textualRepresentation in: namespaceName = (
+
+	| csts |
+	csts := OhmGrammarOfOhm 
+				match: textualRepresentation 
+				startingFrom: 'Grammars'.
+  
+	^ (OhmGrammarOfOhm 
+			semanticAction: (OhmCompileGrammar newIn: (OhmNamespace named: namespaceName))) value: csts
+)
+
+compileGrammarHeader: textualRepresentation = (
+
+	| cst |
+
+	cst := OhmGrammarOfOhm 
+				match: textualRepresentation 
+				startingFrom: 'GrammarHeader'.
+	
+	^ (OhmGrammarOfOhm 
+			semanticAction: OhmCompileGrammarHeader new) value: cst.
+)
+
+compileRule: textualRepresentation forGrammar: aGrammar = (
+
+	| cst rules cleanedTextualRepresentation |
+
+	"To ensure the ending of the snippet complies with Ohm syntax"
+	cleanedTextualRepresentation := textualRepresentation asString 
+		withoutTrailingBlanks , Character cr asString.
+
+	cst := OhmGrammarOfOhm 
+				match: cleanedTextualRepresentation 
+				startingFrom: #Rule.
+	
+	rules := (OhmGrammarOfOhm 
+				semanticAction: OhmCompileRuleAttribute new) 
+					value: cst.
+	
+	self installRules: rules into: aGrammar.
+	
+	aGrammar smalltalkPlaceholder ifNotNil: [
+		aGrammar serializeToSmalltalkClass].
+
+	^ rules
+)
+
+initializeSmalltalkClassFor: grammar = (
+
+	| smalltalkClass |
+	
+	smalltalkClass := OhmGrammarSmalltalkProxy 
+		subclass: grammar grammarName asSymbol
+		instanceVariableNames: ''
+		classVariableNames: ''
+		poolDictionaries: ''
+		category: grammar namespace namespaceName.
+	smalltalkClass
+		initialize;
+		OhmInstance: grammar.
+	grammar 
+		smalltalkPlaceholder: smalltalkClass;
+		serializeToSmalltalkClass.
+)
+
+installGrammar: grammar = (
+	
+	^ self installGrammar: grammar intoNamespace: grammar namespace namespaceName
+)
+
+installGrammar: grammar intoNamespace: namespaceName = (
+
+	| namespace |
+	namespace := OhmNamespace named: namespaceName.
+	(OhmGrammar hasGrammarNamed: grammar grammarName)
+		ifTrue: [OhmDuplicateGrammarDefinitionError signalForGrammar: grammar ]
+		ifFalse: [grammar namespace: namespace.
+				self initializeSmalltalkClassFor: grammar.    ].
+	
+)
+
+installRules: rules into: aGrammar = (
+
+	| previousRule |
+	rules do: [ :rule | 
+		rule
+			performChecksFor: aGrammar;
+			boundGrammar: aGrammar.
+
+		previousRule := aGrammar ruleDeclarations at: rule ruleName ifAbsent: [nil].
+		aGrammar ruleDeclarations at: rule ruleName put: rule.
+		
+		previousRule
+			ifNotNil: [ self removeOrphanRulesOf: previousRule in: aGrammar.
+				        OhmChangeNotifier uniqueInstance 
+						rule: previousRule modifiedTo: rule in: aGrammar.]
+			ifNil: [OhmChangeNotifier uniqueInstance 
+					rule: rule addedTo: aGrammar]]
+)
+
+removeOrphanRulesOf: previousRule in: aGrammar = (
+
+	aGrammar rules keysAndValuesRemove: [:k :v | previousRule inlineRules includes: v]
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

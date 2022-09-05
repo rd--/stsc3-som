@@ -1,0 +1,175 @@
+OhmParsingExpression = Object (
+| description textualRepresentation parent |
+
+arity = (
+
+	^ 1
+)
+
+asExpected: ruleDict = (
+
+	^ ''
+)
+
+debugNodeString = (
+	
+	^ self name
+)
+
+description = (
+
+	^ description
+)
+
+description: anObject = (
+
+	description := anObject
+)
+
+initialize = (
+
+	self description: ''
+)
+
+isSyntactic: ruleName = (
+
+	^ ruleName size > 0
+		and: [(ruleName asString at: 1) isUppercase]
+)
+
+parentExpression = (
+	
+	^ parent
+)
+
+parentExpression: aPExpr = (
+
+	parent := aPExpr
+)
+
+rootExpression = (
+
+	^ self parentExpression
+		ifNil: [ self ]
+		ifNotNil: [ self parentExpression rootExpression ].
+)
+
+textualRepresentation = (
+
+	^ textualRepresentation
+)
+
+textualRepresentation: sourceCode = (
+
+	textualRepresentation := sourceCode
+)
+
+totalNumberOfExpressions = (
+
+	^ 1
+)
+
+weightedComplexity = (
+
+	^ 1
+)
+
+asActionBindingName = (
+
+	self subclassResponsibility 
+)
+
+asString = (
+
+	self subclassResponsibility 
+)
+
+doEval: state = (
+
+	self subclassResponsibility 
+)
+
+eval: state = (
+
+	^ self doEval: state
+)
+
+syntacticRuleHandling: state = (
+
+	state isSyntactic
+		ifTrue: [ state grammar skipSpaces: state ]
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	^ true
+)
+
+innerNodesAt: parsingState = (
+	
+	^ {}
+)
+
+nodesResultingInCST = (
+	"This method only returns these rules in the rule tree
+	which will create nodes in the CST. So an alt rule will
+	only return itself, because it will only build one node.
+	A sequence in contrast will return all its children as they 
+	all contribute."
+
+	self subclassResponsibility 
+)
+
+outgoingCalls = (
+	
+	| candidates |
+
+	candidates := (self innerNodesAt: nil).
+	^ (candidates select: [:pexpr | pexpr isKindOf: OhmPExprApply]) ,
+		((candidates select: [:pexpr | (pexpr isKindOf: OhmPExprApply) not])
+			gather: [:pexpr | pexpr outgoingCalls])
+)
+
+replaceParametersWithArguments: arguments = (
+	"This method should return a copy of itself
+	with any potential child Param expression replaced
+	with an apply to the actual argument."
+
+	self subclassResponsibility 
+)
+
+toRecipe = (
+
+	self subclassResponsibility
+)
+
+
+----------------------------
+
+expressionName = (
+
+	self subclassResponsibility
+)
+
+listRuleIdentifier = (
+
+	^ #'_list'
+)
+
+terminalRuleIdentifier = (
+
+	^ #'_terminal'
+)
+
+newOn: anObject = (
+
+	self subclassResponsibility
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

@@ -1,0 +1,30 @@
+OhmDuplicateActionDeclarationError = Error (
+| actionSelector |
+
+actionSelector = (
+
+	^ actionSelector
+)
+
+actionSelector: anObject = (
+
+	actionSelector := anObject
+)
+
+
+----------------------------
+
+signalForAction: actionSelectorHead = (
+
+	self new
+		actionSelector: actionSelectorHead;
+		signal
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

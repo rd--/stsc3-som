@@ -1,0 +1,78 @@
+OhmPExprNot = OhmPExprLookahead (
+arity = (
+
+	^ 0
+)
+
+asActionBindingName = (
+
+	^ 'not' , self term asActionBindingName
+)
+
+asExpected: rulesDict = (
+
+	((self term class = OhmPExprApply) and: [self term ruleName = #any]) 
+		ifTrue: [ ^ 'end of input' ].
+
+	^ 'not ' , (self term asExpected: rulesDict)
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	"self term assertChoicesHaveUniformArity: ruleName"
+)
+
+doEval: state = (
+
+	| result originalPosition originalFailures |
+	
+	originalPosition := state inputStream getState.
+	originalFailures := state rightmostFailure.
+	state rightmostFailure: OhmFailureDescriptor new.
+	result := super doEval: state.
+	state rightmostFailure: originalFailures.
+
+	result 
+		ifTrue: [ state recordFailureOf: self at: originalPosition.
+				state bindings removeLast ].
+	
+	^ result not
+)
+
+nodesResultingInCST = (
+
+	^ {}
+)
+
+toRecipe = (
+
+	^ 'b not: (' , 
+		self term toRecipe, 
+		')'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprNot
+)
+
+newOn: term = (
+
+	| newExpr |
+	newExpr := (self new)
+		term: term;
+		yourself.
+	term parentExpression: newExpr.
+	^ newExpr
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

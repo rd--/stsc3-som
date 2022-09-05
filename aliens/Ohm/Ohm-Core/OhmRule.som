@@ -1,0 +1,196 @@
+OhmRule = Object (
+| ruleName body parameters boundGrammar superGrammar inlineRules textualRepresentation |
+
+arity = (
+
+	^ self body arity
+)
+
+body = (
+
+	^ body
+)
+
+body: anObject = (
+
+	body := anObject
+)
+
+boundGrammar = (
+ 
+	^ boundGrammar
+)
+
+boundGrammar: aGrammar = (
+ 
+	boundGrammar := aGrammar
+)
+
+dispatchedBodyOn: aGrammar = (
+
+	^ self subclassResponsibility
+)
+
+enclosingRule = (
+
+	^ self
+)
+
+inlineRules = (
+
+	^ inlineRules
+)
+
+inlineRules: rules = (
+
+	rules do: [:r | 
+		self assert: r isInlineRule.
+		r enclosingRule: self].
+	inlineRules := rules
+)
+
+installInto: ruleDict = (
+
+	self subclassResponsibility 
+)
+
+isInlineRule = (
+
+	^ false
+)
+
+parameters = (
+
+	^ parameters ifNil: [#()]
+)
+
+parameters: collectionOfSymbols = (
+
+	parameters := collectionOfSymbols
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+ 
+	ruleName := anObject
+)
+
+superGrammar = (
+ 
+	^ superGrammar
+)
+
+superGrammar: anObject = (
+ 
+	superGrammar := anObject
+)
+
+textualRepresentation = (
+
+	^ textualRepresentation 
+)
+
+textualRepresentation: aString = (
+
+	textualRepresentation := aString
+)
+
+callersToMe = (
+
+	| enclosingExpressions |
+	
+	enclosingExpressions := OhmPExprApply allInstances 
+		select: [:apply | apply ruleName asSymbol = self ruleName asSymbol]
+		thenCollect: #rootExpression.
+	^ self boundGrammar grammarHierarchyIncludingSelf
+		gather: [:g | g rules select:  [:r | enclosingExpressions includes: r body]]
+)
+
+outgoingCalls = (
+
+	^ self body outgoingCalls 
+)
+
+checkForSameParametersAs: superRule in: aGrammar = (
+	
+	superRule parameters size = self parameters size
+		ifFalse: [OhmIncompatibleNumberOfParameters
+					signalForRule: self
+					inGrammar: aGrammar]
+)
+
+performChecksFor: aGrammar = (
+
+	self body assertChoicesHaveUniformArity: self ruleName.
+	
+	self parameters asSet size = self parameters size
+		ifFalse: [OhmDuplicateParameterName 
+					signalForRule: self
+					inGrammar: aGrammar ].
+)
+
+initialize = (
+
+	self inlineRules: OrderedCollection new.
+	self parameters: {}
+)
+
+printStringLimitedTo: characterLimit = (
+
+	^ self ruleName copyFrom: 1 to: (characterLimit min: self ruleName size)
+)
+
+toRecipe = (
+
+	self subclassResponsibility 
+)
+
+
+----------------------------
+
+newNamed: ruleName body: b = (
+
+	^ self new
+		ruleName: ruleName;
+		body: b;
+		yourself
+)
+
+newNamed: ruleName body: b superGrammar: superGrammar = (
+
+	^ self new
+		ruleName: ruleName;
+		body: b;
+		superGrammar: superGrammar;
+		yourself
+)
+
+newNamed: ruleName body: b textualRepresentation: source = (
+
+	^ self new
+		ruleName: ruleName;
+		body: b;
+		textualRepresentation: source;
+		yourself
+)
+
+newNamed: ruleName parameters: parameters body: b = (
+
+	^ self new
+		ruleName: ruleName;
+		parameters: parameters;
+		body: b;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

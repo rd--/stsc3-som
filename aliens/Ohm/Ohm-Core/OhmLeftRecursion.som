@@ -1,0 +1,61 @@
+OhmLeftRecursion = Object (
+| ruleName involvedRules hasMatched |
+
+hasMatched = (
+
+	^ hasMatched
+)
+
+hasMatched: anObject = (
+
+	hasMatched := anObject
+)
+
+initialize = (
+
+	self hasMatched: false.
+)
+
+involvedRules = (
+
+	^ involvedRules
+)
+
+involvedRules: anObject = (
+
+	involvedRules := anObject
+)
+
+isInvolvedRule: ruleName = (
+
+	^ self involvedRules includes: ruleName 
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+
+----------------------------
+
+newForRule: ruleName withInvolvedRules: involvedRules = (
+
+	^ (self new)
+		ruleName: ruleName;
+		involvedRules: involvedRules;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

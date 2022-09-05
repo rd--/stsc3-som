@@ -1,0 +1,97 @@
+OhmInputStreamTest = TestCase (
+| fixtureStream fixtureString |
+
+fixtureStream = (
+
+	^ fixtureStream
+)
+
+fixtureStream: anObject = (
+
+	fixtureStream := anObject
+)
+
+fixtureString = (
+
+	^ fixtureString
+)
+
+fixtureString: anObject = (
+
+	fixtureString := anObject
+)
+
+setUp = (
+
+   self fixtureString: 'hallo Test !'.
+	self fixtureStream: (OhmInputStream on: self fixtureString).
+   
+)
+
+tearDown = (
+
+   self fixtureString: nil.
+	self fixtureStream: nil.
+)
+
+testAtEnd = (
+
+	| testStream |
+	testStream := OhmInputStream on: 'x'.
+	self deny: testStream atEnd.
+      testStream next.
+      self assert: testStream atEnd.
+
+	self assert: self fixtureStream next
+             equals: (self fixtureString at: 1).
+)
+
+testGetMemento = (
+
+	| memento |
+	memento := self fixtureStream getState.
+	self assert: self fixtureStream next equals: $h.
+      self fixtureStream setState: memento.
+      self assert: self fixtureStream next equals: $h.
+)
+
+testGetNextToken = (
+
+	self assert: self fixtureStream next
+             equals: (self fixtureString at: 1).
+	self assert: self fixtureStream next
+             equals: (self fixtureString at: 2).
+)
+
+testIterateOverTheEnd = (
+
+	| testStream |
+	testStream := OhmInputStream on: 'x'.
+      testStream next.
+	self assert: #ohmFail equals: testStream next.
+)
+
+testMatchExactly = (
+
+	self assert: (self fixtureStream matchExactly: $h).
+	self assert: #ohmFail equals: (self fixtureStream matchExactly: $u).
+)
+
+testMatchRegex = (
+
+	self fixtureString: '1a'.
+	self fixtureStream: (OhmInputStream on: self fixtureString).
+	self assert: (self fixtureStream matchRegex: (RxParser preferredMatcherClass for: (RxParser new parse: '[0-9]')) ) ~= #ohmFail.
+	self assert: (self fixtureStream matchRegex: (RxParser preferredMatcherClass for: (RxParser new parse: '[a-z]'))) ~= #ohmFail.
+)
+
+testMatchString = (
+
+	self assert: (self fixtureStream matchString: 'hal').
+	self assert: (self fixtureStream matchString: '').
+	self assert: #ohmFail equals: (self fixtureStream matchString: 'xx').
+	
+)
+
+
+)

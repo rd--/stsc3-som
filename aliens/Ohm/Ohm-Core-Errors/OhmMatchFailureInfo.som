@@ -1,0 +1,35 @@
+OhmMatchFailureInfo = Object (
+| lineNumber columnNumber line |
+
+columnNumber = (
+
+	^ columnNumber 
+)
+
+columnNumber: anObject = (
+
+	columnNumber := anObject 
+)
+
+line = (
+
+	^ line 
+)
+
+line: anObject = (
+
+	line := anObject 
+)
+
+lineNumber = (
+
+	^ lineNumber 
+)
+
+lineNumber: anObject = (
+
+	lineNumber := anObject 
+)
+
+
+)

@@ -1,0 +1,43 @@
+OhmParsingExpressionStringTest = OhmParsingExpressionTest (
+testCreateAString = (
+
+	| testExpression |
+	testExpression := OhmPExprString newOn: 'abc'.
+)
+
+testStringArity = (
+
+	self assert: 1 equals: (OhmPExprString newOn: 'abc') arity.
+)
+
+testStringMatchesItsString = (
+
+	| stringExpression |
+	stringExpression := OhmPExprString newOn: 'foo'.
+	self
+		assertParsingExpression: stringExpression
+		asSyntactic: true
+		compliesWithItsFixture: #expressionMatch.
+)
+
+testStringProducesIntervals = (
+
+	| stringExpression |
+	stringExpression := OhmPExprString newOn: 'foo'.
+	self
+		assertParsingExpression: stringExpression
+		asSyntactic: true
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testStringProducesPrimitiveNodes = (
+
+	| stringExpression |
+	stringExpression := OhmPExprString newOn: 'foo'.
+	self
+		assertParsingExpression: stringExpression
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+
+)

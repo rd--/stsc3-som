@@ -1,0 +1,361 @@
+OhmCompileRuleAttribute = OhmSemanticAction (
+| builder currentRule predefinedNamespace |
+
+Alt: node with: expr = (
+
+	^ self value: expr
+)
+
+AltRec: node with: expr1 with: x with: expr2 = (
+
+	^ (self builder alt: { self value: expr1 . self value: expr2 })
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+Base: node with: expr = (
+
+	^ self value: expr
+)
+
+BaseApplication: node with: name with: arguments = (
+
+	| argumentList |
+	argumentList := (self value: arguments) ifNil: [#()].
+	^ (self builder apply: (self value: name) withArguments: argumentList)
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+BaseParen: node with: x with: expr with: xx = (
+
+	^ self value: expr
+)
+
+BaseRange: node with: start literal: x with: end = (
+
+	| endChar startChar |
+	startChar := start interval contents second.
+	endChar := end interval contents second.
+	
+	^ (self builder rangeFrom: startChar to: endChar)
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+BaseTerminal: node with: expr = (
+
+	^ self value: expr
+)
+
+Formals: node with: literal with: formalsList with: anotherLiteral = (
+
+	^ self value: formalsList
+)
+
+FormalsList: node with: startIdentifier with: separators with: optionalMoreIdentifiers = (
+
+	^ {startIdentifier interval contents} , (optionalMoreIdentifiers children collect: [:i | i interval contents])
+)
+
+Iter: node with: expr = (
+
+	^ self value: expr
+)
+
+IterOpt: node with: expr with: symbol = (
+
+	^ (self builder opt: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+IterPlus: node with: expr with: x = (
+
+	^ (self builder plus: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+IterStar: node with: expr with: x = (
+
+	^ (self builder star: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+Lex: node with: expr = (
+	
+	^ self value: expr
+)
+
+Params: node with: literal with: paramsList with: anotherLiteral = (
+
+	^ (self value: paramsList) ifNil: [#()]
+)
+
+ParamsList: node with: startParameter with: separators with: optionallyMoreParameters = (
+
+	^ {self value: startParameter} , (optionallyMoreParameters children collect: [:p | self value: p ])
+)
+
+Pred: node with: expr = (
+
+	^ self value: expr
+)
+
+PredLookahead: node with: x with: expr = (
+
+	^ (self builder lookahead: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+PredNot: node with: x with: expr = (
+
+	^ (self builder not: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+Rule: node with: expr = (
+
+	| body |
+	self builder: OhmAttributesRuleBuilder new.
+	self builder textualRepresentation: node interval contents.
+	body := self value: expr.
+
+	^ self builder build 
+)
+
+RuleDefine: node with: name with: parameters with: description with: x with: body = (
+
+	| bodyValue descriptionValue nameValue |
+	
+	nameValue := self value: name.
+	self currentRule: nameValue.
+	self builder parameterNames: ((self value: parameters) ifNil: [#()]).
+	
+	bodyValue := self value: body.
+	descriptionValue := self value: description.
+	
+	^ self builder 
+		define: nameValue 
+		body: bodyValue
+)
+
+RuleExtend: node with: name with: parameters with: x with: body = (
+
+	| bodyValue nameValue |
+	nameValue := self value: name.
+	self currentRule: nameValue.
+	self builder parameterNames: ((self value: parameters) ifNil: [#()]).
+	
+	bodyValue := self value: body.
+	
+	^ self builder 
+		extend: nameValue 
+		body: bodyValue
+)
+
+RuleOverride: aNode with: name with: parameters with: description with: x with: body = (
+
+	| bodyValue descriptionValue nameValue |
+	
+	nameValue := self value: name.
+	self currentRule: nameValue.
+	self builder parameterNames: ((self value: parameters) ifNil: [#()]).
+	
+	bodyValue := self value: body.
+	descriptionValue := self value: description.
+	
+	^ self builder 
+		override: nameValue
+		body: bodyValue.
+)
+
+Seq: node with: expr = (
+	
+	^ (self builder seq: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+Term: node with: expr = (
+
+	^ self value: expr
+)
+
+TermInline: node with: expr with: name = (
+
+	| inlineRuleName inlineRuleBody |
+	inlineRuleName := self class inlineRuleNameFor: (self value: name) in: self currentRule.
+	inlineRuleBody := (self value: expr).
+	inlineRuleBody textualRepresentation: node interval contents. 
+	^ self builder inline: inlineRuleName body: inlineRuleBody
+)
+
+caseName: node with: x with: xx with: name with: xxx with: xxxx = (
+
+	^ self value: name
+)
+
+escapeChar: node with: expr = (
+
+	^ node interval contents	
+)
+
+ident: node with: name = (
+
+	^ self value: name
+)
+
+name: node with: x with: xx = (
+
+	^ node interval contents
+)
+
+number: aNode with: x with: xx = (
+
+	^ (self builder prim: aNode interval contents asNumber)
+		textualRepresentation: aNode interval contents;
+		yourself
+)
+
+ohmTerminal: aNode with: result = (
+
+	^ self value: result
+)
+
+oneCharTerminal: aNode literal: x content: cs literal: xx = (
+
+	^ self utilString: aNode content: cs 
+)
+
+reCharClass: node with: expr = (
+
+	^ self value: expr
+)
+
+reCharClassOrdinary: node with: x with: xx with: xxx = (
+
+	^ node interval contents
+)
+
+regExp: node with: x with: expr with: xx = (
+
+	^ (self builder regex: (self value: expr))
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+ruleDescr: node with: x with: description with: xx = (
+
+	| descriptionValue |
+	descriptionValue := self value: description.
+	self builder setRuleDescription: descriptionValue.
+	^ descriptionValue
+)
+
+ruleDescrText: node with: x = (
+
+	^ node interval contents withBlanksTrimmed 
+)
+
+string: node with: x with: cs with: xx = (
+
+	^ self utilString: node content: cs
+)
+
+terminalChar: node with: expr = (
+
+	^ node interval contents
+
+	
+)
+
+utilString: node content: cs = (
+
+	| s reader writer char |
+	s := ((self value: cs) inject: '' into: [:result :new | result , new ]).
+
+	reader := s readStream.
+	writer := '' writeStream.
+	[reader atEnd]
+		whileFalse: [char := reader next.
+			(char = $\ and: [reader atEnd not])
+				ifTrue: [char := reader next.
+					char caseOf: {
+						[$n] -> [writer nextPut: Character cr].
+						[$t] -> [writer nextPut: Character tab].
+						[$"] -> [writer nextPut: $"].
+						[$'] -> [writer nextPut: $'].
+						[$\] -> [writer nextPut: $\].
+						[$u] -> [ | chars |
+							chars := String newFrom: {reader next . reader next . reader next . reader next}.
+							writer nextPut: (Character value:
+								(Number readFrom: chars base: 16))].
+						[$x] -> [ | chars |
+							chars := String newFrom: {reader next . reader next}.
+							writer nextPut: (Character value:
+								(Number readFrom: chars base: 16))]}
+						 otherwise: [writer nextPutAll: {$\. char}]]
+				ifFalse: [writer nextPut: char]].
+	s := writer contents.
+	^ (self builder string: s)
+		textualRepresentation: node interval contents;
+		yourself
+)
+
+builder = (
+
+	^ builder
+)
+
+builder: anObject = (
+
+	builder := anObject
+)
+
+currentRule = (
+
+	^ currentRule
+)
+
+currentRule: anObject = (
+
+	currentRule := anObject
+)
+
+predefinedNamespace = (
+
+	^ predefinedNamespace
+)
+
+predefinedNamespace: anObject = (
+
+	predefinedNamespace := anObject
+)
+
+
+----------------------------
+
+inlineRuleNameFor: inlineRuleName in: parentRuleName = (
+
+	^ parentRuleName  , $_ , inlineRuleName
+)
+
+newOnNamespace: optionalNamespace = (
+
+	^ self new
+		predefinedNamespace: optionalNamespace;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

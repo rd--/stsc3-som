@@ -1,0 +1,65 @@
+OhmPExprString = OhmPExprPrim (
+| matchString |
+
+asExpected: rulesDict = (
+
+	^ self matchString printString
+)
+
+debugNodeString = (
+
+	^ 'String:' , self matchString
+)
+
+matchInput: anInput = (
+
+	| matchResult |
+
+	matchResult := anInput matchString: self matchString.
+	matchResult == #ohmFail
+		ifFalse: [ ^ self matchString ].
+	^ #ohmFail
+)
+
+matchString = (
+
+	^ matchString
+)
+
+matchString: anObject = (
+
+	matchString := anObject
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: self matchString
+)
+
+toRecipe = (
+
+	^ 'b prim: ' , self matchString printString
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprString
+)
+
+newOn: aString = (
+
+	^ (self new)
+		matchString: aString;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

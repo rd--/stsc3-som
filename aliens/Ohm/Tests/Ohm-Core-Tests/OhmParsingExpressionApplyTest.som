@@ -1,0 +1,78 @@
+OhmParsingExpressionApplyTest = OhmParsingExpressionTest (
+evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: aGrammar = (
+
+	^ self evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: aGrammar andBindings: OrderedCollection new
+)
+
+evalPExpr: pexpr on: input asSyntactic: isSyntactic usingGrammar: aGrammar andBindings: bindings = (
+
+	| rules state grammar parameterizedRule |
+
+	rules := Dictionary new.
+	rules at: #firstRule put: (OhmPExprString newOn: 'firstRule' ).
+	parameterizedRule := OhmRuleDefine
+		newNamed: 'parameterRule'
+		parameters: {#x}
+		body: (OhmPExprSeq newOn: {OhmPExprParam newOn: 1 . OhmPExprParam newOn: 1}).
+	parameterizedRule installInto: rules.
+	grammar := OhmGrammar newWithName: 'FirstGrammar' ruleDictionary: rules.
+
+	state := OhmParsingState new.
+	state
+		grammar: grammar;
+		pushInput: input;
+		isSyntactic: isSyntactic;
+		pushBindings: bindings;
+		shouldRecordFailures: false.
+
+
+	^ pexpr eval: state
+)
+
+testApplyAppliesAnotherRule = (
+
+	| applyExpression |
+	applyExpression := OhmPExprApply newOn: #firstRule.
+	self
+		assertParsingExpression: applyExpression
+		compliesWithItsFixture: #matchContents.
+	
+)
+
+testApplyArity = (
+
+	self assert: 1 equals: (OhmPExprApply newOn: #firstRule) arity.
+)
+
+testApplyProducesIntervals = (
+
+	| applyExpression |
+	applyExpression := OhmPExprApply newOn: #firstRule.
+	self
+		assertParsingExpression: applyExpression
+		compliesWithItsIntervalFixture: #matchInterval.
+	
+)
+
+testCreateAnApply = (
+
+	OhmPExprApply newOn: #firstRule.
+)
+
+testParameterizedApplyArity = (
+
+	self assert: 1 equals: (OhmPExprApply newOn: #parameterRule arguments: {#firstRule}) arity.
+)
+
+testParamterizedApplyAppliesYetAnotherRule = (
+
+	| applyExpression |
+	applyExpression := OhmPExprApply newOn: #parameterRule arguments: {OhmPExprApply newOn: #firstRule}.
+	self
+		assertParsingExpression: applyExpression
+		compliesWithItsFixture: #parameterizedExpressionMatch.
+	
+)
+
+
+)

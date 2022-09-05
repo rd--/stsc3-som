@@ -1,0 +1,138 @@
+OhmMatchFailure = Error (
+| state startRuleName |
+
+errorInfo = (
+
+	| lineNumber source columnNumber line originalSource |
+	originalSource := state inputStream asString.
+	source := (self position = originalSource size
+		ifTrue: [ originalSource ]
+		ifFalse: [ originalSource copyFrom: 1 to: self position ]).
+	lineNumber := source lineCount.
+	columnNumber := 0.
+	line := ''.
+	lineNumber > 0
+		ifTrue: [columnNumber := (source lineNumber: lineNumber) size + 1.
+	                 line := originalSource lineNumber: lineNumber].
+	
+
+	^ OhmMatchFailureInfo new
+		line: line;
+		columnNumber: columnNumber;
+		lineNumber: lineNumber;
+		yourself
+)
+
+expected = (
+
+	^ Set newFrom: (self state rightmostFailure expressions 
+					collect: [ :e | e asExpected: state grammar ownAndInheritedRules ]).
+
+	
+)
+
+expectedText = (
+
+	| expected text |
+	
+	expected := self expected asOrderedCollection.
+	expected size = 1
+		ifTrue: [ ^ 'Expected ' ,  expected first ].
+
+	text := WriteStream on: ''.
+	2 to: expected size - 1 do: [ :index |
+		text << ', or '.
+		text << (expected at: index). ].
+
+	text << (' or ' , expected last).
+
+	^ 'Expected ' , expected first , text contents
+)
+
+message = (
+	
+	| errorInfo text lineAndColumnInfoText |
+
+	self state inputStream isStringStream
+		ifFalse: [ ^ 'match failed at position ' , self position ].
+
+	errorInfo := self errorInfo.
+	text := WriteStream on: ''.
+
+	lineAndColumnInfoText := 'Line ' , errorInfo lineNumber , ', column ' , errorInfo columnNumber , ': '.
+	text << lineAndColumnInfoText.
+	text << errorInfo line.
+	text << ('' , Character cr).
+
+	errorInfo columnNumber + lineAndColumnInfoText size
+		timesRepeat: [ text << Character space ].
+	text << ('^' , Character cr).
+	text << self expectedText.
+	
+	^ text contents
+)
+
+messageText = (
+
+	^ self message
+)
+
+position = (
+
+	^ self state rightmostFailure position
+)
+
+startRuleName = (
+
+	^ startRuleName
+)
+
+startRuleName: ruleName = (
+
+	startRuleName := ruleName asSymbol.
+)
+
+state = (
+
+	^ state
+)
+
+state: anObject = (
+
+	state := anObject
+)
+
+signalFor: state = (
+
+	self state: state.
+	super signal.
+)
+
+signalFor: state startedFrom: startRuleName = (
+
+	self
+		startRuleName: startRuleName;
+		state: state.
+	super signal.
+)
+
+
+----------------------------
+
+signalFor: state = (
+
+	self new signalFor: state
+)
+
+signalFor: state startedFrom: startRuleName = (
+
+	self new signalFor: state startedFrom: startRuleName
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

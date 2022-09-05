@@ -1,0 +1,50 @@
+OhmNodeTest = TestCase (
+| grammar |
+
+expectedFailures = (
+
+	^ #(#testSkippedSpacesNormalCase #testSkippedSpacesNormalCaseNodes #testSkippedSpacesWithManyPExpr)
+)
+
+setUp = (
+
+	grammar := OhmGrammar new: 'OhmNodeTestGrammar {
+		StartRule = firstRule secondRule lastRule
+		firstRule = "a"
+		secondRule = "b"
+		lastRule = "c"
+	}'
+)
+
+testSkippedSpacesNormalCase = (
+
+	| result |
+	result := (grammar match: 'a  b	c' startingFrom: #StartRule) cst.
+	self assert: String tab equals: result children last skippedSpacesString.
+	self assert: '  ' equals: result children second skippedSpacesString.
+)
+
+testSkippedSpacesNormalCaseNodes = (
+
+	| result |
+	result := (grammar match: 'a  b	c' startingFrom: #StartRule) cst.
+	self assert: 1 equals: result children last skippedSpacesNodes children first children size.
+	self assert: 2 equals: result children second skippedSpacesNodes children first children size.
+)
+
+testSkippedSpacesWithManyPExpr = (
+
+	| result |
+	grammar := OhmGrammar new: 'OhmNodeTestGrammar {
+		StartRule = (";" firstRule)+
+		firstRule = "a"
+		space += comment
+		comment = "\"" (~"\"" any)* "\""
+	}'.
+	result := (grammar match: ';a ; "comment" a' startingFrom: #StartRule) cst.
+
+	self assert: ' "comment" ' equals: result children last children last skippedSpacesString.
+)
+
+
+)

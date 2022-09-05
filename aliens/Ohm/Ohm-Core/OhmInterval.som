@@ -1,0 +1,73 @@
+OhmInterval = Object (
+| stream start end |
+
+contents = (
+
+	(self end > self stream size or: [self end = 0])
+		ifTrue: [^ ''].
+	^ self stream contents copyFrom: self start to: self end
+)
+
+end = (
+
+	^ end
+)
+
+end: anObject = (
+
+	end := anObject
+)
+
+length = (
+
+	^ (self end - self start) + 1
+)
+
+start = (
+
+	^ start
+)
+
+start: anObject = (
+
+	start := anObject
+)
+
+stream = (
+
+	^ stream
+)
+
+stream: anObject = (
+
+	stream := anObject
+)
+
+
+----------------------------
+
+newOn: aString = (
+
+	^ (self new)
+		stream: aString;
+		start: 1;
+		end: aString size;
+		yourself
+)
+
+newOn: aString from: start to: end = (
+
+	^ (self new)
+		stream: aString;
+		start: start;
+		end: end;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

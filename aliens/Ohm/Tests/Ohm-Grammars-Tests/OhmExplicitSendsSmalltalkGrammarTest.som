@@ -1,0 +1,94 @@
+OhmExplicitSendsSmalltalkGrammarTest = OhmSmalltalkGrammarTest (
+setUp = (
+
+	grammar := OhmExplicitSendsSmalltalk.
+)
+
+testGrammarDistinguishesOperandAndUnaryCascades = (
+
+	startRule := #Expression.
+	self
+		shouldParse: 'self new test; test' to: #(
+			Expression
+				(Expression_unaryCascade
+					(UnaryMessageReceiver 'self new')
+					(CascadedMessages 'test; test')))
+)
+
+testGrammarParsesBinaryMessageChains = (
+
+	"This has a different meaning now, so skipped --pre"
+)
+
+testGrammarParsesCascadedMessages = (
+
+	"This has a different meaning now --pre"
+	startRule := #Expression.
+
+	self shouldParseAll: #(
+		'self negated firstMessage: 2; yourself'
+		'self negated firstMessage: 2 negated; yourself'
+		'self negated firstMessage; anotherMessage: 2 negated; yourself' )
+)
+
+testGrammarParsesConstantReferencesInExpressions = (
+
+	startRule := #Expression.
+	self shouldParse: 'nil+3' to: #(Expression
+		(KeywordMessageSend
+			(KeywordMessageReceiver
+				(BinaryMessageSend
+					(BinaryMessageReceiver (UnaryMessageSend (UnaryMessageSend_base (Operand (Literal 'nil')))))
+					(BinaryMessage '+3')))
+			(_list)))
+
+
+	
+)
+
+testGrammarParsesUnaryMessageChains = (
+
+	"This has a different meaning now, so skipped --pre"
+)
+
+testGrammarParsesUnaryMessageSendsWithProblematicOperand = (
+
+	startRule := #Expression.
+	self
+		shouldParse: '2negated' to: #(Expression
+			#(KeywordMessageSend
+				#(KeywordMessageReceiver
+					#(BinaryMessageSend
+						#(BinaryMessageReceiver
+							#(UnaryMessageSend
+								#(UnaryMessageSend_message
+									#(UnaryMessageReceiver #(Operand '2'))
+									#(UnaryMessage 'negated'))))))
+					#(_list)));
+		shouldParse: 'falseNegated' to: #(Expression
+			#(KeywordMessageSend
+				#(KeywordMessageReceiver
+					#(BinaryMessageSend
+						#(BinaryMessageReceiver
+							#(UnaryMessageSend
+								#(UnaryMessageSend_base
+									#(Operand 'falseNegated'))))))
+					#(_list)))
+
+	
+)
+
+
+----------------------------
+
+shouldInheritSelectors = (
+	^true
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

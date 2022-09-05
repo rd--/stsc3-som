@@ -1,0 +1,125 @@
+OhmAttributes = Object (
+| grammar dispatchCache cachedSelectors |
+
+applyListAttribute: ruleName on: aNode = (
+
+	| listElementActionName actionName actionNameIndexPart |
+	actionName := self class ruleNameToMessageName: aNode parent ruleName.
+	actionNameIndexPart := aNode parent children indexOf: aNode ifAbsent: [Error signal].
+	listElementActionName := (actionName , 'At' , actionNameIndexPart) asSymbol.
+	
+	((self class allSelectorsBelow: Object) includes: listElementActionName)
+		ifTrue: [^ self perform: listElementActionName withArguments: { aNode }.]
+		ifFalse: [^ self listExpression: aNode] 
+)
+
+defaultAttributeApplicable: ruleName on: aNode = (
+
+	^ (self class canUnderstand: #defaultExpression:) 
+			and: [(ruleName = OhmParsingExpression listRuleIdentifier) not]					
+)
+
+tryToUseSpecialAttributesFor: ruleName asMessage: ruleMessageName on: aNode = (
+	
+	ruleName = OhmParsingExpression listRuleIdentifier ifTrue: [
+		^ self applyListAttribute: ruleName on: aNode].
+
+	ruleName = OhmParsingExpression terminalRuleIdentifier ifTrue: [
+		^ self terminalExpression: aNode].
+	
+	(self defaultAttributeApplicable: ruleName on: aNode) ifTrue: [ 
+		^ self defaultExpression: aNode].
+					
+	"Else"
+	OhmMissingAttributeMethod signal: ruleMessageName.							
+)
+
+value: inputNode = (
+
+	| selectors ruleName ruleMessageName aNode |
+	inputNode isOhmMatchResult 
+		ifTrue: [aNode := inputNode cst]
+		ifFalse: [aNode := inputNode ].
+	
+	ruleName := aNode ruleName asSymbol.
+	ruleMessageName := self class ruleNameToMessageName: ruleName.
+	
+	selectors := self selectors select: [:msg | msg beginsWith: ruleMessageName].
+	self assert: selectors size <= 1.
+	
+	selectors size = 1
+		ifTrue:  [ ^ self 
+						perform: selectors anyOne 
+						withArguments: {aNode} , aNode children. ]
+		ifFalse: [ ^ self 
+						tryToUseSpecialAttributesFor: ruleName 
+						asMessage: ruleMessageName on: aNode ].
+)
+
+grammar = (
+
+	^ grammar
+)
+
+grammar: anObject = (
+
+	grammar := anObject.
+	"self refreshDispatchCache."
+)
+
+initialize = (
+
+	dispatchCache := IdentityDictionary new
+)
+
+listExpression: aNode = (
+
+	^ aNode children collect: [ :child | self value: child ]
+)
+
+terminalExpression: aNode = (
+
+	^ aNode children first
+)
+
+selectors = (
+
+	^ cachedSelectors ifNil: [cachedSelectors := self class allSelectorsBelow: OhmAttributes]
+)
+
+
+----------------------------
+
+possibleActionsForRule: anOhmRule = (
+	
+	| result ruleName ruleMessageName|
+	ruleName := anOhmRule ruleName asSymbol.
+	ruleMessageName := self ruleNameToMessageName: ruleName.
+	result := OrderedCollection new.
+	self allSubclassesDo: [ :attribute | |messages|
+		messages := attribute allSelectorsBelow: attribute superclass. 
+		result addAll: (messages select: [:msg | msg beginsWith: ruleMessageName] thenCollect: [:msg | attribute >> msg]) ].
+	^ result
+)
+
+ruleNameToMessageName: ruleName = (
+
+	| name nameParts |
+	nameParts := (ruleName subStrings: '_') asOrderedCollection.
+	nameParts ifEmpty: [ ^ 'anything:' asSymbol ].
+		
+	name := nameParts removeFirst.
+	nameParts 
+		ifNotEmpty:[ name := name , 
+								(nameParts inject: '' 
+									into: [ :result :new | result , new capitalized ])].
+	^ (name , ':') asSymbol
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

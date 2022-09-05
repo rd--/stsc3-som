@@ -1,0 +1,39 @@
+OhmDuplicateGrammarDefinitionError = Error (
+| grammarName |
+
+grammarName = (
+
+	^ grammarName
+)
+
+grammarName: anObject = (
+
+	grammarName := anObject
+)
+
+messageText = (
+
+	^ 'The grammar ' , self grammarName grammarName , ' has already been defined.'
+)
+
+signalForGrammar: grammarName = (
+	
+	self grammarName: grammarName.
+	super signal
+)
+
+
+----------------------------
+
+signalForGrammar: grammarName = (
+	
+	self new signalForGrammar: grammarName
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

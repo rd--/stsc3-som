@@ -1,0 +1,22 @@
+OhmSetParentAttribute = OhmSemanticAction (
+defaultExpression: aNode = (
+
+	^ aNode children do: [ :child |
+		child parent: aNode.
+		self value: child. ]
+)
+
+listExpression: aNode = (
+
+	^ aNode children do: [ :child |
+		child parent: aNode.
+		self value: child. ]
+)
+
+terminalExpression: aNode = (
+
+	^ self
+)
+
+
+)

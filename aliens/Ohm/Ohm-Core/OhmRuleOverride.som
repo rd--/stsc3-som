@@ -1,0 +1,23 @@
+OhmRuleOverride = OhmRule (
+dispatchedBodyOn: aGrammar = (
+
+	^ self body  
+)
+
+installInto: ruleDict = (
+
+	self body description: (self superGrammar ruleNamed: self ruleName) description.
+	ruleDict at: self ruleName put: self body.
+)
+
+performChecksFor: aGrammar = (
+
+	| superRule |
+	superRule := aGrammar superGrammar ruleDeclarationNamed: self ruleName.
+	self checkForSameParametersAs: superRule in: aGrammar.
+
+	super performChecksFor: aGrammar.
+)
+
+
+)

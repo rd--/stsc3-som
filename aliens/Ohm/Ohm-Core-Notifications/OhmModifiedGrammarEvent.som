@@ -1,0 +1,35 @@
+OhmModifiedGrammarEvent = ModifiedEvent (
+newGrammar = (
+
+	^ self item
+)
+
+oldGrammar = (
+
+	^ self oldItem
+)
+
+
+----------------------------
+
+oldGrammar: oldGrammar modifiedTo: newGrammar = (
+
+	| instance |
+	instance := self item: newGrammar kind: OhmChangeNotifier grammarKind.
+	instance itemClass: nil.
+	instance oldItem: oldGrammar.
+	^ instance
+)
+
+supportedKinds = (
+
+	^ Array with: OhmChangeNotifier grammarKind
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

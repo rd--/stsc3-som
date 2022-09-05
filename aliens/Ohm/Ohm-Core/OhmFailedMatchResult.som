@@ -1,0 +1,20 @@
+OhmFailedMatchResult = OhmMatchResult (
+| failure |
+
+failed = (
+
+	^ true
+)
+
+failure = (
+
+	^ failure
+)
+
+failure: aMatchFailure = (
+
+	failure := aMatchFailure
+)
+
+
+)

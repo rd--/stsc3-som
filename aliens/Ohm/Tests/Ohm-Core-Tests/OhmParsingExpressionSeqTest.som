@@ -1,0 +1,50 @@
+OhmParsingExpressionSeqTest = OhmParsingExpressionTest (
+testAssertSeqArity = (
+
+	self assert: 0 equals: (OhmPExprSeq newOn: {}) arity.
+
+	self assert: 2 equals: (OhmPExprSeq newOn: { OhmPExprAnything new . OhmPExprAnything new}) arity.
+)
+
+testCreateASeq = (
+
+	OhmPExprSeq newOn: {}.
+)
+
+testSeqMatchesTheSequenceOfItsTerms = (
+
+	| seqExpression |
+	seqExpression := OhmPExprSeq newOn: { OhmPExprString newOn: 'a' .
+												OhmPExprString newOn: 'bc' .
+												OhmPExprString newOn: 'z' }.
+	self
+		assertParsingExpression: seqExpression
+		asSyntactic: true
+		compliesWithItsFixture: #syntacticExpressionMatch.
+)
+
+testSeqProducesIntervals = (
+
+	| seqExpression |
+	seqExpression := OhmPExprSeq newOn: { OhmPExprString newOn: 'a' .
+												OhmPExprString newOn: 'bc' .
+												OhmPExprString newOn: 'z' }.
+	self
+		assertParsingExpression: seqExpression
+		asSyntactic: true
+		compliesWithItsIntervalFixture: #matchInterval.
+)
+
+testSeqProducesNoNodes = (
+
+	| seqExpression |
+	seqExpression := OhmPExprSeq newOn: { OhmPExprString newOn: 'a' .
+												OhmPExprString newOn: 'bc' .
+												OhmPExprString newOn: 'z' }.
+	self
+		assertParsingExpression: seqExpression
+		compliesWithItsNodeFixture: #matchTree.
+)
+
+
+)

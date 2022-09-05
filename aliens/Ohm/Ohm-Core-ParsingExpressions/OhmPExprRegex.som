@@ -1,0 +1,78 @@
+OhmPExprRegex = OhmPExprPrim (
+| regex regexString |
+
+asExpected: rulesDict = (
+
+	^ self regexString
+)
+
+asString = (
+
+	^ self regexString
+)
+
+debugNodeString = (
+
+	^ 'Regex:' , self regexString
+)
+
+matchInput: anInput = (
+
+	^ anInput matchRegex: self regex
+		
+)
+
+regex = (
+
+	^ regex
+)
+
+regex: anObject = (
+
+	regex := anObject
+)
+
+regexString = (
+
+	^ regexString
+)
+
+regexString: anObject = (
+
+	regexString := anObject
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: self regexString
+	
+)
+
+toRecipe = (
+
+	^ 'b regex: ' , self regexString printString
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprRegex
+)
+
+newOn: regex = (
+
+	^ self new
+		regexString: regex;
+		regex: (RxParser preferredMatcherClass for: (RxParser new parse: regex));
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

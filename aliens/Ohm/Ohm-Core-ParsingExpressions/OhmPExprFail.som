@@ -1,0 +1,43 @@
+OhmPExprFail = OhmParsingExpression (
+asActionBindingName = (
+
+	self assert: false "This should not be called"
+)
+
+doEval: state = (
+
+	state recordFailureOf: self at: state inputStream getState.
+	^ false
+	
+)
+
+nodesResultingInCST = (
+
+	^ { }
+)
+
+asExpected: rulesDict = (
+
+	^ 'hell to freeze over'
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprFail
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

@@ -1,0 +1,94 @@
+OhmInputMemoizedResult = Object (
+| hasMatched node position involvedRules failureDescriptor |
+
+failureDescriptor = (
+
+	^ failureDescriptor
+)
+
+failureDescriptor: anObject = (
+
+	failureDescriptor := anObject
+)
+
+hasMatched = (
+
+	^ hasMatched
+)
+
+hasMatched: anObject = (
+
+	hasMatched := anObject
+)
+
+initialize = (
+
+	self involvedRules: OrderedCollection new.
+)
+
+involvedRules = (
+
+	^ involvedRules
+)
+
+involvedRules: anObject = (
+
+	involvedRules := anObject
+)
+
+isLeftRecursion = (
+
+	^ false
+)
+
+node = (
+
+	^ node
+)
+
+node: anObject = (
+
+	node := anObject
+)
+
+position = (
+
+	^ position
+)
+
+position: anObject = (
+
+	position := anObject
+)
+
+
+----------------------------
+
+newWithResult: result andFailures: failures hasMatched: hasMatched andInvolvedRules: involvedRules on: position = (
+	
+	^ (self
+		newWithResult: result
+		andFailures: failures
+		hasMatched: hasMatched
+		on: position)
+			involvedRules: involvedRules;
+		 	yourself
+)
+
+newWithResult: result andFailures: failures hasMatched: hasMatched on: position = (
+
+	^ (self new)
+		node: result;
+		failureDescriptor: failures;
+		hasMatched: hasMatched;
+		position: position;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

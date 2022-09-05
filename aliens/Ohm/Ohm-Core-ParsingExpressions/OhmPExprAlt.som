@@ -1,0 +1,116 @@
+OhmPExprAlt = OhmParsingExpression (
+| terms |
+
+arity = (
+
+	^ self terms
+		ifEmpty: [0]
+		ifNotEmptyDo: [:terms | terms first arity] 
+)
+
+asActionBindingName = (
+
+	^ 'alt'
+)
+
+assertChoicesHaveUniformArity: ruleName = (
+
+	| index |
+	index := self terms findFirst: [ :t | t arity ~= self terms first arity ].
+	
+	index > 0
+		ifTrue: [ OhmInconsistentArityError 
+					signalForRule: ruleName 
+					expectedArity: self terms first arity
+					actualArity: (self terms at: index) arity   ]
+)
+
+doEval: state = (
+
+	"TODO: syntactic tests"
+
+	| originalInputState index backtrackingInputState input |
+	
+	input := state inputStream.
+	originalInputState := input getState.
+	
+	backtrackingInputState := input getState.
+	index := self terms findFirst: [:term |
+		input setState: backtrackingInputState.
+		term eval: state ].
+
+	index = 0
+		ifTrue:  [ input setState: originalInputState. 
+				^ false ]
+		ifFalse: [ ^ true ]
+)
+
+innerNodesAt: parsingState = (
+
+	^ self terms
+)
+
+nodesResultingInCST = (
+
+	^ { self }
+)
+
+terms = (
+
+	^ terms
+)
+
+terms: anObject = (
+
+	terms := anObject
+)
+
+totalNumberOfExpressions = (
+
+	^ super totalNumberOfExpressions + (self terms collect: [:e | e totalNumberOfExpressions]) sum
+)
+
+weightedComplexity = (
+
+
+	^ 4 + (self terms collect: [:e | e weightedComplexity]) sum
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newOn: 
+		(self terms collect: [:t | t replaceParametersWithArguments: arguments])
+)
+
+toRecipe = (
+
+	^ 'b alt: {' , 
+		((self terms collect: #toRecipe) joinSeparatedBy: ' . '), 
+		'}'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprAlt
+)
+
+newOn: terms = (
+
+	| newExpr |
+	newExpr := (self new)
+		terms: terms;
+		yourself.
+	terms do: [:t | t parentExpression: newExpr.].
+	^ newExpr
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

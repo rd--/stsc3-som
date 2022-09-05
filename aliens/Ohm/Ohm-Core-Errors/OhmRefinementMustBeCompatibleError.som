@@ -1,0 +1,56 @@
+OhmRefinementMustBeCompatibleError = Error (
+| ruleName expected why |
+
+expected = (
+
+	^ expected
+)
+
+expected: anObject = (
+
+	expected := anObject
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+why = (
+
+	^ why
+)
+
+why: anObject = (
+
+	why := anObject
+)
+
+signalForRule: ruleName expectedArity: arity reason: why = (
+	
+	self ruleName: ruleName.
+	self expected: arity.
+	self why: why.
+	super signal.
+)
+
+
+----------------------------
+
+signalForRule: ruleName expectedArity: arity reason: why = (
+
+	self new signalForRule: ruleName expectedArity: arity reason: why
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

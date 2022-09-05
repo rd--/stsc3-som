@@ -1,0 +1,20 @@
+OhmGrammarLoadingTest = TestCase (
+| grammarString |
+
+grammarString = (
+
+	^ grammarString
+)
+
+grammarString: anObject = (
+
+	grammarString := anObject
+)
+
+setUp = (
+
+	self grammarString: 'G { foo = ''bar'' }'.
+)
+
+
+)

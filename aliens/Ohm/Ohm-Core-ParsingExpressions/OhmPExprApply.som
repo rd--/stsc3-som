@@ -1,0 +1,127 @@
+OhmPExprApply = OhmParsingExpression (
+| ruleName arguments cachedRuleBody cachedRuleBodyParseId |
+
+arguments = (
+
+	^ arguments
+)
+
+arguments: collectionOfSymbols = (
+
+	arguments := collectionOfSymbols
+)
+
+asExpected: rulesDict = (
+
+	| article rule |
+	rule := rulesDict at: self ruleName.
+	^ rule description ifEmpty: [ 
+		article := self ruleName first isVowel ifTrue: [ 'an' ] ifFalse: ['a' ].
+		article , ' ' , self ruleName ]
+)
+
+asString = (
+
+	^ self ruleName
+)
+
+debugNodeString = (
+
+	^ self ruleName
+)
+
+doEval: state = (
+	
+	^ (OhmPExprApplyInvocation
+		newFor: ruleName
+		with: (self ruleBodyOn: state)
+		on: state) result
+)
+
+initialize = (
+
+	super initialize.
+	self arguments: #()
+)
+
+innerNodesAt: parsingState = (
+
+	^ { self ruleBodyOn: parsingState }
+)
+
+nodesResultingInCST = (
+
+	^ { self }
+)
+
+ruleBodyOn: state = (
+	
+	cachedRuleBodyParseId ~= state idOfParseProcess  
+		ifTrue: [cachedRuleBody := nil].	
+	cachedRuleBody ifNil: [
+		cachedRuleBody := (state grammar ruleNamed: ruleName asSymbol)
+			replaceParametersWithArguments: self arguments.
+		cachedRuleBodyParseId := state idOfParseProcess.].
+	^ cachedRuleBody
+)
+
+ruleName = (
+
+	^ ruleName
+)
+
+ruleName: anObject = (
+
+	ruleName := anObject
+)
+
+asActionBindingName = (
+
+	^ self ruleName
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class 
+		newOn: self ruleName 
+		arguments: (self arguments collect: [:arg | 
+						arg replaceParametersWithArguments: arguments])
+)
+
+toRecipe = (
+
+	^ 'b apply: ' , self ruleName asSymbol printString , ' with: {' , 
+		(((self arguments ifNil: [#()]) collect: [:a | a toRecipe]) joinSeparatedBy: ' . ')  , '}'
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprApply
+)
+
+newOn: ruleName = (
+
+	^ (self new)
+		ruleName: ruleName asSymbol;
+		arguments: #();
+		yourself
+)
+
+newOn: ruleName arguments: collectionOfSymbols = (
+
+	collectionOfSymbols ifNil: [0 halt].
+	^ (self newOn: ruleName)
+		arguments: collectionOfSymbols;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

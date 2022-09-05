@@ -1,0 +1,36 @@
+OhmPExprAnything = OhmPExprPrim (
+asExpected: rulesDict = (
+
+	^ 'any object'
+)
+
+matchInput: anInput = (
+
+	^ anInput next
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class new
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprAnything
+)
+
+newOn: anything = (
+
+	^ self new
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

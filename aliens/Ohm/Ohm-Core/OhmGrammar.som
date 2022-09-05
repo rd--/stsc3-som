@@ -1,0 +1,431 @@
+OhmGrammar = Object (
+| ruleDeclarations grammarName superGrammar namespace smalltalkPlaceholder defaultStartRuleName |
+
+allSubGrammars = (
+
+	^ ((OhmGrammarSmalltalkProxy allInstances 
+			collect: [:p | p OhmInstance]
+		 	thenSelect: [:g | g superGrammar = self])
+			gather: [:g | g allSubGrammars ])  asSet
+)
+
+defaultStartRuleName = (
+
+	^ defaultStartRuleName
+)
+
+defaultStartRuleName: anObject = (
+
+	defaultStartRuleName := anObject
+)
+
+grammarHierarchyIncludingSelf = (
+	| r|
+	r:= (self superGrammarsIncludingSelf , 
+		((OhmGrammarSmalltalkProxy allSubclasses 
+			collect: [:p | p OhmInstance]
+		 	thenSelect: [:g | g ~= self and: [g superGrammar = self]])
+			gather: [:g | {g allSubGrammars . {g}} gather: [:i | i] ])   ) asSet.
+	
+	^ r.
+)
+
+grammarName = (
+
+	^ grammarName
+)
+
+grammarName: anObject = (
+
+	grammarName := anObject
+)
+
+initialize = (
+
+	self grammarName: ''.
+	self ruleDeclarations: Dictionary new.
+	
+	self superGrammar: OhmBuiltInRules OhmInstance.
+)
+
+namespace = (
+
+	^ namespace
+)
+
+namespace: anObject = (
+
+	namespace := anObject
+)
+
+ownAndInheritedRules = (
+
+	| ownDefinedRules |
+
+	self superGrammar = self
+		ifTrue: [^ self rules].
+
+	ownDefinedRules := self rules collect: #ruleName.
+	
+	^ (self superGrammar ownAndInheritedRules reject: [:r | ownDefinedRules includes: r ruleName ]) , self rules 
+)
+
+qualifiedGrammarName = (
+	
+	^ 	self namespace namespaceName , '.'
+		, self grammarName
+)
+
+removeRuleNamed: ruleName = (
+	| rule |
+	rule := self ruleDeclarations at: ruleName.
+	rule inlineRules do: [:inlineRule | self removeRuleNamed: inlineRule ruleName].
+	self ruleDeclarations removeKey: ruleName ifAbsent: [].
+	self serializeToSmalltalkClass.
+	OhmChangeNotifier uniqueInstance rule: rule removedFrom: self.
+)
+
+ruleDeclarationNamed: ruleName = (
+
+	^ self ruleDeclarationNamed: ruleName 
+		ifAbsent: [ (self superGrammar ~= self)
+						ifTrue: [ ^ self superGrammar 
+							ruleDeclarationNamed: ruleName lookUpFor: self ]
+						ifFalse: [OhmUndeclaredRuleError 
+									signalForRule: ruleName 
+									inGrammar: self grammarName]]
+)
+
+ruleDeclarationNamed: ruleName ifAbsent: aBlock = (
+
+	^ self ruleDeclarations at: ruleName ifAbsent: aBlock
+)
+
+ruleDeclarationNamed: ruleName lookUpFor: startGrammar = (
+
+	^ self ruleDeclarationNamed: ruleName ifAbsent: [ 
+		(self superGrammar ~= self)
+			ifTrue: [ ^ self superGrammar 
+						ruleDeclarationNamed: ruleName lookUpFor: startGrammar ]
+			ifFalse: [OhmUndeclaredRuleError 
+						signalForRule: ruleName 
+						inGrammar: startGrammar grammarName ]]
+)
+
+ruleDeclarations = (
+
+	^ ruleDeclarations
+)
+
+ruleDeclarations: anObject = (
+
+	ruleDeclarations := anObject
+)
+
+ruleNamed: ruleName = (
+
+	^ (self ruleDeclarationNamed: ruleName lookUpFor: self) dispatchedBodyOn: self
+)
+
+rules = (
+
+	^ ruleDeclarations
+)
+
+smalltalkPlaceholder = (
+
+	^ smalltalkPlaceholder
+)
+
+smalltalkPlaceholder: anObject = (
+
+	smalltalkPlaceholder := anObject
+)
+
+superGrammar = (
+
+	^ superGrammar
+)
+
+superGrammar: anObject = (
+
+	superGrammar := anObject
+)
+
+superGrammarsIncludingSelf = (
+
+	self superGrammar = self
+		ifTrue: [ ^ { self } ]
+		ifFalse: [ ^ { self } , self superGrammar superGrammarsIncludingSelf ]
+)
+
+assertAritiesMatch: actionClass = (
+
+	| message ruleMessageName messages arguments wrongActions |
+	messages := actionClass allSelectorsBelow: OhmAttributes.
+
+	wrongActions := self rules associationsDo: [ :assoc | 
+		ruleMessageName := OhmAttributes ruleNameToMessageName: assoc key.
+		message :=  messages detect: [:msg | msg beginsWith: ruleMessageName] ifNone: [ nil ].
+		message
+			ifNil: [ true ]
+			ifNotNil: [ arguments := (message count: [:c | c = $:]) - 1.
+					  arguments = assoc value arity
+						ifFalse: [ ^ OhmAttributeAritiesMissmatchError 
+									signalForRule: assoc key
+									andMessage: message  ] ] ].
+)
+
+assertNoDuplicateActions: actionsClass = (
+
+	| messageHeads messages |
+
+	messages :=
+	{ OhmSemanticAction. OhmInheritedAttribute. OhmSynthesizedAttribute}
+		inject: (actionsClass allSelectorsBelow: OhmAttributes) 
+		into: [:msgs :class | msgs difference: (class allSelectorsBelow: OhmAttributes) ].
+
+	messageHeads := (messages asOrderedCollection
+							collect: [ :msg | (msg subStrings: ':')]
+							thenSelect: [:msg | msg size > 1])
+							collect: [ :msg | msg first].
+	
+	messageHeads asSet size < messageHeads size
+		ifTrue: ["There is at least one messageHead which is not unique --pre"
+				| violatingMethod |
+				violatingMethod := messageHeads detect: [:msg | (messageHeads occurrencesOf: msg) > 1].
+				OhmDuplicateActionDeclarationError signalForAction: violatingMethod. ].
+				
+)
+
+inheritedAttribute: attributesObject = (
+
+	 ^ self installAttribute: attributesObject
+)
+
+installAttribute: attributesObject = (
+
+	self 
+		assertAritiesMatch: attributesObject class;
+		assertNoDuplicateActions: attributesObject class.
+	attributesObject grammar: self.
+	^ attributesObject
+)
+
+semanticAction: actionsObject = (
+
+	 ^ self installAttribute: actionsObject
+)
+
+synthesizedAttribute: attributesObject = (
+
+	^ self installAttribute: attributesObject
+	
+)
+
+doesMatch: string startingFrom: startRuleName = (
+	
+	| state |
+	state := OhmParsingState new.
+	state
+		grammar: self;
+		pushInput: (OhmInputStream on: string);
+		isSyntactic: false;
+		pushBindings: OrderedCollection new;
+		shouldRecordFailures: false.      
+
+	^ (OhmPExprSeq newOn: { OhmPExprApply newOn: startRuleName . 
+								  OhmPExprMany newStarOn: (self ruleNamed: #space) .
+								  OhmPExprApply newOn: #end } )
+			eval: state
+)
+
+match: stringOrObject = (
+	
+	self defaultStartRuleName ifNil: [ OhmMissingStartRule signal ].
+	^ self match: stringOrObject startingFrom: self defaultStartRuleName
+)
+
+match: string startingFrom: startRuleName = (
+	
+	^ self 
+		matchStream: (OhmInputStream on: string) 
+		startingFrom: startRuleName 
+		failureAsException: false
+)
+
+matchStream: stream startingFrom: startRuleName failureAsException: exceptionOnFailure = (
+	
+	| result bindings state |
+	bindings := OrderedCollection new.
+	state := OhmParsingState new.
+	state
+		grammar: self;
+		pushInput: stream;
+		pushBindings: bindings.
+	
+	result := (OhmPExprApply newOn: startRuleName) eval: state.
+	result = false ifFalse: [
+		self skipSpaces: state.
+		result := (OhmPExprApply newOn: #end) eval: state].
+	
+	^ OhmMatchResult newFor: state withResult: result startingFrom: startRuleName
+)
+
+skipSpaces: state = (
+
+	| result originalPosition anInput originalFailures |
+	anInput := state inputStream.
+	originalPosition := anInput getState.
+	state isSyntactic: false.
+	originalFailures := state rightmostFailure.
+	state rightmostFailure: OhmFailureDescriptor new.
+
+	[ originalPosition := anInput getState.
+	  state pushBindings: OrderedCollection new.
+	  result := state cachedSpacesRule eval: state.
+	  state popBindings.
+	  result.
+	 ] whileTrue.
+
+	state rightmostFailure: originalFailures.
+	state isSyntactic: true.
+	anInput setState: originalPosition.
+)
+
+grammarDefinitionAsString = (
+
+	^ self grammarName
+		, (self superGrammar == OhmBuiltInRules 
+				ifFalse: [' <: ' , self superGrammar grammarName] 
+				ifTrue: [''])
+)
+
+grammarDefinitionString = (
+	
+	^ String streamContents: [:stream |
+		stream << self grammarDefinitionAsString.
+		stream << ' {'; cr.
+		((self rules sorted: [:a :b | a ruleName < b ruleName])
+			select: [:r | r isInlineRule not])
+			do: [:rule | stream << rule textualRepresentation withBlanksTrimmed]
+			separatedBy: [stream cr; cr].
+		stream << '}' ]
+)
+
+rulesToRecipe = (
+
+	^ self ruleDeclarations inject: '' into: [:recipe :rule | recipe , Character cr , rule toRecipe ]
+)
+
+serializeToSmalltalkClass = (
+
+	self smalltalkPlaceholder ifNotNil: [
+		self smalltalkPlaceholder class compile: 
+		'serializedGrammar' , Character cr ,
+		'^ ' , self grammarDefinitionString printString.]
+)
+
+toRecipe = (
+
+	^ '
+[ | b |
+b := OhmGrammarBuilder new.
+b setGrammarName: ' , self grammarName printString , '.' , Character cr ,
+self rulesToRecipe , Character cr ,
+'b buildGrammar]'
+	
+)
+
+isSyntactic: ruleName = (
+
+	^ ruleName size > 0
+		and: [(ruleName asString at: 1) isUppercase]
+)
+
+printOn: aStream = (
+
+	| aName |
+	super printOn: aStream.
+	aName := self grammarName ifNil: ['unnamed'].
+	aStream 
+		<< ': '
+		<< aName
+)
+
+
+----------------------------
+
+grammarNamed: grammarName = (
+
+	^ self installedGrammars 
+		detect: [:g | g grammarName = grammarName ]
+		ifNone: [ OhmUndeclaredGrammarError signalForGrammar: grammarName ]
+)
+
+hasGrammarNamed: grammarName = (
+
+	^ self installedGrammars anySatisfy: [:g | g grammarName = grammarName ]
+)
+
+install: description = (
+
+	| grammar |
+	grammar := OhmCompiler compileGrammarDefinition: description inNamespace: OhmNamespace defaultNamespaceName.
+	OhmCompiler installGrammar: grammar intoNamespace: OhmNamespace defaultNamespaceName.
+	^ grammar
+	
+)
+
+installedGrammars = (
+
+	^ OhmGrammarSmalltalkProxy allSubclasses
+			collect: [:c | c OhmInstance ]
+			thenSelect: [:c | c notNil]
+)
+
+makeAndInstallGrammar: description in: namespaceName = (
+
+	| grammar |
+	grammar := OhmCompiler 
+					compileGrammarDefinition: description 
+					inNamespace: namespaceName.
+	OhmCompiler installGrammar: grammar intoNamespace: namespaceName.
+	^ grammar
+	
+)
+
+makeAndInstallGrammars: description in: namespaceName = (
+	| grammars |
+	grammars := OhmCompiler 
+					compileGrammarDefinitions: description
+					andInstallIn: namespaceName.
+	^ grammars
+	
+)
+
+new: description = (
+
+	^ OhmCompiler compileGrammarDefinition: description 
+	
+)
+
+newWithName: name ruleDictionary: rulesDictionary = (
+
+	| newGrammar |
+	newGrammar := self new
+						grammarName: name;
+						yourself.
+						
+	newGrammar ruleDeclarations: (Dictionary newFrom: (rulesDictionary associations 
+			collect: [:assoc | assoc key asSymbol -> (OhmRuleDefine newNamed: assoc key body: assoc value) ])).
+	^ newGrammar
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

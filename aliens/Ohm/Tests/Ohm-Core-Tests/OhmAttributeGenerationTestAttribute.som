@@ -1,0 +1,15 @@
+OhmAttributeGenerationTestAttribute = OhmAttributes (
+| log |
+
+bar: node with: fooexpr with: barstr = (
+
+	^ {#bar . self value: fooexpr . barstr interval contents }
+)
+
+foo: node expr: str = (
+
+	^ { #foo . node interval contents }
+)
+
+
+)

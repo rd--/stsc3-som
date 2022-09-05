@@ -1,0 +1,54 @@
+OhmNamespace = Object (
+grammars = (
+
+	^ (self classes 
+			select: [:c | c superclass == OhmGrammarSmalltalkProxy ])
+			collect: [:c | c OhmInstance ]
+			thenSelect: [:c | c notNil]
+)
+
+hasGrammarNamed: grammarName = (
+
+	^ self grammars anySatisfy: [:g | g grammarName = grammarName]
+)
+
+namespaceName = (
+
+	^ self packageName  
+)
+
+register: aGrammar = (
+	
+	SystemOrganizer classify: aGrammar smalltalkPlaceholder under: aGrammar namespace
+)
+
+
+----------------------------
+
+defaultNamespace = (
+
+	^ PackageInfo named: 'Ohm-Grammars'
+)
+
+defaultNamespaceName = (
+
+	^ 'Ohm-Grammars'
+)
+
+named: namespaceName = (
+
+	^ PackageInfo named: namespaceName
+)
+
+removeNamed: namespaceName = (
+
+	SystemOrganizer default removeSystemCategory: namespaceName
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

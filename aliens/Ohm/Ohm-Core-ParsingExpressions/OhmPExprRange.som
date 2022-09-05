@@ -1,0 +1,75 @@
+OhmPExprRange = OhmPExprPrim (
+| startCharacter endCharacter |
+
+asExpected: rulesDict = (
+
+	^ 'a character between {1} and {2}' format: {self startCharacter asString . self endCharacter asString}
+)
+
+debugNodeString = (
+
+	^ 'Range from {1} to {2}' format: {self startCharacter asString . self endCharacter asString}
+)
+
+endCharacter = (
+
+	^ endCharacter
+)
+
+endCharacter: anObject = (
+
+	endCharacter := anObject
+)
+
+startCharacter = (
+
+	^ startCharacter
+)
+
+startCharacter: anObject = (
+
+	startCharacter := anObject
+)
+
+toRecipe = (
+
+	^ 'b rangeFrom: {1} to: {2}' format: {self startCharacter printString . self endCharacter printString}
+)
+
+matchInput: anInput = (
+
+	| char |
+	char := anInput next.
+	^ (char isCharacter and: [self startCharacter <= char] and: [char <= self endCharacter])
+		ifTrue: [char]
+		ifFalse: [#ohmFail]
+)
+
+replaceParametersWithArguments: arguments = (
+
+	^ self class newFrom: self startCharacter to: self endCharacter
+)
+
+
+----------------------------
+
+expressionName = (
+
+	^ #ohmPExprRange
+)
+
+newFrom: startCharacter to: endCharacter = (
+
+	^ self new
+		startCharacter: startCharacter;
+		endCharacter: endCharacter;
+		yourself
+)
+
+
+comment = (^'
+No comment
+')
+
+
+)

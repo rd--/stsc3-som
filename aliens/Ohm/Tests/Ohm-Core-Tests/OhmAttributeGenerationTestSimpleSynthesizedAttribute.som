@@ -1,0 +1,49 @@
+OhmAttributeGenerationTestSimpleSynthesizedAttribute = OhmSynthesizedAttribute (
+| counter |
+
+bar: aNode with: e = (
+
+	| c |
+	c := self counter.
+	self counter: c + 1.
+
+	^ c
+)
+
+baz: aNode with: e = (
+
+	| c |
+	c := self counter.
+	self counter: c + 1.
+
+	^ c
+)
+
+foo: aNode with: barExpr with: bazExpr = (
+
+	| barResult bazResult barResult2 |
+	bazResult := self value: bazExpr.
+	barResult := self value: barExpr.
+	barResult2 := self value: barExpr.
+
+	^ { barResult . bazResult . barResult2 }
+)
+
+counter = (
+
+	^ counter
+)
+
+counter: anObject = (
+
+	counter := anObject
+)
+
+initialize = (
+
+	super initialize.
+	self counter: 0.
+)
+
+
+)

@@ -1,0 +1,30 @@
+OhmTestSpy = Object (
+| messages |
+
+initialize = (
+
+	self messages: OrderedCollection new.
+)
+
+messages = (
+
+	^ messages
+)
+
+messages: anObject = (
+
+	messages := anObject
+)
+
+ruleAdded: aRule = (
+
+	self messages add: #ruleAdded
+)
+
+ruleChanged: aRule = (
+
+	self messages add: #ruleChanged
+)
+
+
+)
