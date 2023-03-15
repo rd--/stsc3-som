@@ -12,4 +12,4 @@ system using the parser and abstract syntax tree of
 Cli:
 [stsc3-som](https://rohandrape.net/?t=stsc3-som&e=md/stsc3-som.md)
 
-© [Rohan Drape](http://rohandrape.net/), 2019-2022, [Gpl](http://gnu.org/copyleft/)
+© [Rohan Drape](http://rohandrape.net/), 2019-2023, [Gpl](http://gnu.org/copyleft/)

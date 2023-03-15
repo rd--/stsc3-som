@@ -3,12 +3,12 @@ Name:               stsc3-som
 Version:            0.21
 License:            GPL-3.0-only
 Category:           Sound
-Copyright:          (c) Rohan Drape, 2019-2022
+Copyright:          (c) Rohan Drape, 2019-2023
 Author:             Rohan Drape
 Maintainer:         rd@rohandrape.net
 Stability:          Experimental
 Homepage:           http://rohandrape.net/t/stsc3-som
-Tested-With:        GHC == 9.4.3
+Tested-With:        GHC == 9.6.1
 Build-Type:         Simple
 
 library
