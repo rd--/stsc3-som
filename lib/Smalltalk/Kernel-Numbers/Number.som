@@ -211,17 +211,6 @@ degreesToRadians = (
 	^self asFloat degreesToRadians
 )
 
-downTo: stop = (
-	| answer index |
-	answer := Array new: self - stop + 1.
-	index := 1.
-	self downTo: stop do: [ :item |
-		answer at: index put: item.
-		index := index + 1
-	].
-	^answer
-)
-
 downTo: stop do: aBlock = (
 	self to: stop by: -1 do: aBlock
 )

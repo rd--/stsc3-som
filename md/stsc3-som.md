@@ -8,10 +8,13 @@ Repl for a simple implementation of the Simple Object Model.
 It reads the location of class library files from the environment variable `SOM_CLASS_PATH`.
 
 ~~~~
-$ export SOM_CLASS_PATH = ./SOM-st/SOM/Smalltalk:./SOM-st/SOM/TestSuite:./are-we-fast-yet/benchmarks/SOM
-$ stsc3-som -cp $SOM_CLASS_PATH repl
+$ export SOM_CLASS_PATH=./SOM-st/SOM/Smalltalk:./SOM-st/SOM/TestSuite:./smarr/are-we-fast-yet/benchmarks/SOM
+$ stsc3-som -cp $SOM_CLASS_PATH som repl
+> 3 + 4
+result<pc=0>: 7
 > TestHarness new run: #('TestHarness.som')
 ...
+$ time stsc3-som -cp $SOM_CLASS_PATH run TestHarness
 Total number of tests:           201
 Number of unsupported optionals: 3
 Number of successful tests:      201
@@ -20,8 +23,6 @@ Number of assertions tested:     1074
 ...
 Total Runtime: 329669us
 ^D
-$ stsc3-som -cp $SOM_CLASS_PATH run TestHarness
-...
 $
 ~~~~
 
