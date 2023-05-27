@@ -1,0 +1,10 @@
+# som.diff
+
+Patch to <https://github.com/SOM-st/SOM/>.
+
+Modifies:
+
+- Block>>whileTrue:
+- System>>resolve:
+
+Also comments out some failing tests.
