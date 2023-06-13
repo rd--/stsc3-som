@@ -5,6 +5,11 @@ evalString = (
 	^Compiler evaluate: self
 )
 
+paragraphs = (
+	"Myself separated into paragraphs"
+	^self splitBy: {Character nl. Character nl}
+)
+
 readTextFile = (
 	"Read my contents as a String (I am the name of an existing text file)"
 	^Smalltalk readTextFile: self

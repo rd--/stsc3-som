@@ -224,9 +224,11 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
 
 prIntegerDivisionExact :: SmallInteger -> SmallInteger -> Maybe Object
 prIntegerDivisionExact lhs rhs =
-  case divMod lhs rhs of
-    (answer, 0) -> Just (intObject answer)
-    _ -> Nothing
+  if rhs == 0
+  then Nothing
+  else case divMod lhs rhs of
+         (answer, 0) -> Just (intObject answer)
+         _ -> Nothing
 
 prBitShift :: SmallInteger -> SmallInteger -> Object
 prBitShift lhs rhs =

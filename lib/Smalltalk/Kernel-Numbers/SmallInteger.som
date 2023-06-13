@@ -47,7 +47,7 @@ SmallInteger = Integer (
 
 / aNumber = (
 	<primitive: 10>
-	aNumber isZero ifTrue: [self error: 'divide by zero'].
+	aNumber isZero ifTrue: [self error: 'SmallInteger>>/ divide by zero'].
 	(aNumber isMemberOf: SmallInteger)
 		ifTrue: [^ (Fraction numerator: self denominator: aNumber) reduced].
 	^ aNumber adaptToInteger: self andSend: #/
@@ -343,7 +343,7 @@ quo: aNumber = (
 	Fail if the argument is 0 or is not a SmallInteger. Optional. See Object
 	documentation whatIsAPrimitive."
 	<primitive: 13>
-	aNumber = 0 ifTrue: [self error: 'divide by zero'].
+	aNumber = 0 ifTrue: [self error: 'SmallInteger>>quo: divide by zero'].
 	(aNumber isMemberOf: SmallInteger)
 		ifFalse: [^ super quo: aNumber].
 	(aNumber = -1 and: [self = self class minVal])
