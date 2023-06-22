@@ -111,10 +111,7 @@ sortedCounts = (
 )
 
 sortedElements = (
-	| elements |
-	elements := SortedCollection new.
-	contents associationsDo: [:assn | elements add: assn].
-	^ elements
+	^contents associations sort ; yourself
 )
 
 sum = (
