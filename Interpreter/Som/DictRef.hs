@@ -41,10 +41,10 @@ dictRefAssign r key value = deRef r >>= \d -> dictAssign d key value
 dictRefAssignMany :: (MonadIO m, Ord k) => DictRef k v -> [k] -> v -> m ()
 dictRefAssignMany r keys value = deRef r >>= \d -> dictAssignMany d keys value
 
-dictRefAssignList :: (MonadIO m, Ord k) => DictRef k v -> [(k,v)] -> m ()
+dictRefAssignList :: (MonadIO m, Ord k) => DictRef k v -> [(k, v)] -> m ()
 dictRefAssignList r keysvalues = deRef r >>= \d -> dictAssignList d keysvalues
 
-dictRefFromList :: (MonadIO m, Ord k) => [(k,v)] -> m (DictRef k v)
+dictRefFromList :: (MonadIO m, Ord k) => [(k, v)] -> m (DictRef k v)
 dictRefFromList l = dictFromList l >>= \d -> toRef d
 
 dictRefCopy :: (MonadIO m, Ord k) => DictRef k v -> m (DictRef k v)

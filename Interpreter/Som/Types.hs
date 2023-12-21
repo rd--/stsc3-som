@@ -1,4 +1,5 @@
-{-# Language ConstraintKinds, FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- | Type definitions and functions over these.
 
@@ -21,8 +22,8 @@ import qualified Data.Hashable as Hashable {- hashable -}
 import qualified Data.Map as Map {- containers -}
 import qualified System.Random as Random {- containers -}
 
-import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
+import qualified Control.Monad.State as State {- mtl -}
 
 import qualified Music.Theory.Byte {- hmt-base -}
 
@@ -64,8 +65,8 @@ type ExceptionHandler = (Object, Object)
        3. maybe an (exception, handler) pair
      In addition both store local variables (arguments and temporaries) as an ObjectDictionary.
 -}
-data ContextFrame =
-    MethodFrame Id ((Symbol, Bool), Symbol) Object ObjectDictionary
+data ContextFrame
+  = MethodFrame Id ((Symbol, Bool), Symbol) Object ObjectDictionary
   | BlockFrame Id Object (Maybe ExceptionHandler) ObjectDictionary
   deriving (Eq)
 
@@ -132,9 +133,9 @@ contextFrame :: Context -> Maybe ContextFrame
 contextFrame ctx =
   case ctx of
     [] -> Nothing
-    frame:_ -> Just frame
+    frame : _ -> Just frame
 
-contextParent :: Context -> Maybe  Context
+contextParent :: Context -> Maybe Context
 contextParent ctx =
   case ctx of
     [] -> Nothing
@@ -238,24 +239,38 @@ contextPrint ctx =
        Symbol is a subclass of String
 -}
 data ObjectData
-  = DataUndefinedObject -- ^ nil
+  = -- | nil
+    DataUndefinedObject
   | DataBoolean
-  | DataSmallInteger SmallInteger -- ^ Not in Som
-  | DataLargeInteger LargeInteger -- ^ Som Integer
+  | -- | Not in Som
+    DataSmallInteger SmallInteger
+  | -- | Som Integer
+    DataLargeInteger LargeInteger
   | DataDouble Double
-  | DataCharacter Char -- ^ Not in Som
+  | -- | Not in Som
+    DataCharacter Char
   | DataImmutableString UnicodeString
-  | DataClass (St.ClassDefinition, Bool) ObjectTable (MethodCache,MethodCache) -- ^ Class definition and level, class variables, method caches
+  | -- | Class definition and level, class variables, method caches
+    DataClass (St.ClassDefinition, Bool) ObjectTable (MethodCache, MethodCache)
   | DataContext Context
-  | DataMethod Symbol St.MethodDefinition StExpr -- ^ Holder, definition, lambda StExpr
-  | DataPrimitive Symbol Symbol -- ^ Holder & Signature
-  | DataBlockClosure Id Context StExpr -- ^ Identity, blockContext, lambda StExpr
-  | DataSystem -- ^ Token for system or Smalltalk singleton
-  | DataArrayLiteral (Vec Object) -- ^ Immutable array of literals
-  | DataIndexable Id (VecRef Object) -- ^ Objects with a fixed number of integer indexed mutable slots
-  | DataNonIndexable Id ObjectTable -- ^ Objects with named and index addressable instance variables
-  | DataCharacterArray Id (VecRef Char) -- ^ Character array
-  | DataByteArray Id (VecRef Word8) -- ^ Byte array
+  | -- | Holder, definition, lambda StExpr
+    DataMethod Symbol St.MethodDefinition StExpr
+  | -- | Holder & Signature
+    DataPrimitive Symbol Symbol
+  | -- | Identity, blockContext, lambda StExpr
+    DataBlockClosure Id Context StExpr
+  | -- | Token for system or Smalltalk singleton
+    DataSystem
+  | -- | Immutable array of literals
+    DataArrayLiteral (Vec Object)
+  | -- | Objects with a fixed number of integer indexed mutable slots
+    DataIndexable Id (VecRef Object)
+  | -- | Objects with named and index addressable instance variables
+    DataNonIndexable Id ObjectTable
+  | -- | Character array
+    DataCharacterArray Id (VecRef Char)
+  | -- | Byte array
+    DataByteArray Id (VecRef Word8)
   | DataThread ThreadId
   | DataMVar (MVar.MVar Object)
   | DataRandomGenerator Id (Ref Random.StdGen)
@@ -287,7 +302,7 @@ objectDataAsArray o =
 -- * Object
 
 -- | Object represented as class name and object data.
-data Object = Object { objectClassName :: Symbol, objectData :: ObjectData } deriving (Eq)
+data Object = Object {objectClassName :: Symbol, objectData :: ObjectData} deriving (Eq)
 
 -- | Association list of named objects.
 type ObjectAssociationList = [(Symbol, Object)]
@@ -306,14 +321,14 @@ objectToConciseString (Object nm obj) =
     DataSmallInteger x -> show x
     DataLargeInteger x -> show x
     DataDouble x -> show x
-    DataCharacter x -> ['$',x]
+    DataCharacter x -> ['$', x]
     DataImmutableString x ->
       if nm == toSymbol "Symbol"
-      then concat ["#'",fromUnicodeString x,"'"]
-      else concat ["'",fromUnicodeString x,"'"]
-    DataClass (x,isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
-    DataMethod holder method _ -> concat [fromSymbol holder,">>",St.methodSignature method]
-    DataPrimitive holder signature -> concat ["Primitive:",fromSymbol holder,">>",fromSymbol signature]
+        then concat ["#'", fromUnicodeString x, "'"]
+        else concat ["'", fromUnicodeString x, "'"]
+    DataClass (x, isMeta) _ _ -> (if isMeta then St.metaclassName else id) (St.className x)
+    DataMethod holder method _ -> concat [fromSymbol holder, ">>", St.methodSignature method]
+    DataPrimitive holder signature -> concat ["Primitive:", fromSymbol holder, ">>", fromSymbol signature]
     DataArrayLiteral vec -> "#(" ++ unwords (map objectToConciseString (vecToList vec)) ++ ")"
     _ -> "instance of " ++ fromSymbol nm
 
@@ -332,7 +347,7 @@ objectListPrint o = liftIO (putStrLn (intercalate ", " (map objectToConciseStrin
 
 objectTableExamine :: MonadIO m => (Object -> m String) -> ObjectTable -> m String
 objectTableExamine f tbl = do
-  (keys,values) <- fmap unzip (tblToList tbl)
+  (keys, values) <- fmap unzip (tblToList tbl)
   valuesInspected <- mapM f values
   return (show (zip keys valuesInspected))
 
@@ -358,7 +373,7 @@ objectExamine vmPp f (Object nm obj) =
       vec <- deRef ref
       let bytes = vecToList vec
       return (printf "instance of %s <pc:%d> with: '%s'" nm x (Music.Theory.Byte.byte_seq_hex_pp False bytes))
-    DataClass (x,_) tbl _ -> do
+    DataClass (x, _) tbl _ -> do
       tblStr <- objectTableExamine f tbl
       return (St.className x ++ ": " ++ tblStr)
     DataMethod _ x _ -> return (show x)
@@ -415,7 +430,7 @@ vmStateInspect :: MonadIO m => VmState -> m String
 vmStateInspect (_cp, _tm, pc, _ctx, glb, wrk) = do
   globalKeys <- dictRefKeys glb
   workspaceKeys <- dictRefKeys wrk
-  return (show ("programCounter",pc,"global",globalKeys,"workspace",workspaceKeys))
+  return (show ("programCounter", pc, "global", globalKeys, "workspace", workspaceKeys))
 
 -- * Exception
 
@@ -426,10 +441,13 @@ System generated errors are also implemented here.
 The handler for NonLocalReturn is installed at message sends,
 the handler for Exception is installed at block evaluations.
 -}
-data ExceptionOrNonLocalReturn =
-  SystemError String -- ^ message
-  | Exception Object Context -- ^ exceptionObject signalContext
-  | NonLocalReturn Id Object Object -- ^ contextId, block returned from, value returned
+data ExceptionOrNonLocalReturn
+  = -- | message
+    SystemError String
+  | -- | exceptionObject signalContext
+    Exception Object Context
+  | -- | contextId, block returned from, value returned
+    NonLocalReturn Id Object Object
 
 type StError m = Except.MonadError ExceptionOrNonLocalReturn m
 
@@ -464,10 +482,10 @@ vmError txt = stError ("Virtual machine error: " ++ txt)
 type Vm r = WithException (WithVmState IO) r
 
 vmStartTime :: Vm Double
-vmStartTime = State.get >>= \(_,startTime,_,_,_,_) -> return startTime
+vmStartTime = State.get >>= \(_, startTime, _, _, _, _) -> return startTime
 
 vmClassPath :: Vm [FilePath]
-vmClassPath = State.get >>= \(cp,_,_,_,_,_) -> return cp
+vmClassPath = State.get >>= \(cp, _, _, _, _, _) -> return cp
 
 vmElapsedTimeInSeconds :: Vm Double
 vmElapsedTimeInSeconds = do
@@ -479,13 +497,13 @@ vmElapsedTimeInMicroseconds :: Vm Int
 vmElapsedTimeInMicroseconds = fmap secondsToMicroseconds vmElapsedTimeInSeconds
 
 vmGetProgramCounter :: Vm Int
-vmGetProgramCounter = State.get >>= \(_,_,programCounter,_,_,_) -> return programCounter
+vmGetProgramCounter = State.get >>= \(_, _, programCounter, _, _, _) -> return programCounter
 
 vmIncrementProgramCounter :: Vm Int
-vmIncrementProgramCounter = State.get >>= \(cp,tm,pc,ctx,glb,usr) -> State.put (cp,tm,pc + 1,ctx,glb,usr) >> return pc
+vmIncrementProgramCounter = State.get >>= \(cp, tm, pc, ctx, glb, usr) -> State.put (cp, tm, pc + 1, ctx, glb, usr) >> return pc
 
 vmGetContext :: Vm Context
-vmGetContext = State.get >>= \(_,_,_,ctx,_,_) -> return ctx
+vmGetContext = State.get >>= \(_, _, _, ctx, _, _) -> return ctx
 
 vmThisContextObject :: Vm Object
 vmThisContextObject = do
@@ -500,9 +518,9 @@ vmNearestMethodFrame = maybe (vmErrorWithBacktrace "vmNearestMethodFrame" []) re
 
 vmModifyContext :: (Context -> Vm Context) -> Vm Context
 vmModifyContext f = do
-  (cp,tm,pc,ctx,glb,usr) <- State.get
+  (cp, tm, pc, ctx, glb, usr) <- State.get
   modifiedCtx <- f ctx
-  State.put (cp,tm,pc,modifiedCtx,glb,usr)
+  State.put (cp, tm, pc, modifiedCtx, glb, usr)
   return ctx
 
 vmAddContextFrame :: ContextFrame -> Vm Context
@@ -513,8 +531,8 @@ vmDeleteContextFrame = vmModifyContext contextDeleteFrame
 
 vmReplaceContext :: Context -> Vm Context
 vmReplaceContext ctx = do
-  (cp,tm,pc,previousCtx,glb,usr) <- State.get
-  State.put (cp,tm,pc,ctx,glb,usr)
+  (cp, tm, pc, previousCtx, glb, usr) <- State.get
+  State.put (cp, tm, pc, ctx, glb, usr)
   return previousCtx
 
 vmPutContext :: Context -> Vm ()
@@ -527,7 +545,7 @@ vmUnwindTo k = do
   vmReplaceContext (contextUnwindTo (contextParentOrError ctx) k)
 
 vmGetGlobalDict :: Vm ObjectDictionary
-vmGetGlobalDict = State.get >>= \(_,_,_,_,dict,_) -> return dict
+vmGetGlobalDict = State.get >>= \(_, _, _, _, dict, _) -> return dict
 
 vmGlobalDictAllKeys :: Vm [Symbol]
 vmGlobalDictAllKeys = vmGetGlobalDict >>= dictRefKeys
@@ -556,7 +574,7 @@ vmGlobalAssignOrCreate :: Symbol -> Object -> Vm Object
 vmGlobalAssignOrCreate key value = vmGetGlobalDict >>= \d -> dictRefInsert d key value >> return value
 
 vmGetWorkspaceDict :: Vm ObjectDictionary
-vmGetWorkspaceDict = State.get >>= \(_,_,_,_,_,d) -> return d
+vmGetWorkspaceDict = State.get >>= \(_, _, _, _, _, d) -> return d
 
 vmWorkspaceLookupMaybe :: Symbol -> Vm (Maybe Object)
 vmWorkspaceLookupMaybe key = vmGetWorkspaceDict >>= \dict -> dictRefLookup dict key
@@ -574,10 +592,10 @@ vmWorkspaceAssignOrCreate key value = do
 
 vmInspect :: Vm String
 vmInspect = do
-  (_,_tm,pc,_ctx,glb,wrk) <- State.get
+  (_, _tm, pc, _ctx, glb, wrk) <- State.get
   globalKeys <- dictRefKeys glb
   workspaceKeys <- dictRefKeys wrk
-  return (show ("programCounter",pc,"global",globalKeys,"workspace",workspaceKeys))
+  return (show ("programCounter", pc, "global", globalKeys, "workspace", workspaceKeys))
 
 objectVmInspect :: Object -> Vm String
 objectVmInspect = objectExamine vmInspect objectVmInspect -- todo: recursion depth
@@ -604,8 +622,8 @@ vmErrorWithBacktrace msg obj = vmBacktrace >> objectListError obj msg
 classCachedMethods :: Object -> Maybe MethodCache
 classCachedMethods (Object _ obj) =
   case obj of
-    DataClass (_,False) _ (instanceMethodsCache,_) -> Just instanceMethodsCache
-    DataClass (_,True) _ (_,classMethodsCache) -> Just classMethodsCache
+    DataClass (_, False) _ (instanceMethodsCache, _) -> Just instanceMethodsCache
+    DataClass (_, True) _ (_, classMethodsCache) -> Just classMethodsCache
     _ -> Nothing
 
 classCachedMethodLookup :: Object -> St.Selector -> Vm (Maybe Object)
@@ -652,7 +670,7 @@ systemReserverIdentifier :: SystemType -> String
 systemReserverIdentifier typ =
   case typ of
     SomSystem -> "system"
-    SmalltalkSystem  -> "Smalltalk"
+    SmalltalkSystem -> "Smalltalk"
 
 reservedIdentifierObjectFor :: SystemType -> String -> Object
 reservedIdentifierObjectFor sys x =
@@ -681,12 +699,12 @@ If methods were compiled then lookup would be by index and the cache would be a 
 -}
 type MethodCache = Map.Map St.Selector (Int, Object)
 
-classMakeMethodCaches :: St.ClassDefinition -> (MethodCache,MethodCache)
+classMakeMethodCaches :: St.ClassDefinition -> (MethodCache, MethodCache)
 classMakeMethodCaches cd =
   let f nm m ix = (St.methodSelector m, (ix, methodObject nm m))
-      im = zipWith (f (St.className cd)) (St.instanceMethods cd) [1..]
-      cm = zipWith (f (St.classMetaclassName cd)) (St.classMethods cd) [1..]
-  in (Map.fromList im,Map.fromList cm)
+      im = zipWith (f (St.className cd)) (St.instanceMethods cd) [1 ..]
+      cm = zipWith (f (St.classMetaclassName cd)) (St.classMethods cd) [1 ..]
+  in (Map.fromList im, Map.fromList cm)
 
 makeObjectTable :: MonadIO m => [Symbol] -> m ObjectTable
 makeObjectTable variableNames = tblFromList (zip variableNames (repeat nilObject))
@@ -700,7 +718,7 @@ classObject cd = do
   let classVarNames = map toSymbol (St.classVariableNames cd)
       mc = toSymbol (St.classMetaclassName cd)
   tbl <- makeObjectTable classVarNames
-  return (Object mc (DataClass (cd,False) tbl (classMakeMethodCaches cd)))
+  return (Object mc (DataClass (cd, False) tbl (classMakeMethodCaches cd)))
 
 {- | Create method Object for named Class.
      This is the point at which the MethodDefinition is translated to Expr form.
@@ -721,11 +739,11 @@ doubleObject x = Object (toSymbol "Double") (DataDouble x)
 doubleAsFractional :: Integral t => (t -> Object) -> Double -> Object
 doubleAsFractional cons x =
   case properFraction x of
-    (i,0) -> cons i
+    (i, 0) -> cons i
     _ -> doubleObject x
 
 nanObject :: Object
-nanObject = doubleObject (0/0)
+nanObject = doubleObject (0 / 0)
 
 characterObject :: Char -> Object
 characterObject ch = Object (toSymbol "Character") (DataCharacter ch)
@@ -812,26 +830,26 @@ methodContextFrame pc cs rcv arg tmp = fmap (MethodFrame pc cs rcv) (localVariab
 
 -- * Hash
 
-mHash :: (Monad m,Hashable.Hashable t) => t -> m SmallInteger
+mHash :: (Monad m, Hashable.Hashable t) => t -> m SmallInteger
 mHash = return . Hashable.hash
 
 -- | Hash of object.  Used for object equality.
 objectHash :: (MonadIO m, StError m) => Object -> m SmallInteger
 objectHash (Object nm obj) =
   case obj of
-    DataUndefinedObject -> mHash (nm,"nil")
+    DataUndefinedObject -> mHash (nm, "nil")
     DataBoolean -> mHash nm
     DataSmallInteger x -> return x -- c.f. Integer>>hashcode
     DataLargeInteger x -> return (fromInteger x) -- c.f. Integer>>hash
     DataDouble x -> mHash x
     DataCharacter x -> mHash x
     DataImmutableString x -> mHash (nm, x) -- c.f. 'x' hash /= #'x' hash
-    DataClass (x,_) _ _ -> mHash (nm,St.className x)
+    DataClass (x, _) _ _ -> mHash (nm, St.className x)
     DataContext _ -> vmError ("Object>>hash: Context")
-    DataMethod holder method _ -> mHash (nm,holder,St.methodSignature method)
-    DataPrimitive holder signature -> mHash (nm,holder,signature)
+    DataMethod holder method _ -> mHash (nm, holder, St.methodSignature method)
+    DataPrimitive holder signature -> mHash (nm, holder, signature)
     DataBlockClosure x _ _ -> mHash ("Block", x)
-    DataSystem -> mHash (nm,"system")
+    DataSystem -> mHash (nm, "system")
     DataArrayLiteral vec -> mapM objectHash (vecToList vec) >>= \lst -> mHash (nm, lst)
     DataIndexable x _ -> mHash (nm, x)
     DataNonIndexable x _ -> mHash (nm, x)
@@ -857,8 +875,8 @@ stringLiteralId = -1
 objectIdentical :: (MonadIO m, StError m) => Object -> Object -> m Bool
 objectIdentical obj1 obj2 =
   case (obj1, obj2) of
-    (Object "String" (DataCharacterArray k1 _), Object "String" (DataCharacterArray k2 _))
-      -> if k1 == stringLiteralId && k2 == stringLiteralId then objectHashEqual obj1 obj2 else return (obj1 == obj2)
+    (Object "String" (DataCharacterArray k1 _), Object "String" (DataCharacterArray k2 _)) ->
+      if k1 == stringLiteralId && k2 == stringLiteralId then objectHashEqual obj1 obj2 else return (obj1 == obj2)
     _ -> return (obj1 == obj2)
 
 -- * Constructors
@@ -956,7 +974,7 @@ mLookupSequence :: Monad m => [k -> m (Maybe v)] -> k -> m (Maybe v)
 mLookupSequence l k =
   case l of
     [] -> return Nothing
-    f:l' -> do
+    f : l' -> do
       r <- f k
       case r of
         Nothing -> mLookupSequence l' k
@@ -967,7 +985,7 @@ mAssignSequence :: Monad m => [k -> v -> m (Maybe v)] -> k -> v -> m (Maybe v)
 mAssignSequence l k v =
   case l of
     [] -> return Nothing
-    f:l' -> do
+    f : l' -> do
       r <- f k v
       case r of
         Nothing -> mAssignSequence l' k v
@@ -982,9 +1000,12 @@ objectLookupClassVariable :: Object -> Symbol -> Vm (Maybe Object)
 objectLookupClassVariable object key =
   case object of
     Object _ DataUndefinedObject -> return Nothing
-    Object _ (DataClass (cd,isMeta) tbl _) ->
-      mLookupSequence [tblAtKeyMaybe tbl
-                      ,\k -> classSuperclass cd isMeta >>= \sp -> objectLookupClassVariable sp k] key
+    Object _ (DataClass (cd, isMeta) tbl _) ->
+      mLookupSequence
+        [ tblAtKeyMaybe tbl
+        , \k -> classSuperclass cd isMeta >>= \sp -> objectLookupClassVariable sp k
+        ]
+        key
     _ -> objectClass object >>= \cl -> objectLookupClassVariable cl key
 
 -- * Class
@@ -1002,10 +1023,10 @@ objectClass rcv@(Object nm obj) =
 classMetaclass :: Object -> Vm Object
 classMetaclass receiver@(Object nm obj) =
   case obj of
-    DataClass (cd,isMeta) cVar mCache ->
+    DataClass (cd, isMeta) cVar mCache ->
       if isMeta
-      then vmGlobalLookupOrError "Metaclass"
-      else return (Object "Class" (DataClass (cd,True) cVar mCache))
+        then vmGlobalLookupOrError "Metaclass"
+        else return (Object "Class" (DataClass (cd, True) cVar mCache))
     _ -> vmErrorWithBacktrace ("classMetaclass: " ++ nm) [receiver]
 
 {- | Class>>superclass => Class|nil
@@ -1022,10 +1043,10 @@ For all other classes "C class superclass = C superclass class".
 classSuperclass :: St.ClassDefinition -> Bool -> Vm Object
 classSuperclass cd isMeta =
   if St.superclassName cd == Nothing
-  then if isMeta then vmGlobalLookupOrError "Class" else return nilObject
-  else do
-    sp <- maybe (return nilObject) vmGlobalLookupOrNil (St.superclassName cd)
-    if isMeta then classMetaclass sp else return sp
+    then if isMeta then vmGlobalLookupOrError "Class" else return nilObject
+    else do
+      sp <- maybe (return nilObject) vmGlobalLookupOrNil (St.superclassName cd)
+      if isMeta then classMetaclass sp else return sp
 
 -- * Class Primitives
 
@@ -1038,12 +1059,14 @@ classAllVariableNames :: (St.ClassDefinition -> [Symbol]) -> St.ClassDefinition 
 classAllVariableNames fn cd = do
   case St.superclassName cd of
     Just spName ->
-      do res <- vmGlobalLookupMaybe spName
-         case res of
-           Just (Object _ (DataClass (spCd,_) _ _)) ->
-             do spIv <- classAllVariableNames fn spCd
-                return (spIv ++ fn cd)
-           _ -> vmError "classAllVariableNames"
+      do
+        res <- vmGlobalLookupMaybe spName
+        case res of
+          Just (Object _ (DataClass (spCd, _) _ _)) ->
+            do
+              spIv <- classAllVariableNames fn spCd
+              return (spIv ++ fn cd)
+          _ -> vmError "classAllVariableNames"
     Nothing -> return (fn cd)
 
 classAllVariableNamesFor :: St.ClassDefinition -> Bool -> Vm [Symbol]
@@ -1051,7 +1074,6 @@ classAllVariableNamesFor cd isMeta =
   case isMeta of
     False -> classAllVariableNames St.classInstanceVariableNames cd
     True -> classAllVariableNames St.classVariableNames cd
-
 
 {- | Create instance of a non-indexable non-immediate class.
      Allocate reference for instance variables and initialize to nil.
@@ -1090,18 +1112,18 @@ byteArrayNewWithArg size = do
 classNewWithArg :: St.ClassDefinition -> SmallInteger -> Vm (Maybe Object)
 classNewWithArg cd size =
   if size < 0
-  then return Nothing
-  else case St.className cd of
-         "Array" -> fmap Just (arrayNewWithArg size)
-         "ByteArray" -> fmap Just (byteArrayNewWithArg size)
-         "String" -> fmap Just (stringOrSymbolNewWithArg "String" size)
-         "Symbol" -> fmap Just (stringOrSymbolNewWithArg "Symbol" size)
-         _ -> return Nothing
+    then return Nothing
+    else case St.className cd of
+      "Array" -> fmap Just (arrayNewWithArg size)
+      "ByteArray" -> fmap Just (byteArrayNewWithArg size)
+      "String" -> fmap Just (stringOrSymbolNewWithArg "String" size)
+      "Symbol" -> fmap Just (stringOrSymbolNewWithArg "Symbol" size)
+      _ -> return Nothing
 
 classSuperclassOf :: Object -> Vm Object
 classSuperclassOf (Object _ obj) =
   case obj of
-    DataClass (cd,isMeta) _ _ -> classSuperclass cd isMeta
+    DataClass (cd, isMeta) _ _ -> classSuperclass cd isMeta
     _ -> vmError "classSuperclassOf"
 
 -- * Tables
@@ -1124,18 +1146,18 @@ systemLoadAndAssignClassesAbove x = do
   existing <- vmGlobalLookupMaybe x
   cp <- vmClassPath
   case existing of
-      Just _ -> return existing
-      Nothing -> do
-        maybeCd <- liftIO (St.somLoadClassDefinitionExtMod True cp x) -- todo: this should also read .st and .stc files
-        case maybeCd of
-          Just cd -> do
-            co <- classObject cd
-            _ <- case St.superclassName cd of
-                   Just sp -> systemLoadAndAssignClassesAbove sp
-                   Nothing -> return (Just co)
-            _ <- vmGlobalAssignOrCreate (St.className cd) co
-            return (Just co)
-          _ -> return Nothing
+    Just _ -> return existing
+    Nothing -> do
+      maybeCd <- liftIO (St.somLoadClassDefinitionExtMod True cp x) -- todo: this should also read .st and .stc files
+      case maybeCd of
+        Just cd -> do
+          co <- classObject cd
+          _ <- case St.superclassName cd of
+            Just sp -> systemLoadAndAssignClassesAbove sp
+            Nothing -> return (Just co)
+          _ <- vmGlobalAssignOrCreate (St.className cd) co
+          return (Just co)
+        _ -> return Nothing
 
 -- | Load and return class (and required parent classes) if it exists.
 systemLoadClassMaybe :: Symbol -> Vm (Maybe Object)
@@ -1166,7 +1188,7 @@ sysLiteralObject :: SystemType -> Object -> Vm Object
 sysLiteralObject typ obj =
   case (typ, obj) of
     (SomSystem, Object "Array" (DataArrayLiteral _)) -> objectShallowCopy obj
-    (SmalltalkSystem, Object "String" (DataImmutableString str))  -> mutableStringObject True str
+    (SmalltalkSystem, Object "String" (DataImmutableString str)) -> mutableStringObject True str
     _ -> return obj
 
 -- * Resolve
@@ -1192,29 +1214,43 @@ contextLookup :: Context -> Symbol -> Vm (Maybe Object)
 contextLookup ctx k =
   case ctx of
     [] ->
-      mLookupSequence [vmGlobalResolveMaybe
-                      ,vmWorkspaceLookupMaybe] k
+      mLookupSequence
+        [ vmGlobalResolveMaybe
+        , vmWorkspaceLookupMaybe
+        ]
+        k
     MethodFrame _ _ rcv localVariables : _ ->
       if k == "self" || k == "super"
-      then return (Just rcv)
-      else mLookupSequence [dictRefLookup localVariables
-                           ,objectLookupInstanceVariable rcv
-                           ,objectLookupClassVariable rcv
-                           ,vmGlobalResolveMaybe] k
+        then return (Just rcv)
+        else
+          mLookupSequence
+            [ dictRefLookup localVariables
+            , objectLookupInstanceVariable rcv
+            , objectLookupClassVariable rcv
+            , vmGlobalResolveMaybe
+            ]
+            k
     BlockFrame _ _ _ localVariables : p ->
-      mLookupSequence [dictRefLookup localVariables
-                      ,contextLookup p
-                      ,vmGlobalResolveMaybe
-                      ,vmWorkspaceLookupMaybe] k
+      mLookupSequence
+        [ dictRefLookup localVariables
+        , contextLookup p
+        , vmGlobalResolveMaybe
+        , vmWorkspaceLookupMaybe
+        ]
+        k
 
 -- | Assign to class variable of Object.  For rules see objectLookupClassVariable.
 objectAssignClassVariable :: Object -> Symbol -> Object -> Vm (Maybe Object)
 objectAssignClassVariable object key value =
   case object of
     Object _ DataUndefinedObject -> return Nothing
-    Object _ (DataClass (cd,isMeta) tbl _) ->
-      mAssignSequence [tblAtKeyPutMaybe tbl
-                      ,\k v -> classSuperclass cd isMeta >>= \sp -> objectAssignClassVariable sp k v] key value
+    Object _ (DataClass (cd, isMeta) tbl _) ->
+      mAssignSequence
+        [ tblAtKeyPutMaybe tbl
+        , \k v -> classSuperclass cd isMeta >>= \sp -> objectAssignClassVariable sp k v
+        ]
+        key
+        value
     _ -> objectClass object >>= \cl -> objectAssignClassVariable cl key value
 
 {- | Set a name in a Context.
@@ -1225,15 +1261,23 @@ contextDoAssignment ctx k v =
   case ctx of
     [] -> fmap Just (vmWorkspaceAssignOrCreate k v)
     MethodFrame _ _ rcv localVariables : _p ->
-      mAssignSequence [dictRefAssignMaybe localVariables
-                      ,objectAssignInstanceVariable rcv
-                      ,objectAssignClassVariable rcv
-                      ,vmGlobalAssign] k v
+      mAssignSequence
+        [ dictRefAssignMaybe localVariables
+        , objectAssignInstanceVariable rcv
+        , objectAssignClassVariable rcv
+        , vmGlobalAssign
+        ]
+        k
+        v
     BlockFrame _ _ _ localVariables : p ->
-      mAssignSequence [dictRefAssignMaybe localVariables
-                      ,contextDoAssignment p
-                      ,vmGlobalAssign
-                      ,vmWorkspaceAssign] k v
+      mAssignSequence
+        [ dictRefAssignMaybe localVariables
+        , contextDoAssignment p
+        , vmGlobalAssign
+        , vmWorkspaceAssign
+        ]
+        k
+        v
 
 -- | Add new BlockFrame frame to blockContext at blockObject.
 blockContextFrame :: Object -> [Object] -> Maybe ExceptionHandler -> Vm Context
@@ -1242,7 +1286,7 @@ blockContextFrame blockObject arguments maybeExceptionHandler = do
       Expr.Lambda _ blockArguments blockTemporaries _ = lambda
   localVariables <- localVariablesDict (zip blockArguments arguments) blockTemporaries
   pc <- vmIncrementProgramCounter
-  return (contextAddFrame (BlockFrame pc blockObject maybeExceptionHandler localVariables)  blockContext)
+  return (contextAddFrame (BlockFrame pc blockObject maybeExceptionHandler localVariables) blockContext)
 
 vmDoAssignment :: Symbol -> Object -> Vm Object
 vmDoAssignment key value = do
@@ -1259,10 +1303,9 @@ vmAssignAllToNil = mapM_ (\name -> vmDoAssignment name nilObject)
 findMethodMaybe :: Object -> St.Selector -> Vm (Maybe Object)
 findMethodMaybe obj sel =
   if isNil obj -- Object superclass = nil
-  then return Nothing
-  else do
-    r <- classCachedMethodLookup obj sel
-    case r of
-      Just m -> return (Just m)
-      Nothing -> classSuperclassOf obj >>= \sc -> findMethodMaybe sc sel
-
+    then return Nothing
+    else do
+      r <- classCachedMethodLookup obj sel
+      case r of
+        Just m -> return (Just m)
+        Nothing -> classSuperclassOf obj >>= \sc -> findMethodMaybe sc sel

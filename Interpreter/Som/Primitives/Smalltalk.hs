@@ -1,4 +1,4 @@
-{-# Language FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- | Smalltalk primitives indicate success by returning (Just answer) and failure by returning Nothing.
 Error handling and delegation is in the standard library.
@@ -58,10 +58,10 @@ prStringAll f = booleanObject . unicodeStringAll f
 
 prSystemLoadFile :: (StError m, MonadIO m) => UnicodeString -> m Object
 prSystemLoadFile aString = do
-    let fn = fromUnicodeString aString
-        onFailure = return nilObject
-    maybeText <- liftIO (readFileMaybe fn)
-    maybe onFailure (return . strObject) maybeText
+  let fn = fromUnicodeString aString
+      onFailure = return nilObject
+  maybeText <- liftIO (readFileMaybe fn)
+  maybe onFailure (return . strObject) maybeText
 
 prQuit :: MonadIO m => SmallInteger -> m t
 prQuit exitCode = liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure exitCode))
@@ -89,7 +89,7 @@ prMethodArray :: Object -> Vm (Maybe Object)
 prMethodArray rcv =
   case classCachedMethods rcv of
     Nothing -> return Nothing
-    Just mth  -> fmap Just (arrayFromIndexedMap mth)
+    Just mth -> fmap Just (arrayFromIndexedMap mth)
 
 fmapMaybeM :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
 fmapMaybeM f = maybe (return Nothing) (fmap Just . f)
@@ -119,7 +119,7 @@ prReadTextFile :: ObjectData -> Vm (Maybe Object)
 prReadTextFile aFileName = do
   maybeFileName <- objectDataAsString aFileName
   case maybeFileName of
-    Just fileName -> liftIO (readFile fileName) >>= return .  Just . strObject
+    Just fileName -> liftIO (readFile fileName) >>= return . Just . strObject
     _ -> return Nothing
 
 prWriteStringToTextFile :: ObjectData -> ObjectData -> Vm (Maybe Object)
@@ -148,8 +148,8 @@ prSystemCommand aString = do
 sendUdpPacket :: String -> Int -> Data.ByteString.ByteString -> IO ()
 sendUdpPacket host port bytes = do
   fd <- Network.Socket.socket Network.Socket.AF_INET Network.Socket.Datagram 0
-  let hints = Network.Socket.defaultHints { Network.Socket.addrFamily = Network.Socket.AF_INET } -- localhost=ipv4
-  i:_ <- Network.Socket.getAddrInfo (Just hints) (Just host) (Just (show port))
+  let hints = Network.Socket.defaultHints {Network.Socket.addrFamily = Network.Socket.AF_INET} -- localhost=ipv4
+  i : _ <- Network.Socket.getAddrInfo (Just hints) (Just host) (Just (show port))
   let sa = Network.Socket.addrAddress i
   Network.Socket.connect fd sa
   Network.Socket.ByteString.sendAllTo fd bytes sa
@@ -174,7 +174,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("atRandom", DataSmallInteger x, []) -> fmap (Just . intObject) (liftIO (System.Random.getStdRandom (System.Random.randomR (1, x))))
     ("atRandom", DataDouble x, []) -> fmap (Just . doubleObject) (liftIO (System.Random.getStdRandom (System.Random.randomR (0, x))))
     ("evaluate:", DataSystem, [Object "String" str]) -> mapMMM (evalString stEvalOpt) (objectDataAsString str)
-    ("fields", DataClass (cd,isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
+    ("fields", DataClass (cd, isMeta) _ _, []) -> fmap Just (prClassFields cd isMeta)
     ("fork", DataBlockClosure {}, []) -> fmap Just (threadObject stEvalOpt receiver)
     ("fromIEEE32Bit:", DataClass {}, [Object _ (DataSmallInteger x)]) -> return (Just (doubleObject (realToFrac (Music.Theory.Byte.castWord32ToFloat (fromIntegral x)))))
     ("fromString:", DataClass {}, [Object _ (DataImmutableString x)]) ->
@@ -194,13 +194,13 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("loadFile:", DataSystem, [Object "String" str]) -> mapMM prSystemLoadFile (objectDataAsString str)
     ("log2", DataDouble x, []) -> return (Just (doubleObject (logBase 2 x)))
     ("methodArray", DataClass {}, []) -> prMethodArray receiver
-    ("methodClass", DataMethod methodClass _ _,[]) -> fmap Just (vmGlobalResolveOrError methodClass)
+    ("methodClass", DataMethod methodClass _ _, []) -> fmap Just (vmGlobalResolveOrError methodClass)
     ("name", DataClass (cd, isMeta) _ _, []) -> return (Just (symObject ((if isMeta then St.metaclassName else id) (St.className cd))))
     ("next", DataRandomGenerator _ rng, []) -> fmap (Just . doubleObject) (randomGeneratorNext rng)
     ("nextInt:", DataRandomGenerator _ rng, [Object _ (DataSmallInteger x)]) -> fmap (Just . intObject) (randomGeneratorNextInt rng x)
     ("numArgs", DataBlockClosure _ _ (St.Lambda _ args _ _), []) -> return (Just (intObject (length args)))
     ("on:do:", DataBlockClosure {}, [exception, handler]) -> evalBlockWithMaybeExceptionHandler stEvalOpt receiver [] (Just (exception, handler))
-    ("sendUdpData:toHost:port:", DataSystem, [Object _ (DataByteArray _ aByteArray),  Object _ hostAddress, Object _ (DataSmallInteger portNumber)]) -> prSendUdp aByteArray hostAddress portNumber
+    ("sendUdpData:toHost:port:", DataSystem, [Object _ (DataByteArray _ aByteArray), Object _ hostAddress, Object _ (DataSmallInteger portNumber)]) -> prSendUdp aByteArray hostAddress portNumber
     ("threadDelayMicroseconds", DataSmallInteger x, []) -> liftIO (threadDelay x) >> return (Just receiver)
     ("perform:inSuperclass:", _, [Object "Symbol" str, cl]) -> mapMM (\sym -> objectPerformInSuperclass stEvalOpt receiver sym cl) (objectDataAsString str)
     ("primitive", DataMethod _ mth _, []) -> return (fmap (literalObject stLiteralConstructors) (St.methodDefinitionPrimitiveLabel mth))
@@ -214,7 +214,7 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
     ("signal", _, []) -> signalException receiver
     ("selector", DataContext ctx, []) -> return (fmap (symObject . contextSelectorOrError) (contextNearestMethod ctx))
     ("selector", DataMethod _ mth _, []) -> return (Just (symObject (St.selectorIdentifier (St.methodSelector mth))))
-    ("superclass", DataClass (cd,isMeta) _ _,[]) -> fmap Just (classSuperclass cd isMeta)
+    ("superclass", DataClass (cd, isMeta) _ _, []) -> fmap Just (classSuperclass cd isMeta)
     ("systemCommand:", DataSystem, [Object "String" aString]) -> prSystemCommand aString
     ("utcOffset", DataSystem, []) -> fmap (Just . intObject) getSystemTimezoneInSeconds
     ("utcTime", DataSystem, []) -> fmap (Just . intObject . secondsToMicroseconds) getSystemTimeInSeconds
@@ -225,17 +225,18 @@ stPrimitivesC (prClass, prMethod) _prCode receiver@(Object _ receiverObj) argume
 prIntegerDivisionExact :: SmallInteger -> SmallInteger -> Maybe Object
 prIntegerDivisionExact lhs rhs =
   if rhs == 0
-  then Nothing
-  else case divMod lhs rhs of
-         (answer, 0) -> Just (intObject answer)
-         _ -> Nothing
+    then Nothing
+    else case divMod lhs rhs of
+      (answer, 0) -> Just (intObject answer)
+      _ -> Nothing
 
 prBitShift :: SmallInteger -> SmallInteger -> Object
 prBitShift lhs rhs =
   intObject
-  (if rhs >= 0
-   then Data.Bits.shiftL lhs rhs
-   else Data.Bits.shiftR lhs (negate rhs))
+    ( if rhs >= 0
+        then Data.Bits.shiftL lhs rhs
+        else Data.Bits.shiftR lhs (negate rhs)
+    )
 
 prValueWithArguments :: Object -> Object -> Vm (Maybe Object)
 prValueWithArguments receiver (Object _ argumentsArray) = do
@@ -297,8 +298,8 @@ stPrimitives (prClass, prMethod) prCode receiver@(Object _ receiverObj) argument
     (64, DataCharacterArray _ ref, [Object _ (DataSmallInteger ix), Object _ (DataCharacter ch)]) -> fmap (fmap characterObject) (vecRefAtPutMaybe ref (ix - 1) ch)
     (65, DataMVar mvar, []) -> fmap Just (liftIO (MVar.takeMVar mvar)) -- next
     (66, DataMVar mvar, [obj]) -> liftIO (MVar.putMVar mvar obj) >> return (Just obj) -- nextPut:
-    (70, DataClass (cd,_) _ _,[]) -> fmap Just (classNew cd) -- basicNew
-    (71, DataClass (cd,_) _ _,[Object _ (DataSmallInteger size)]) -> classNewWithArg cd size -- basicNew:
+    (70, DataClass (cd, _) _ _, []) -> fmap Just (classNew cd) -- basicNew
+    (71, DataClass (cd, _) _ _, [Object _ (DataSmallInteger size)]) -> classNewWithArg cd size -- basicNew:
     (73, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix)]) -> tblAtMaybe tbl (ix - 1) -- instVarAt:
     (74, DataNonIndexable _ tbl, [Object _ (DataSmallInteger ix), newObject]) -> tblAtPutMaybe tbl (ix - 1) newObject -- instVarAt:put:
     (75, _, []) -> fmap (Just . intObject) (objectHash receiver) -- identityHash

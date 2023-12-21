@@ -9,7 +9,7 @@ import qualified Data.Time.LocalTime as Time {- time -}
 This is elapsed time since the UTC epoch of 1970-01-01.
 
 > tm <- getSystemTimeInSeconds
-> secondsInYear = 365 * 24 * 60 * 60
+> let secondsInYear = 365 * 24 * 60 * 60
 > tm / secondsInYear
 
 70 * 365 * 24 * 60 * 60
@@ -24,7 +24,6 @@ getSystemTimeInSeconds = do
 
 secondsToMicroseconds :: Double -> Int
 secondsToMicroseconds = round . (* 1.0e6)
-
 
 getSystemTimezoneInSeconds :: MonadIO m => m Int
 getSystemTimezoneInSeconds = do

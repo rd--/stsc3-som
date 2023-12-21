@@ -10,3 +10,9 @@ clean:
 push-all:
 	r.gitlab-push.sh stsc3-som
 	r.github-push.sh stsc3-som
+
+indent:
+	fourmolu -i Interpreter cmd
+
+doctest:
+	doctest -Wno-x-partial -Wno-incomplete-uni-patterns Interpreter

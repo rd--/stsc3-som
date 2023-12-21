@@ -13,19 +13,45 @@ import Interpreter.Som.Types {- stsc3-som -}
 
 stStandardClassList :: [St.Identifier]
 stStandardClassList =
-    ["Object"
-    ,"Behavior", "ClassDescription", "Class", "Metaclass"
-    ,"BlockClosure"
-    ,"InstructionStream", "Context", "Thread"
-    ,"Boolean", "True", "False"
-    ,"Collection", "HashedCollection", "Set", "SequenceableCollection", "ArrayedCollection", "Array", "String", "Symbol", "Dictionary"
-    ,"Exception", "Error", "Halt"
-    ,"Magnitude", "Character", "LookupKey", "Association", "Number", "Float", "Double", "Integer", "SmallInteger"
-    ,"Method"
-    ,"RandomGenerator"
-    ,"SmalltalkImage"
-    ,"UndefinedObject", "Nil"
-    ]
+  [ "Object"
+  , "Behavior"
+  , "ClassDescription"
+  , "Class"
+  , "Metaclass"
+  , "BlockClosure"
+  , "InstructionStream"
+  , "Context"
+  , "Thread"
+  , "Boolean"
+  , "True"
+  , "False"
+  , "Collection"
+  , "HashedCollection"
+  , "Set"
+  , "SequenceableCollection"
+  , "ArrayedCollection"
+  , "Array"
+  , "String"
+  , "Symbol"
+  , "Dictionary"
+  , "Exception"
+  , "Error"
+  , "Halt"
+  , "Magnitude"
+  , "Character"
+  , "LookupKey"
+  , "Association"
+  , "Number"
+  , "Float"
+  , "Double"
+  , "Integer"
+  , "SmallInteger"
+  , "Method"
+  , "RandomGenerator"
+  , "SmalltalkImage"
+  , "UndefinedObject"
+  , "Nil"
+  ]
 
 standardClassListFor :: SystemType -> [St.Identifier]
 standardClassListFor sys =
@@ -58,7 +84,7 @@ replContinue :: EvalOpt -> VmState -> IO ()
 replContinue opt vmState = do
   str <- replReadInput "" stdin
   (result, vmState') <- vmEval opt vmState str
-  let (_,_,programCounter,_,_,_) = vmState'
+  let (_, _, programCounter, _, _, _) = vmState'
   case result of
     Left (SystemError msg) -> putStrLn ("replContinue: system error: " ++ msg) >> replContinue opt vmState
     Left (Exception exc ctx) -> putStrLn ("replContinue: exception") >> objectInspectAndPrint exc >> contextPrint ctx >> replContinue opt vmState
@@ -90,7 +116,7 @@ loadAndRunClass :: EvalOpt -> [FilePath] -> St.Identifier -> [String] -> IO ()
 loadAndRunClass opt cp cl arg = do
   globals <- initialGlobalDictionaryFor (evalOptTyp opt) cp
   st <- vmStateInit cp globals
-  (result,_) <- vmEval opt st (runSomClassSmalltalk cl arg)
+  (result, _) <- vmEval opt st (runSomClassSmalltalk cl arg)
   case result of
     Left (SystemError msg) -> putStrLn ("loadAndRunClass: system error: " ++ msg)
     Left (Exception {}) -> putStrLn ("loadAndRunClass: exception")

@@ -41,8 +41,8 @@ unicodeStringAt :: UnicodeString -> SmallInteger -> Maybe Char
 unicodeStringAt str ix =
   let size = unicodeStringLength str
   in if ix > 0 && ix <= size
-     then Just (Text.index str (fromIntegral ix - 1))
-     else Nothing
+      then Just (Text.index str (fromIntegral ix - 1))
+      else Nothing
 
 unicodeStringWrite :: UnicodeString -> IO ()
 unicodeStringWrite = Text.IO.putStr

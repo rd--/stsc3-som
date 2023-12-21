@@ -34,10 +34,10 @@ fromUnicodeString = id
 
 readMaybe :: Read t => String -> Maybe t
 readMaybe str =
-    case reads str of
-      [(answer,[])] -> Just answer
-      [(answer,[continues])] -> if isSpace continues then Just answer else Nothing
-      _ -> Nothing
+  case reads str of
+    [(answer, [])] -> Just answer
+    [(answer, [continues])] -> if isSpace continues then Just answer else Nothing
+    _ -> Nothing
 
 unicodeStringReadSmallInteger :: UnicodeString -> Maybe SmallInteger
 unicodeStringReadSmallInteger = readMaybe
@@ -65,8 +65,8 @@ unicodeStringAt :: UnicodeString -> SmallInteger -> Maybe Char
 unicodeStringAt str ix =
   let size = unicodeStringLength str
   in if ix > 0 && ix <= size
-     then Just (str !! (ix - 1))
-     else Nothing
+      then Just (str !! (ix - 1))
+      else Nothing
 
 unicodeStringWrite :: UnicodeString -> IO ()
 unicodeStringWrite = putStrAllowingCr

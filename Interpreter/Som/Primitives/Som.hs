@@ -1,4 +1,4 @@
-{-# Language FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Som primitives either succeed or raise an error.
 module Interpreter.Som.Primitives.Som where
@@ -87,30 +87,33 @@ prStringAll f = booleanObject . unicodeStringAll f
 
 {- | C.f. DoubleTest, c.f. Js
 
-(doubleMod (-3) 2, mod' (-3) 2) == (-1, 1)
-(doubleMod 3 (-2), mod' 3 (-2)) == (1, -1)
+>>> (doubleMod (-3) 2, mod' (-3) 2)
+(-1,1)
+
+>>> (doubleMod 3 (-2), mod' 3 (-2))
+(1,-1)
 -}
 doubleMod :: Real t => t -> t -> t
 doubleMod p q =
   let r = mod' p q
   in case (p < 0, q < 0) of
-       (True, False) -> -r
-       (False, True) -> -r
-       _ -> r
+      (True, False) -> -r
+      (False, True) -> -r
+      _ -> r
 
 prSystemLoadFile :: (StError m, MonadIO m) => UnicodeString -> m Object
 prSystemLoadFile aString = do
-    let fn = fromUnicodeString aString
-        onFailure = return nilObject
-    maybeText <- liftIO (readFileMaybe fn)
-    maybe onFailure (return . strObject) maybeText
+  let fn = fromUnicodeString aString
+      onFailure = return nilObject
+  maybeText <- liftIO (readFileMaybe fn)
+  maybe onFailure (return . strObject) maybeText
 
 prSystemExit :: MonadIO m => LargeInteger -> m Object
 prSystemExit exitCode =
   let actuallyExit = False
   in if actuallyExit
-     then liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure (fromInteger exitCode)))
-     else liftIO (putStrLn (printf "exit: %d" exitCode)) >> return nilObject
+      then liftIO (if exitCode == 0 then exitSuccess else exitWith (ExitFailure (fromInteger exitCode)))
+      else liftIO (putStrLn (printf "exit: %d" exitCode)) >> return nilObject
 
 prStringEqual :: (String, String) -> Object -> Object
 prStringEqual (lhsClass, lhs) obj =
@@ -217,12 +220,16 @@ somPrimitivesI (prClass, prMethod) receiver@(Object receiverName receiverObj) ar
     _ ->
       case somPrimitivesM (prClass, prMethod) receiver arguments of
         Just answer -> return answer
-        Nothing -> prError (printf "%s>>%s (rcv: '%s', arity: %d, types: '%s')"
-                             prClass
-                             prMethod
-                             (fromSymbol receiverName)
-                             (length arguments)
-                             (unwords (map objectClassName arguments)))
+        Nothing ->
+          prError
+            ( printf
+                "%s>>%s (rcv: '%s', arity: %d, types: '%s')"
+                prClass
+                prMethod
+                (fromSymbol receiverName)
+                (length arguments)
+                (unwords (map objectClassName arguments))
+            )
 
 {- | Primitives that require access to Vm state.
 
@@ -237,7 +244,7 @@ somPrimitivesV (prClass, prMethod) receiver@(Object _receiverName receiverObj) a
     ("global:put:", DataSystem, [Object "Symbol" (DataImmutableString x), e]) -> vmGlobalAssignOrCreate (fromUnicodeString x) e
     ("hasGlobal:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> fmap booleanObject (vmHasGlobal (fromUnicodeString x))
     ("methods", _, []) -> maybe (prError "Class>>methods") arrayFromIndexedMap (classCachedMethods receiver)
-    ("new:", DataClass {},[Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
+    ("new:", DataClass {}, [Object _ (DataLargeInteger size)]) -> arrayFromList (genericReplicate size nilObject)
     ("ticks", DataSystem, []) -> fmap (intObject . toLargeInteger) vmElapsedTimeInMicroseconds
     ("time", DataSystem, []) -> fmap (intObject . toLargeInteger . (`div` 1000)) vmElapsedTimeInMicroseconds
     _ -> somPrimitivesI (prClass, prMethod) receiver arguments
@@ -259,18 +266,18 @@ somPrimitivesC :: SomPrimitiveDispatcher
 somPrimitivesC (prClass, prMethod) receiver@(Object _ receiverObj) arguments =
   case (prMethod, receiverObj, arguments) of
     ("class", _, []) -> objectClass receiver
-    ("fields", DataClass (cd,isMeta) _ _, []) -> prClassFields cd isMeta
-    ("holder", DataMethod holder _ _,[]) -> vmGlobalResolveOrError holder
+    ("fields", DataClass (cd, isMeta) _ _, []) -> prClassFields cd isMeta
+    ("holder", DataMethod holder _ _, []) -> vmGlobalResolveOrError holder
     ("inspect", _, []) -> objectInspectAndPrint receiver
-    ("invokeOn:with:", DataPrimitive {}, [_,_]) -> vmError "Primitive>>invokeOn:with: not implemented"
+    ("invokeOn:with:", DataPrimitive {}, [_, _]) -> vmError "Primitive>>invokeOn:with: not implemented"
     ("invokeOn:with:", rcv, [arg1, arg2]) -> prMethodInvokeOnWith somEvalOpt rcv arg1 arg2
     ("load:", DataSystem, [Object "Symbol" (DataImmutableString x)]) -> systemLoadClassOrNil (fromUnicodeString x)
-    ("new", DataClass (cd,_) _ _,[]) -> classNew cd
+    ("new", DataClass (cd, _) _ _, []) -> classNew cd
     ("perform:", _, [Object "Symbol" (DataImmutableString sel)]) -> objectPerform somEvalOpt receiver sel
     ("perform:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), cl]) -> objectPerformInSuperclass somEvalOpt receiver sel cl
     ("perform:withArguments:", _, [Object "Symbol" (DataImmutableString sel), arg]) -> objectPerformWithArguments somEvalOpt receiver sel arg
     ("perform:withArguments:inSuperclass:", _, [Object "Symbol" (DataImmutableString sel), arg, cl]) -> objectPerformWithArgumentsInSuperclass somEvalOpt receiver sel arg cl
-    ("superclass", DataClass (cd,isMeta) _ _,[]) -> classSuperclass cd isMeta
+    ("superclass", DataClass (cd, isMeta) _ _, []) -> classSuperclass cd isMeta
     _ -> somPrimitivesV (prClass, prMethod) receiver arguments
 
 somPrimitives :: PrimitiveDispatcher

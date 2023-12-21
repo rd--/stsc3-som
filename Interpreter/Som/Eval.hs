@@ -1,6 +1,6 @@
-{-# Language FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-{- | Evalulator -}
+-- | Evalulator
 module Interpreter.Som.Eval where
 
 import Control.Concurrent {- base -}
@@ -10,8 +10,8 @@ import qualified Data.Char {- base -}
 import Data.Maybe {- base -}
 import Text.Printf {- base -}
 
-import qualified Control.Monad.State as State {- mtl -}
 import qualified Control.Monad.Except as Except {- mtl -}
+import qualified Control.Monad.State as State {- mtl -}
 
 import qualified Language.Smalltalk.Ansi as St {- stsc3 -}
 import qualified Language.Smalltalk.Ansi.Expr as Expr {- stsc3 -}
@@ -25,7 +25,7 @@ import Interpreter.Som.Types
 -- | (Holder, selector), code, receiver, arguments, answer.
 type PrimitiveDispatcher = (Symbol, Symbol) -> Integer -> Object -> [Object] -> Vm (Maybe Object)
 
-data EvalOpt = EvalOpt { evalOptTyp :: SystemType, evalOptLit :: LiteralConstructors, evalOptPrim :: PrimitiveDispatcher }
+data EvalOpt = EvalOpt {evalOptTyp :: SystemType, evalOptLit :: LiteralConstructors, evalOptPrim :: PrimitiveDispatcher}
 
 contextLookupOrUnknown :: EvalOpt -> Symbol -> Context -> Vm Object
 contextLookupOrUnknown opt k ctx = do
@@ -42,7 +42,7 @@ coreSymbolObject opt str = let (_, _, symObject) = evalOptLit opt in symObject s
 vmDoesNotUnderstand :: EvalOpt -> Object -> String -> Object -> Vm Object
 vmDoesNotUnderstand opt receiver k argsArray = do
   let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
-  --printTrace ("vmDoesNotUnderstand: " ++ k ++ " <= ") [receiver, argsArray]
+  -- printTrace ("vmDoesNotUnderstand: " ++ k ++ " <= ") [receiver, argsArray]
   evalMessageSend opt False receiver sel [coreSymbolObject opt k, argsArray]
 
 -- | When a global lookup fails, the unknownGlobal: message is sent to the contextReceiver, if there is one.
@@ -53,10 +53,11 @@ vmUnknownGlobal opt ctx k =
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a block returns after it's homeContext is deleted send an escapedBlock: message to the Object that the Block escaped from.
-     For this purpose NonLocalReturn stores the Block that sent it.
-     The Block can access the required Object from it's stored context.
-     The Block that sent the non-local return will be the current BlockFrame.
-     The Object that received the message that created a block will be the nearest MethodFrame.
+
+For this purpose NonLocalReturn stores the Block that sent it.
+The Block can access the required Object from it's stored context.
+The Block that sent the non-local return will be the current BlockFrame.
+The Object that received the message that created a block will be the nearest MethodFrame.
 -}
 vmEscapedBlock :: EvalOpt -> Maybe Object -> Vm Object
 vmEscapedBlock opt maybeBlock =
@@ -77,7 +78,7 @@ evalExprSequence opt st =
   case st of
     [] -> return nilObject
     [e] -> evalExpr opt e
-    e0:eN -> evalExpr opt e0 >> evalExprSequence opt eN
+    e0 : eN -> evalExpr opt e0 >> evalExprSequence opt eN
 
 {- | Result indicates whether it's a "return" or the value of the last expression.
 This function doesn't run nonLocalReturn because it is used for both methods and blocks, and return at methods is local.
@@ -91,7 +92,7 @@ evalStatements opt (stm, ret) = do
 
 blockHandler :: EvalOpt -> Bool -> ExceptionHandler -> ExceptionOrNonLocalReturn -> Vm (Bool, Object)
 blockHandler opt hasReturn (_exc, hnd) exception = do
-  --printTrace (printf "blockHandler <ret: %s>: %s" (show hasReturn) (exceptionOrNonLocalReturn_pp exception)) []
+  -- printTrace (printf "blockHandler <ret: %s>: %s" (show hasReturn) (exceptionOrNonLocalReturn_pp exception)) []
   case exception of
     Exception obj _ -> fmap (\r -> (hasReturn, r)) (if isBlock hnd then evalBlockOfCorrectArity opt hnd [obj] Nothing else vmError "blockHandler: illegal block") -- should match on exception...
     NonLocalReturn _pc _blk _obj -> Except.throwError exception
@@ -108,18 +109,18 @@ evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler = do
           Nothing -> vmError "evalBlockOfCorrectArity: onReturn: no home context?"
           Just homeContext -> let pc = contextIdOrError homeContext in nonLocalReturn pc blockObject result
   (isReturn, result) <- case maybeExceptionHandler of
-            Nothing -> evalStatements opt blockStatements
-            Just eh -> evalStatements opt blockStatements `Except.catchError` blockHandler opt hasReturn eh
-  --printTrace (printf "evalBlockOfCorrectArity: ret=%s" (show isReturn)) (result : blockObject : arguments)
+    Nothing -> evalStatements opt blockStatements
+    Just eh -> evalStatements opt blockStatements `Except.catchError` blockHandler opt hasReturn eh
+  -- printTrace (printf "evalBlockOfCorrectArity: ret=%s" (show isReturn)) (result : blockObject : arguments)
   _ <- vmReplaceContext currentContext
   if isReturn then onReturn result else onNoReturn result
 
 evalBlockWithMaybeExceptionHandler :: EvalOpt -> Object -> [Object] -> Maybe (Object, Object) -> Vm (Maybe Object)
 evalBlockWithMaybeExceptionHandler opt blockObject arguments maybeExceptionHandler = do
-  --printTrace (printf "evalBlockWithMaybeExceptionHandler: eh=%s" (show (isJust maybeExceptionHandler))) (blockObject : arguments)
+  -- printTrace (printf "evalBlockWithMaybeExceptionHandler: eh=%s" (show (isJust maybeExceptionHandler))) (blockObject : arguments)
   if isBlockOfArity (length arguments) blockObject
-  then fmap Just (evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler)
-  else return Nothing
+    then fmap Just (evalBlockOfCorrectArity opt blockObject arguments maybeExceptionHandler)
+    else return Nothing
 
 {- | evalBlock works by:
    1. extending the stored (block) context with a context frame
@@ -139,7 +140,7 @@ evalBlock opt blockObject arguments = evalBlockWithMaybeExceptionHandler opt blo
 
 sendHandler :: Id -> ExceptionOrNonLocalReturn -> Vm (Bool, Object)
 sendHandler ctxId exception =
-  --printTrace (printf "sendHandler <pc: %d>: %s" ctxId (exceptionOrNonLocalReturn_pp exception)) [] >>
+  -- printTrace (printf "sendHandler <pc: %d>: %s" ctxId (exceptionOrNonLocalReturn_pp exception)) [] >>
   case exception of
     Exception {} -> Except.throwError exception
     NonLocalReturn pc _blk obj -> if ctxId == pc then return (True, obj) else Except.throwError exception
@@ -156,7 +157,6 @@ Returns in blocks are non-local, they return to the blocks home context.
 The home context is the method the block was defined in.
 When a non-local return arrives at it's home context the answer is unpacked and returned.
 When an exception value arrives at a handler (exception handlers are at Block contexts) it is handled.
-
 -}
 evalMethod :: EvalOpt -> St.MethodDefinition -> [Symbol] -> [St.Identifier] -> ([StExpr], Maybe StExpr) -> Object -> [Object] -> Vm Object
 evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements receiver arguments = do
@@ -168,7 +168,7 @@ evalMethod opt methodDefinition methodArguments methodTemporaries methodStatemen
   when (requiredArguments /= providedArguments) (vmError arityError)
   pc <- vmIncrementProgramCounter
   currentContext <- vmAddContextFrame =<< methodContextFrame pc (className, selector) receiver (zip methodArguments arguments) methodTemporaries
-  --printTrace (printf "evalMethod: <pc=%d> %s -- " pc (St.methodSignature methodDefinition)) (receiver : arguments)
+  -- printTrace (printf "evalMethod: <pc=%d> %s -- " pc (St.methodSignature methodDefinition)) (receiver : arguments)
   (isReturn, result) <- evalStatements opt methodStatements `Except.catchError` sendHandler pc
   _ <- vmReplaceContext currentContext
   if isReturn then return result else return receiver
@@ -180,19 +180,19 @@ evalMethodOrPrimitive opt dat rcv arg =
       (Expr.Lambda _ methodArguments methodTemporaries methodStatements) = expr
       notPrimitive = evalMethod opt methodDefinition methodArguments methodTemporaries methodStatements rcv arg
   in case St.methodDefinitionPrimitiveCode methodDefinition of
-       Just k -> do
-         --printTrace (printf "evalMethodOrPrimitive: <primitive: %d>: " k) (rcv : arg)
-         answer <- (evalOptPrim opt) (holder, St.methodSignature methodDefinition) k rcv arg
-         case answer of
-           Just result -> return result
-           Nothing -> notPrimitive
-       Nothing -> notPrimitive
+      Just k -> do
+        -- printTrace (printf "evalMethodOrPrimitive: <primitive: %d>: " k) (rcv : arg)
+        answer <- (evalOptPrim opt) (holder, St.methodSignature methodDefinition) k rcv arg
+        case answer of
+          Just result -> return result
+          Nothing -> notPrimitive
+      Nothing -> notPrimitive
 
 -- | Find method & evaluate, else send doesNotUnderstand message.
 findAndEvalMethodOrPrimitive :: EvalOpt -> Object -> Object -> St.Selector -> [Object] -> Vm Object
 findAndEvalMethodOrPrimitive opt receiver methodReceiver selector arguments = do
   maybeMethod <- findMethodMaybe methodReceiver selector
-  --printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) (receiver : arguments)
+  -- printTrace ("findAndEvalMethodOrPrimitive: " ++ St.selectorIdentifier selector) (receiver : arguments)
   case maybeMethod of
     Nothing -> do
       argumentsArray <- arrayFromList arguments
@@ -205,8 +205,8 @@ lookupClassForSuper opt = do
   ctx <- vmGetContext
   case contextNearestMethodFrame ctx of
     Just (MethodFrame _ ((className, isMeta), _) _ _) -> do
-             obj <- contextLookupOrUnknown opt (if isMeta then St.metaclassNameClassName className else className) ctx
-             classSuperclassOf =<< if isMeta then classMetaclass obj else return obj
+      obj <- contextLookupOrUnknown opt (if isMeta then St.metaclassNameClassName className else className) ctx
+      classSuperclassOf =<< if isMeta then classMetaclass obj else return obj
     _ -> vmError "lookupClassForSuper: no method context?"
 
 {- | Evaluate message send.
@@ -231,7 +231,7 @@ evalExpr opt expr =
     Expr.Literal x -> sysLiteralObject (evalOptTyp opt) (literalObject (evalOptLit opt) x)
     Expr.Assignment lhs rhs -> evalExpr opt rhs >>= vmDoAssignment lhs
     Expr.Send receiverExpr (Expr.Message selector argumentsExpr) -> do
-      --ctx <- vmGetContext
+      -- ctx <- vmGetContext
       receiver <- evalExpr opt receiverExpr
       arguments <- mapM (evalExpr opt) argumentsExpr
       evalMessageSend opt (Expr.exprIsSuper receiverExpr) receiver selector arguments
@@ -263,7 +263,7 @@ deleteLeadingSpaces :: String -> String
 deleteLeadingSpaces = dropWhile Data.Char.isSpace
 
 {- | Run evalStringOrError given initial state and input text.
-     If the text is empty (or whitespace only) return nil.
+If the text is empty (or whitespace only) return nil.
 -}
 vmEval :: EvalOpt -> VmState -> String -> IO (Either ExceptionOrNonLocalReturn Object, VmState)
 vmEval opt vmState str =
@@ -297,4 +297,3 @@ objectPerform opt rcv sel = objectClass rcv >>= \cl -> objectPerformInSuperclass
 
 printTrace :: MonadIO m => String -> [Object] -> m ()
 printTrace msg o = liftIO (putStr (msg ++ " with: ")) >> objectListPrint o >> return ()
-

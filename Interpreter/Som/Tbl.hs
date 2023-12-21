@@ -33,8 +33,8 @@ tblAtPutMaybe tbl ix o = if ix < 0 || ix >= tblSize tbl then return Nothing else
 tblAtPutDefault :: MonadIO m => Table k v -> Int -> v -> m v -> m v
 tblAtPutDefault tbl ix o def =
   if ix < 0 || ix >= tblSize tbl
-  then def
-  else tblAtPut tbl ix o
+    then def
+    else tblAtPut tbl ix o
 
 tblKeyIndex :: Eq k => Table k v -> k -> Maybe Int
 tblKeyIndex tbl key = Vector.findIndex ((== key) . fst) tbl
@@ -54,14 +54,14 @@ tblAtKeyPutMaybe tbl key o =
     Nothing -> return Nothing
     Just ix -> fmap Just (tblAtPut tbl ix o)
 
-tblFromList :: MonadIO m => [(k,v)] -> m (Table k v)
+tblFromList :: MonadIO m => [(k, v)] -> m (Table k v)
 tblFromList lst = do
-  let (keys,values) = unzip lst
+  let (keys, values) = unzip lst
   valuesRef <- mapM toRef values
   return (Vector.fromList (zip keys valuesRef))
 
-tblToList :: MonadIO m => Table k v -> m [(k,v)]
-tblToList = mapM (\(key,ref) -> deRef ref >>= \value -> return (key,value)) . Vector.toList
+tblToList :: MonadIO m => Table k v -> m [(k, v)]
+tblToList = mapM (\(key, ref) -> deRef ref >>= \value -> return (key, value)) . Vector.toList
 
 {-
 tblKeys :: Table k v -> [k]

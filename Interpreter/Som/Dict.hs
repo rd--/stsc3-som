@@ -1,4 +1,4 @@
-{-# Language FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Dict
 module Interpreter.Som.Dict where
@@ -44,21 +44,21 @@ dictAssignMaybe dict key value =
 dictAssign :: (MonadIO m, Ord k) => Dict k v -> k -> v -> m Bool
 dictAssign d k = fmap isJust . dictAssignMaybe d k
 
-dictAssignList :: (MonadIO m, Ord k) => Dict k v -> [(k,v)] -> m ()
-dictAssignList d = mapM_ (\(k,v) -> dictAssign d k v)
+dictAssignList :: (MonadIO m, Ord k) => Dict k v -> [(k, v)] -> m ()
+dictAssignList d = mapM_ (\(k, v) -> dictAssign d k v)
 
 dictAssignMany :: (MonadIO m, Ord k) => Dict k v -> [k] -> v -> m ()
 dictAssignMany d keys value = mapM_ (\k -> dictAssign d k value) keys
 
-dictFromList :: (MonadIO m, Ord k) => [(k,v)] -> m (Dict k v)
+dictFromList :: (MonadIO m, Ord k) => [(k, v)] -> m (Dict k v)
 dictFromList l = do
-  let (k,v) = unzip l
+  let (k, v) = unzip l
   r <- mapM toRef v
   return (Map.fromList (zip k r))
 
-dictToList :: MonadIO m => Dict k v -> m [(k,v)]
+dictToList :: MonadIO m => Dict k v -> m [(k, v)]
 dictToList d = do
-  let (k,r) = unzip (Map.toList d)
+  let (k, r) = unzip (Map.toList d)
   v <- mapM deRef r
   return (zip k v)
 

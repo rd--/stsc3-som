@@ -1,4 +1,4 @@
-{-# Language FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- | Vec is a 0-indexed mutable array type.
 VecRef is a mutable reference to a Vec.
@@ -25,8 +25,8 @@ vecAt vec ix = vec Vector.! ix -- 0-indexed
 vecAtMaybe :: Vec t -> Int -> Maybe t
 vecAtMaybe vec ix =
   if vecBoundsCheck vec ix
-  then Just (vecAt vec ix) -- 0-indexed
-  else Nothing
+    then Just (vecAt vec ix) -- 0-indexed
+    else Nothing
 
 vecLength :: Vec t -> Int
 vecLength = Vector.length

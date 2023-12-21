@@ -1,4 +1,5 @@
-{-# Language ConstraintKinds, FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Interpreter.Som.Error where
 
@@ -21,4 +22,3 @@ somErrorIO errorText = throwIO (SomError errorText)
 -- * Mtl
 
 type StError m = Except.MonadError String m
-

@@ -36,11 +36,11 @@ Harness new run: #('Harness' 'Towers'). "958909us"
 "Benchmarks"
 Harness new run: #('Harness' 'CD' '1' '2'). "? Method cos not found in class Integer"
 Harness new run: #('Harness' 'DeltaBlue' '1' '15').
-Harness new run: #('Harness' 'Havlak' '1' '1')
+Harness new run: #('Harness' 'Havlak' '1' '1').
 Harness new run: #('Harness' 'Json'). "=> 11850231us"
-Harness new run: #('Harness' 'Mandelbrot' '1' '1') "=> 2865us"
-Harness new run: #('Harness' 'NBody' '1' '1') "=> 15594us"
-Harness new run: #('Harness' 'NBody' '1' '250000')
+Harness new run: #('Harness' 'Mandelbrot' '1' '1'). "=> 2865us"
+Harness new run: #('Harness' 'NBody' '1' '1'). "=> 15594us"
+Harness new run: #('Harness' 'NBody' '1' '250000').
 Harness new run: #('Harness' 'Richards').
 
 (system load: #Array) = Array "=> true"

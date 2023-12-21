@@ -14,15 +14,14 @@ $ stsc3-som -cp $SOM_CLASS_PATH som repl
 result<pc=0>: 7
 > TestHarness new run: #('TestHarness.som')
 ...
+> Harness new run: #('Harness' 'Bounce')
+...
+^D
 $ time stsc3-som -cp $SOM_CLASS_PATH run TestHarness
 Total number of tests:           208
 Number of unsupported optionals: 3
 Number of successful tests:      208
 Number of assertions tested:     1096
-> Harness new run: #('Harness' 'Bounce')
-...
-Total Runtime: 329669us
-^D
 $
 ~~~~
 

@@ -21,4 +21,3 @@ rwRef r = liftIO . modifyIORef r
 
 wrRef :: MonadIO m => Ref t -> t -> m ()
 wrRef r = liftIO . writeIORef r
-
