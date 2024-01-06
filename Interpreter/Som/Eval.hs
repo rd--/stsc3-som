@@ -41,7 +41,7 @@ coreSymbolObject opt str = let (_, _, symObject) = evalOptLit opt in symObject s
 -- | When a method lookup fails, the doesNotUnderstand:arguments: message is sent to the receiver.
 vmDoesNotUnderstand :: EvalOpt -> Object -> String -> Object -> Vm Object
 vmDoesNotUnderstand opt receiver k argsArray = do
-  let sel = St.KeywordSelector "doesNotUnderstand:arguments:"
+  let sel = St.KeywordSelector "doesNotUnderstand:arguments:" 2
   -- printTrace ("vmDoesNotUnderstand: " ++ k ++ " <= ") [receiver, argsArray]
   evalMessageSend opt False receiver sel [coreSymbolObject opt k, argsArray]
 
@@ -49,7 +49,7 @@ vmDoesNotUnderstand opt receiver k argsArray = do
 vmUnknownGlobal :: EvalOpt -> Context -> String -> Vm Object
 vmUnknownGlobal opt ctx k =
   case contextReceiver ctx of
-    Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:") [coreSymbolObject opt k]
+    Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "unknownGlobal:" 1) [coreSymbolObject opt k]
     _ -> vmError ("vmUnknownGlobal: no contextReceiver: " ++ show k)
 
 {- | If a block returns after it's homeContext is deleted send an escapedBlock: message to the Object that the Block escaped from.
@@ -66,7 +66,7 @@ vmEscapedBlock opt maybeBlock =
       case block of
         Object _ (DataBlockClosure _ blockContext _) ->
           case contextReceiver blockContext of
-            Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "escapedBlock:") [block]
+            Just receiver -> evalMessageSend opt False receiver (St.KeywordSelector "escapedBlock:" 1) [block]
             Nothing -> vmError "escaped context: no receiver"
         _ -> vmError "escaped context: bad block"
     Nothing -> vmError "escaped context?"
